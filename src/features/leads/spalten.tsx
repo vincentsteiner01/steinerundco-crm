@@ -9,7 +9,7 @@ import { cn } from '@/components/ui/cn'
 import { Glyph } from '@/components/ui/Glyph'
 import type { SelectOption } from '@/components/ui/Select'
 import type { CsvSpalte } from '@/lib/csv'
-import { fmtDatum, fmtDatumKurz, fmtZeit, relativ } from '@/lib/format'
+import { fmtDatum, fmtDatumKurz, fmtZeit, MINUS, relativ } from '@/lib/format'
 import { fmtTelefon } from '@/lib/telefon'
 import { kurzId } from '@/lib/ids'
 import { stageLabel } from '@/lib/stufen'
@@ -20,6 +20,7 @@ import { phaseVon } from '@/lib/stufen'
 import type { Lead, LeadRole, Member, Salutation, Settings } from '@/types/domain'
 import { Mono } from './Mono'
 import { SPALTE_FELD, SPALTEN_LABEL, type SpaltenKey } from './spaltenKeys'
+import { anzeigeName } from '@/lib/mitglied'
 
 /**
  * Tabellenzeile = Lead + clientseitig angereicherte Flags (Firmensperre aus companies, Sperrlisten-Treffer) + Firmen-Embed für
@@ -75,6 +76,14 @@ export const ROLLE_OPTIONEN: SelectOption[] = (Object.keys(ROLLE_LABEL) as LeadR
   value: r,
   label: ROLLE_LABEL[r],
 }))
+/** „Geschäftsführer“ statt „Geschäftsführer · Geschäftsführer“ (Import setzt role_title oft = Rollenwort); abweichender Titel bleibt dran. */
+export function rolleAnzeige(role: LeadRole, titel: string | null | undefined): string | null {
+  const t = titel?.trim() || null
+  if (role === 'unbekannt') return t
+  const label = ROLLE_LABEL[role]
+  if (!t || t.toLowerCase() === label.toLowerCase()) return label
+  return `${label} · ${t}`
+}
 export const ANREDE_LABEL: Record<Salutation, string> = { herr: 'Herr', frau: 'Frau', neutral: '–' }
 export const ANREDE_OPTIONEN: SelectOption[] = [
   { value: 'herr', label: 'Herr' },
@@ -133,8 +142,23 @@ export function naechsteAktionText(
     return { text: `${kurz} ${zeit}`, ton: t === heute ? 'today' : t < heute ? 'overdue' : 'later' }
   }
   if (t === heute) return { text: `${kurz} heute`, ton: 'today' }
-  if (t < heute) return { text: `${kurz} ${relativ(l.next_action_at, heute)}`, ton: 'overdue' }
+  // Überfällig immer „Datum −N T“ (wie ZeitChip): nicht „gestern“ (schnitt bei 1440 zu „geste…“ ab) und ab 7 Tagen nicht das
+  // Datum doppelt („Do 08.10. Do 08.10.“, echte Daten 15.10.2026) – die Tage zählen bei 63 Überfälligen
+  if (t < heute) return { text: `${kurz} ${MINUS}${tageDifferenz(t, heute)} T`, ton: 'overdue' }
   return { text: kurz, ton: 'later' }
+}
+
+/** Kompakte Variante für Kanban-Karten: genau EIN Datum („heute“ · „Do 08.10.“), bei Rückruf/Termin mit Uhrzeit. */
+export function naechsteAktionKurz(
+  l: Pick<Lead, 'next_action_at' | 'next_action_kind' | 'stage'>,
+  heute: string,
+): { text: string; ton: 'today' | 'overdue' | 'later' | null } {
+  if (!l.next_action_at) return { text: '–', ton: null }
+  const t = berlinTag(l.next_action_at)
+  const ton = t === heute ? 'today' : t < heute ? 'overdue' : 'later'
+  const tag = ton === 'today' ? 'heute' : fmtDatumKurz(l.next_action_at)
+  const mitZeit = l.next_action_kind === 'rueckruf' || l.next_action_kind === 'meeting'
+  return { text: mitZeit ? `${tag} ${fmtZeit(l.next_action_at)}` : tag, ton }
 }
 
 /** Spalte Schritt: „4 · Kurzfristig 2“ / „Versuch 3/5“ / „E1 Nachfassen“ / „Rückruf 10:30“ / „–“ (aus next_action_*). */
@@ -204,12 +228,53 @@ function mitglied(members: readonly Member[], id: string | null): Member | null 
 
 const h = spaltenHelper<LeadZeile>()
 
+/**
+ * Abweichung von DESIGN-SYSTEM § 5.10 nach Sichtprüfung mit echten Daten (15.10.2026, Tabelle 1136 px bei 1440er Fenster):
+ * Unternehmen kürzte „Energiekonzepte…“ (136 px), Notiz blieb bei 69 px („First O…“), Kanal (74 px) und Zuständig (97 px) waren für
+ * eine Glyphe bzw. einen Avatar zu breit, „LETZTE BEWEGUNG“ wurde zu „LETZTE BEW…“. Rolle fällt weg, wenn kein Lead eine hat
+ * (LeadsSeite). Nächste Aktion braucht für „Mo 05.10. −10 T“ ≈ 141 px. Summe 85 % + Auswahl 28 px; Notiz = Rest (≈ 140 px).
+ */
+export const BREITE_ECHT = {
+  name: '15%',
+  unternehmen: '15%',
+  rolle: '7%',
+  kanal: '5%',
+  phase: '9.5%',
+  schritt: '10%',
+  zustaendig: '7%',
+  letzteBewegung: '10%',
+  naechsteAktion: '13.5%',
+} as const
+
+/**
+ * Unter 1280 px bleiben nur Name (mit Firma darunter), Kanal, Phase, Schritt, Zuständig und Nächste Aktion – bei 1024 ist der Inhalt
+ * wegen der 232-px-Sidebar nur ≈ 740 px breit (Runde 2: „Nächste Aktion“ war bei 1024 abgeschnitten). Dafür reicht diese Mindestbreite.
+ */
+export const MIN_BREITE_SCHMAL = 640
+
+/** Rolle ausblenden, wenn kein geladener Lead eine Rolle hat (echte Daten: alle 216 „unbekannt“ → überall „–“, Kopf „RO…“). */
+export function ohneLeereRolle<T extends { id?: string }>(defs: T[], rows: readonly { role?: string | null }[]): T[] {
+  if (rows.length === 0 || rows.some((r) => !!r.role && r.role !== 'unbekannt')) return defs
+  return defs.filter((d) => d.id !== 'rolle')
+}
+
+/**
+ * Spalten, die unter einer Breite ausgeblendet sind (`meta.ausblenden`), ganz weglassen statt per CSS verstecken: DataTable rendert die
+ * `<col>`-Breiten ohne die Hide-Klasse – unter 1280 px rutschten sonst alle Breiten eine Spalte nach links (Phase-Chip „E…“, Kopf „KANA“).
+ */
+export function ohneVerdeckte<T extends { meta?: unknown }>(defs: T[], unterXl: boolean, unterLg: boolean): T[] {
+  return defs.filter((d) => {
+    const a = (d.meta as { ausblenden?: 'lg' | 'xl' } | undefined)?.ausblenden
+    return !((a === 'xl' && unterXl) || (a === 'lg' && unterLg))
+  })
+}
+
 /** Baut die Spaltendefinitionen für die gewählten Keys. Die Reihenfolge ist die der Keys. */
 export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): DataTableSpalte<LeadZeile>[] {
   const bearbeitet = (rowId: string, key: SpaltenKey) => o.bearbeitung?.rowId === rowId && o.bearbeitung.spalte === key
   const memberOptionen: SelectOption[] = o.members
     .filter((m) => !!m.id)
-    .map((m) => ({ value: m.id as string, label: m.short_name ?? m.display_name ?? '' }))
+    .map((m) => ({ value: m.id as string, label: anzeigeName(m, '') }))
 
   const defs: DataTableSpalte<LeadZeile>[] = []
   for (const key of keys) {
@@ -219,7 +284,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
           h.accessor('full_name', {
             id: 'name',
             header: SPALTEN_LABEL.name,
-            meta: { oeffnet: true, editierbar: true, breite: SPALTEN_BREITE.name },
+            meta: { oeffnet: true, editierbar: true, breite: BREITE_ECHT.name },
             cell: (c) => {
               const l = c.row.original
               if (bearbeitet(l.id, 'name'))
@@ -239,6 +304,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
                   <span className="min-w-0">
                     <span
                       className={cn('block truncate font-medium', l.stage === 'beendet' ? 'text-ink-2' : 'text-ink')}
+                      title={l.full_name ?? undefined}
                     >
                       {l.full_name ?? '–'}
                     </span>
@@ -260,7 +326,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
           h.accessor('company_name', {
             id: 'unternehmen',
             header: SPALTEN_LABEL.unternehmen,
-            meta: { editierbar: true, breite: SPALTEN_BREITE.unternehmen, ausblenden: 'xl' },
+            meta: { editierbar: true, breite: BREITE_ECHT.unternehmen, ausblenden: 'xl' },
             cell: (c) => {
               const l = c.row.original
               if (bearbeitet(l.id, 'unternehmen'))
@@ -275,7 +341,9 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
                   />
                 )
               return l.company_name ? (
-                <span className="text-ink-2">{l.company_name}</span>
+                <span className="text-ink-2 block truncate" title={l.company_name}>
+                  {l.company_name}
+                </span>
               ) : (
                 <span className="text-ink-3 inline-flex items-center gap-1.5">
                   – <Chip ton="muted">fehlt</Chip>
@@ -290,7 +358,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
           h.accessor('role', {
             id: 'rolle',
             header: SPALTEN_LABEL.rolle,
-            meta: { editierbar: true, breite: SPALTEN_BREITE.rolle },
+            meta: { editierbar: true, breite: BREITE_ECHT.rolle, ausblenden: 'xl' },
             cell: (c) => {
               const l = c.row.original
               if (bearbeitet(l.id, 'rolle'))
@@ -316,7 +384,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
             id: 'kanal',
             header: SPALTEN_LABEL.kanal,
             enableSorting: false,
-            meta: { breite: SPALTEN_BREITE.kanal },
+            meta: { breite: BREITE_ECHT.kanal },
             cell: (c) => {
               const z = kanalZustand(c.row.original)
               return (
@@ -335,7 +403,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
           h.accessor('stage', {
             id: 'phase',
             header: SPALTEN_LABEL.phase,
-            meta: { editierbar: true, breite: SPALTEN_BREITE.phase },
+            meta: { editierbar: true, breite: BREITE_ECHT.phase },
             cell: (c) => {
               const l = c.row.original
               if (bearbeitet(l.id, 'phase'))
@@ -349,7 +417,13 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
                     onTab={o.onTab}
                   />
                 )
-              return <StatusChip stage={l.stage} settings={o.settings} />
+              return (
+                <StatusChip
+                  stage={l.stage}
+                  settings={o.settings}
+                  className="max-w-full [&>span]:min-w-0 [&>span]:truncate"
+                />
+              )
             },
           }),
         )
@@ -359,13 +433,13 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
           h.accessor('next_action_label', {
             id: 'schritt',
             header: SPALTEN_LABEL.schritt,
-            meta: { editierbar: true, breite: SPALTEN_BREITE.schritt },
+            meta: { editierbar: true, breite: BREITE_ECHT.schritt },
             cell: (c) => {
               const l = c.row.original
               const text = schrittText(l)
               const n = l.next_action_kind === 'sequenz_schritt' ? gespraechsphase(l.stage) : null
               return (
-                <span className="truncate">
+                <span className="block truncate" title={text !== '–' ? text : undefined}>
                   {text !== '–' && n !== null ? (
                     <span className="text-ink-3 mr-1.5 font-mono text-[12.5px]">{n}</span>
                   ) : null}
@@ -384,7 +458,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
           h.accessor('owner_id', {
             id: 'zustaendig',
             header: SPALTEN_LABEL.zustaendig,
-            meta: { editierbar: true, breite: SPALTEN_BREITE.zustaendig },
+            meta: { editierbar: true, breite: BREITE_ECHT.zustaendig },
             cell: (c) => {
               const l = c.row.original
               if (bearbeitet(l.id, 'zustaendig'))
@@ -407,7 +481,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
                   zweiter={sales}
                   title={
                     owner
-                      ? `Zuständig: ${owner.short_name ?? owner.display_name}${sales ? ` · Sales: ${sales.short_name ?? sales.display_name}` : ''}`
+                      ? `Zuständig: ${anzeigeName(owner)}${sales ? ` · Sales: ${anzeigeName(sales)}` : ''}`
                       : 'Frei'
                   }
                 />
@@ -421,7 +495,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
           h.accessor('last_activity_at', {
             id: 'letzteBewegung',
             header: SPALTEN_LABEL.letzteBewegung,
-            meta: { rechts: true, mono: true, breite: SPALTEN_BREITE.letzteBewegung, ausblenden: 'lg' },
+            meta: { rechts: true, mono: true, breite: BREITE_ECHT.letzteBewegung, ausblenden: 'xl' },
             cell: (c) => {
               const v = c.getValue()
               return v ? <Mono title={relativ(v, o.heute)}>{fmtDatumKurz(v)}</Mono> : <Mono ton="later">–</Mono>
@@ -434,7 +508,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
           h.accessor('next_action_at', {
             id: 'naechsteAktion',
             header: SPALTEN_LABEL.naechsteAktion,
-            meta: { editierbar: true, rechts: true, mono: true, breite: SPALTEN_BREITE.naechsteAktion },
+            meta: { editierbar: true, rechts: true, mono: true, breite: BREITE_ECHT.naechsteAktion },
             cell: (c) => {
               const l = c.row.original
               if (bearbeitet(l.id, 'naechsteAktion'))
@@ -464,7 +538,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
             id: 'notiz',
             header: SPALTEN_LABEL.notiz,
             enableSorting: false,
-            meta: { editierbar: true, breite: SPALTEN_BREITE.notiz, ausblenden: 'lg' },
+            meta: { editierbar: true, breite: SPALTEN_BREITE.notiz, ausblenden: 'xl' },
             cell: (c) => {
               const l = c.row.original
               if (bearbeitet(l.id, 'notiz'))
@@ -478,7 +552,11 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
                     onTab={o.onTab}
                   />
                 )
-              return <span className="text-ink-3 block truncate text-[12.5px]">{l.notes ?? ''}</span>
+              return (
+                <span className="text-ink-3 block truncate text-[12.5px]" title={l.notes ?? undefined}>
+                  {l.notes ?? ''}
+                </span>
+              )
             },
           }),
         )
@@ -725,25 +803,39 @@ export function mobilZeile(
 ): ReactNode {
   const { text, ton } = naechsteAktionText(l, o.heute)
   const owner = istFrei(l) ? null : mitglied(o.members, l.owner_id)
+  const schritt = schrittText(l)
+  // Feste 56 px (virtualisierte Liste): 22 + 18 + 16 px. Vorher 78 px Inhalt → Zeilen überlappten (Sichtprüfung 390 px).
+  const klein = 'h-[18px]! shrink-0 px-1.5! text-[11px]!'
   return (
-    <div className="flex items-center gap-3 py-2 pr-3">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className={cn('truncate text-[14px] font-medium', l.stage === 'beendet' ? 'text-ink-2' : 'text-ink')}>
-            {l.full_name ?? '–'}
-          </span>
-          {l.firmaGesperrt ? <Chip ton="danger">Firma gesperrt</Chip> : null}
-          {zustand.ausgewaehlt ? <Chip ton="neu">gewählt</Chip> : null}
-        </div>
-        <div className="text-ink-3 truncate text-[11.5px]">{l.company_name ?? '–'}</div>
-        <div className="mt-1 flex items-center gap-2">
-          <StatusChip stage={l.stage} settings={o.settings} />
-          <span className="text-ink-3 truncate text-[12px]">{schrittText(l)}</span>
-        </div>
+    <div className="flex h-14 min-w-0 flex-col justify-center pr-3" data-mobil-zeile>
+      <div className="flex h-[22px] min-w-0 items-center gap-2">
+        <span
+          className={cn(
+            'min-w-0 flex-1 truncate text-[14px] leading-[18px] font-medium',
+            l.stage === 'beendet' ? 'text-ink-2' : 'text-ink',
+          )}
+        >
+          {l.full_name ?? '–'}
+        </span>
+        {l.firmaGesperrt ? (
+          <Chip ton="danger" className={klein}>
+            Firma gesperrt
+          </Chip>
+        ) : null}
+        {zustand.ausgewaehlt ? (
+          <Chip ton="neu" className={klein}>
+            gewählt
+          </Chip>
+        ) : null}
+        <Avatar member={owner} className="shrink-0" />
       </div>
-      <div className="flex flex-col items-end gap-1.5">
+      <div className="flex h-[18px] min-w-0 items-center gap-2">
+        <span className="text-ink-3 min-w-0 flex-1 truncate text-[11.5px] leading-none">{l.company_name ?? '–'}</span>
+        <StatusChip stage={l.stage} settings={o.settings} className={klein} />
+      </div>
+      <div className="flex h-4 min-w-0 items-center gap-2 leading-none">
         <Mono ton={ton}>{text}</Mono>
-        <Avatar member={owner} />
+        {schritt !== '–' ? <span className="text-ink-3 min-w-0 truncate text-[12px]">{schritt}</span> : null}
       </div>
     </div>
   )
@@ -756,7 +848,7 @@ export function csvSpalten(
 ): CsvSpalte<LeadZeile>[] {
   const m = (id: string | null) => {
     const x = mitglied(o.members, id)
-    return x ? (x.short_name ?? x.display_name ?? '') : ''
+    return x ? (anzeigeName(x, '')) : ''
   }
   return keys.map((key): CsvSpalte<LeadZeile> => {
     const label = SPALTEN_LABEL[key]

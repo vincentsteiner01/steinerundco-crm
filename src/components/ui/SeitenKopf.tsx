@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { dateline } from '@/lib/format'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { dateline, datelineKurz } from '@/lib/format'
 import { cn } from './cn'
+
+/** Höhe der Phone-Topbar (DESIGN-SYSTEM § 4.2) – Ersatz für `--head-h`, wenn der Seitenkopf nicht klebt. */
+const TOPBAR_PHONE = 56
 
 export type SeitenKopfProps = {
   titel: string
@@ -44,45 +47,93 @@ export function SeitenKopf({
     return () => io.disconnect()
   }, [])
 
+  // Runde 2 (echte Daten): eingerastet war der Kopf 149 px (1440) bzw. 196 px (1024) hoch – Dateline, Voice und umgebrochene
+  // Stats blieben stehen, DESIGN-SYSTEM § 4.1 sieht 92 px vor. Eingerastet zeigt er nur noch Titel (24 px) und Stats in einer Zeile
+  // (unter 1280 px ohne Stats). `ausgleich` hält den Fluss stabil: der Inhalt darunter springt beim Einrasten nicht nach oben.
+  const vollHoehe = useRef(0)
+  const [ausgleich, setAusgleich] = useState(0)
   useEffect(() => {
     const k = kopf.current
     if (!k) return
-    const schreibe = () => document.documentElement.style.setProperty('--head-h', `${k.offsetHeight}px`)
+    // Unter 768 px klebt der Kopf nicht (er läge unter der Phone-Topbar und fräße ein Viertel des Bildschirms) –
+    // dann kleben Tabellenköpfe direkt unter der 56-px-Topbar.
+    const schreibe = () => {
+      const klebt = getComputedStyle(k).position === 'sticky'
+      document.documentElement.style.setProperty('--head-h', `${klebt ? k.offsetHeight : TOPBAR_PHONE}px`)
+      if (!k.classList.contains('is-stuck')) vollHoehe.current = k.offsetHeight
+      setAusgleich(klebt && k.classList.contains('is-stuck') ? Math.max(0, vollHoehe.current - k.offsetHeight) : 0)
+    }
     schreibe()
     if (typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver(schreibe)
     ro.observe(k)
     return () => ro.disconnect()
   }, [])
+  // Beim Einrasten vor dem Zeichnen ausgleichen (sonst springt der Inhalt für einen Frame nach oben)
+  useLayoutEffect(() => {
+    const k = kopf.current
+    if (!k) return
+    const klebt = getComputedStyle(k).position === 'sticky'
+    setAusgleich(stuck && klebt && vollHoehe.current ? Math.max(0, vollHoehe.current - k.offsetHeight) : 0)
+  }, [stuck])
 
   const dl = eigeneDateline ?? `${dateline()}${kontext ? ` · ${kontext}` : ''}`
+  // Automatische Dateline: unter 768 px mit kurzem Datum („Do 15.10. · KW 42“), sonst wurde der Kontext zu „Handbu…“ (Runde 2)
+  const inhalt = eigeneDateline ?? (
+    <>
+      <span className="max-md:hidden">{dateline()}</span>
+      <span className="md:hidden">{datelineKurz()}</span>
+      {kontext ? ` · ${kontext}` : ''}
+    </>
+  )
 
   return (
     <>
       <div ref={sentinel} aria-hidden className="h-px" />
       <header
         ref={kopf}
+        data-seitenkopf
+        style={ausgleich ? { marginBottom: 24 + ausgleich } : undefined}
         className={cn(
-          'bg-canvas sticky top-0 z-20 mb-6 flex flex-wrap items-end justify-between gap-6 border-b pt-7 pb-5 max-md:mb-[18px] max-md:pt-5 max-md:pb-4',
+          'bg-canvas sticky top-0 z-20 mb-6 flex flex-wrap items-end justify-between gap-6 border-b pt-7 pb-5',
+          'max-md:static max-md:mb-[18px] max-md:gap-4 max-md:pt-5 max-md:pb-4',
           'ease-brand transition-[border-color] duration-[var(--t-1)]',
-          stuck ? 'is-stuck border-line' : 'border-transparent',
+          stuck ? 'is-stuck border-line md:flex-nowrap md:items-center md:pt-3.5 md:pb-3' : 'border-transparent',
           className,
         )}
       >
-        <div className="min-w-0">
-          <span className="text-ink-3 tnum mb-2.5 block font-mono text-[12.5px] tracking-[0.02em]">{dl}</span>
+        <div className="max-w-full min-w-0">
+          <span
+            className={cn(
+              'text-ink-3 tnum mb-2.5 block truncate font-mono text-[12.5px] tracking-[0.02em]',
+              stuck && 'md:hidden',
+            )}
+            title={dl}
+          >
+            {inhalt}
+          </span>
           {titelLinks || titelRechts ? (
             <div className="flex items-center gap-3">
               {titelLinks}
-              <h1 className="headline">{titel}</h1>
+              <h1 className={cn('headline', stuck && 'md:text-[24px] md:leading-[1.2]')}>{titel}</h1>
               {titelRechts}
             </div>
           ) : (
-            <h1 className="headline">{titel}</h1>
+            <h1 className={cn('headline', stuck && 'md:text-[24px] md:leading-[1.2]')}>{titel}</h1>
           )}
-          {voice ? <p className="voice mt-2">{voice}</p> : null}
+          {voice ? <p className={cn('voice mt-2', stuck && 'md:hidden')}>{voice}</p> : null}
         </div>
-        {rechts ? <div className="flex flex-wrap items-center gap-2.5">{rechts}</div> : null}
+        {/* min-w-0 max-w-full: fünf Kennzahlen sprengten bei 390 px sonst die Seite (464 px, Runde 2 /leads) */}
+        {rechts ? (
+          <div
+            className={cn(
+              'flex max-w-full min-w-0 flex-wrap items-center gap-2.5',
+              stuck && 'max-xl:md:hidden xl:flex-nowrap',
+            )}
+          >
+            {rechts}
+          </div>
+        ) : null}
       </header>
     </>
   )
@@ -95,13 +146,20 @@ export function KopfStats({
   eintraege: { wert: number | string; label: string; ton?: 'signal' | 'overdue' }[]
 }) {
   return (
-    <div className="text-ink-2 tnum flex items-baseline gap-5 font-mono text-[13px] max-md:max-w-full max-md:gap-3.5 max-md:overflow-auto max-md:text-[12px]">
+    <div className="text-ink-2 tnum flex max-w-full items-baseline gap-5 font-mono text-[13px] max-md:flex-wrap max-md:gap-x-3.5 max-md:gap-y-1 max-md:text-[12px]">
       {eintraege.map((e) => (
         <span key={e.label} className="whitespace-nowrap">
           <b
             className={cn(
               'text-[16px] font-medium max-md:text-[15px]',
-              e.ton === 'signal' ? 'text-signal' : e.ton === 'overdue' ? 'text-overdue' : 'text-ink-bright',
+              // Eine Null ist kein Signal: „0 fällig“ in Lime/Amber zog den Blick auf nichts (Runde 2, Mikes Heute)
+              e.wert === 0 || e.wert === '0'
+                ? 'text-ink-bright'
+                : e.ton === 'signal'
+                  ? 'text-signal'
+                  : e.ton === 'overdue'
+                    ? 'text-overdue'
+                    : 'text-ink-bright',
             )}
           >
             {e.wert}

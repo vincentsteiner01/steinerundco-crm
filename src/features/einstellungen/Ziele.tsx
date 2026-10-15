@@ -48,6 +48,8 @@ function Zahl({
         id={id}
         mono
         inputMode="decimal"
+        // Zahlen sind kurz; ohne size nimmt das Feld 20 ch Eigenbreite und „Werktage“ schob es bei 1024 px aus der Spalte
+        size={6}
         value={wert}
         onChange={(e) => onChange(e.target.value)}
         rechts={einheit ? <span className="text-ink-3 mono-sm">{einheit}</span> : undefined}
@@ -257,12 +259,12 @@ function KpiBlock({ settings }: { settings: Settings }) {
   return (
     <Block
       titel="KPI-Zielwerte"
-      beschreibung="Ziele neben den Kennzahlen in KPIs (ux § 2.7)."
+      beschreibung="Ziele neben den Kennzahlen in KPIs."
       onSpeichern={speichern}
       geaendert={geaendert}
       busy={update.isPending}
     >
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
         {KPI_FELDER.map((f) => (
           <Zahl
             key={f.key}
@@ -314,7 +316,7 @@ function LangfristigBlock({ settings }: { settings: Settings }) {
       geaendert={geaendert}
       busy={update.isPending}
     >
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
         {LANG_FELDER.map((f) => (
           <Zahl
             key={f.key}
@@ -377,7 +379,7 @@ function TelefonBlock({ settings }: { settings: Settings }) {
       geaendert={geaendert}
       busy={update.isPending}
     >
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid items-start gap-4 sm:grid-cols-2">
         {SLOTS.map((slot) => (
           <FormField key={slot} label={`Zeitfenster ${slot}`} htmlFor={`${id}-${slot}`} fehler={fehler[slot]}>
             <Input
@@ -472,10 +474,12 @@ function FeiertageBlock({ settings }: { settings: Settings }) {
             optionen={jahre.map((j) => ({ value: j, label: j }))}
           />
         </FormField>
-        <FormField label="Feiertag hinzufügen" htmlFor={`${id}-neu`} fehler={fehler}>
+        {/* size 10 (= TT.MM.JJJJ): die Eigenbreite des Felds (20 ch) + „Hinzufügen ↵“ sprengte bei 1024 px die Spalte (+55 px) */}
+        <FormField label="Feiertag hinzufügen" htmlFor={`${id}-neu`} fehler={fehler} className="min-w-0 grid-cols-1">
           <Input
             id={`${id}-neu`}
             mono
+            size={10}
             placeholder="24.12.2026"
             value={eingabe}
             onChange={(e) => setEingabe(e.target.value)}

@@ -5,6 +5,7 @@ import type { Email } from '@/types/domain'
 import {
   emailGate,
   emailSequenzStartbar,
+  hatSperrlistenTreffer,
   kontaktGate,
   linkedinBudget,
   nachfassZaehler,
@@ -224,5 +225,18 @@ describe('nachfassZaehler (Regel 3, E12)', () => {
   it('ein Eingang nach der Erlaubnis setzt die Kette zurück; ohne Mails 0', () => {
     expect(nachfassZaehler([mail({})], { ...lead, last_inbound_at: '2026-10-11T09:00:00Z' })).toBe(0)
     expect(nachfassZaehler(undefined, lead)).toBe(0)
+  })
+})
+
+describe('hatSperrlistenTreffer (Runde 2: Chip „Sperrliste“ an jedem Lead)', () => {
+  it('leeres Array, null und false sind kein Treffer', () => {
+    expect(hatSperrlistenTreffer([])).toBe(false)
+    expect(hatSperrlistenTreffer(null)).toBe(false)
+    expect(hatSperrlistenTreffer(undefined)).toBe(false)
+    expect(hatSperrlistenTreffer(false)).toBe(false)
+  })
+  it('true oder mindestens ein Eintrag ist ein Treffer', () => {
+    expect(hatSperrlistenTreffer(true)).toBe(true)
+    expect(hatSperrlistenTreffer([{ channels: ['telefon'] }])).toBe(true)
   })
 })

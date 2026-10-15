@@ -22,12 +22,14 @@ const GROESSE = {
   L: 'h-11 px-4 text-[15px]',
 } as const
 
+// Rahmenfarbe je Variante: `border-transparent` darf NICHT in der Basis stehen – im Stylesheet gewinnt es gegen
+// `border-line-strong`, secondary hatte dann keinen sichtbaren Rahmen (Runde 2, Hilfe-Agent: borderTopColor rgba(0,0,0,0)).
 const VARIANTE = {
-  primary: 'bg-signal text-signal-ink font-semibold hover:bg-signal-hover disabled:hover:bg-signal',
+  primary: 'border-transparent bg-signal text-signal-ink font-semibold hover:bg-signal-hover disabled:hover:bg-signal',
   secondary: 'border-line-strong text-ink hover:bg-surface-hover',
-  quiet: 'text-ink-2 hover:text-ink hover:bg-surface-hover',
-  danger: 'text-danger hover:bg-danger-tint',
-  icon: 'h-8 w-8 p-0 text-ink-2 hover:text-ink hover:bg-surface-hover',
+  quiet: 'border-transparent text-ink-2 hover:text-ink hover:bg-surface-hover',
+  danger: 'border-transparent text-danger hover:bg-danger-tint',
+  icon: 'border-transparent h-8 w-8 p-0 text-ink-2 hover:text-ink hover:bg-surface-hover',
 } as const
 
 /**
@@ -65,7 +67,7 @@ export function Button(props: ButtonProps) {
       aria-disabled={disabled || undefined}
       data-copied={copied || undefined}
       className={cn(
-        'inline-flex items-center justify-center gap-2 rounded-sm border border-transparent leading-none font-medium whitespace-nowrap',
+        'inline-flex items-center justify-center gap-2 rounded-sm border leading-none font-medium whitespace-nowrap',
         'ease-brand transition-[background,border-color,color] duration-[var(--t-1)]',
         'active:translate-y-[0.5px] disabled:cursor-not-allowed disabled:opacity-45 disabled:active:translate-y-0',
         '[&_kbd]:min-w-[18px] [&_kbd]:border-current [&_kbd]:px-1 [&_kbd]:text-inherit [&_kbd]:opacity-60',
@@ -98,7 +100,11 @@ export function Button(props: ButtonProps) {
   return (
     <Tooltip text={disabledGrund} aus={!mitGrund} stabil>
       <span
-        className={mitGrund ? 'inline-flex' : 'contents'}
+        // min-w-0/max-w-full: im 4er-Raster (Peek-Sheet 390 px) ragte „Kopieren“ (87 px) sonst 10 px in „Gesendet“ (Runde 2);
+        // ein Button mit w-full zieht den Wrapper mit auf die volle Zellenbreite
+        className={
+          mitGrund ? cn('min-w-0', /\bw-full\b/.test(className ?? '') ? 'flex w-full' : 'inline-flex max-w-full') : 'contents'
+        }
         tabIndex={mitGrund ? 0 : undefined}
         aria-label={mitGrund ? disabledGrund : undefined}
       >

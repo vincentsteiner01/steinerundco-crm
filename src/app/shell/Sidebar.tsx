@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { MessageSquareWarning, Search } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 import { NAV } from '@/app/nav'
 import { PFADE } from '@/app/pfade'
@@ -8,6 +8,7 @@ import { Kbd } from '@/components/ui/Kbd'
 import { cn } from '@/components/ui/cn'
 import { useNavZaehler } from '@/data/nav'
 import { useAuth } from '@/features/auth/authStore'
+import { FEEDBACK_EVENT } from '@/features/feedback/texte'
 import { ALLGEMEIN } from '@/texte/de'
 import { RealtimePunkt } from './RealtimePunkt'
 
@@ -48,6 +49,7 @@ export function Sidebar() {
             <NavLink
               key={n.pfad}
               to={n.pfad}
+              data-tour={`nav:${n.pfad}`}
               className={({ isActive }) =>
                 cn(
                   'group text-ui ease-brand hover:bg-surface-hover hover:text-ink relative flex h-[34px] items-center gap-2.5 rounded-sm px-2.5 transition-[background,color] duration-[var(--t-1)]',
@@ -104,6 +106,20 @@ export function Sidebar() {
             {ALLGEMEIN.abmelden}
           </button>
         </div>
+        {/* Feedback mit Screenshot (⌥F): hier statt als schwebender Knopf über dem Inhalt (Runde 2: verdeckte Zeit-Chips, Deltas) */}
+        <button
+          type="button"
+          data-tour="feedback"
+          aria-label="Feedback geben (⌥F)"
+          onClick={() => window.dispatchEvent(new Event(FEEDBACK_EVENT))}
+          className="text-ink-3 hover:text-ink hover:bg-surface-hover -mx-1.5 flex items-center justify-between rounded-sm px-1.5 py-1 text-[12px]"
+        >
+          <span className="flex items-center gap-1.5">
+            <MessageSquareWarning size={14} strokeWidth={1.75} aria-hidden />
+            Feedback geben
+          </span>
+          <Kbd>⌥F</Kbd>
+        </button>
         <div className="text-ink-3 flex items-center justify-between text-[12px]">
           <span>{ALLGEMEIN.tastenkuerzel}</span>
           <button

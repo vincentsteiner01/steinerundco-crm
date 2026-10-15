@@ -40,7 +40,11 @@ export type DataTableProps<T extends RowData> = {
   onEnter?: (r: T) => void
   onZelleBearbeiten?: (r: T, spalte: string) => void
   gruppierung?: { key: (r: T) => string; label: (k: string) => string; zaehler?: boolean }
+  /** Kopf klebt unter dem Seitenkopf – nur ≥ 1280 px wirksam (darunter liegt die Tabelle in einem overflow-x-Wrapper,
+   * in dem `sticky` relativ zum Wrapper rechnete und den Kopf mitten über Zeile 3–4 legte, Runde 2) */
   sticky?: boolean
+  /** Mindestbreite unter 1280 px (Querscroll statt gequetschter Spalten). Standard 1040; `null` = keine – für schmale 4–5-Spalten-Tabellen */
+  minBreite?: number | null
   zeilenHoehe?: 40 | 56
   leer?: ReactNode
   ladeMehr?: () => void
@@ -81,6 +85,7 @@ export function DataTable<T extends RowData>({
   onZelleBearbeiten,
   gruppierung,
   sticky = true,
+  minBreite = 1040,
   zeilenHoehe = 40,
   leer,
   ladeMehr,
@@ -541,15 +546,25 @@ export function DataTable<T extends RowData>({
       <table
         aria-label={ariaLabel}
         aria-rowcount={zeilen.length}
-        className="w-full table-fixed border-collapse max-xl:min-w-[1040px]"
-        style={{ ['--zeile' as string]: `${hoehe}px` }}
+        className="w-full table-fixed border-collapse max-xl:min-w-[var(--min-breite)]"
+        style={{
+          ['--zeile' as string]: `${hoehe}px`,
+          ['--min-breite' as string]: minBreite === null ? '0px' : `${minBreite}px`,
+        }}
       >
         <colgroup>
           {mitAuswahl ? <col style={{ width: 28 }} /> : null}
           {sichtbareSpalten.map((c) => {
             const meta = spaltenMeta(c.columnDef)
             const breite = meta.breite
-            return <col key={c.id} style={breite && breite !== 'auto' ? { width: breite } : undefined} />
+            // <col> blendet mit th/td aus – sonst behielt die versteckte Spalte ihre Breite und alle rutschten nach links (Runde 2, 1024 px)
+            return (
+              <col
+                key={c.id}
+                className={cn(meta.ausblenden === 'lg' && 'max-lg:hidden', meta.ausblenden === 'xl' && 'max-xl:hidden')}
+                style={breite && breite !== 'auto' ? { width: breite } : undefined}
+              />
+            )
           })}
         </colgroup>
         <thead>
@@ -560,7 +575,7 @@ export function DataTable<T extends RowData>({
                   scope="col"
                   className={cn(
                     'bg-canvas border-line-strong h-8 border-b pb-2.5 pl-2 text-left align-bottom',
-                    sticky && 'sticky top-[var(--head-h)] z-[5]',
+                    sticky && 'xl:sticky xl:top-[var(--head-h)] xl:z-[5]',
                   )}
                 >
                   <input
@@ -580,6 +595,8 @@ export function DataTable<T extends RowData>({
                 const sortierbar = header.column.getCanSort()
                 const richtung = header.column.getIsSorted()
                 const inhalt = header.isPlaceholder ? null : <table.FlexRender header={header} />
+                const kopfText =
+                  typeof header.column.columnDef.header === 'string' ? header.column.columnDef.header : undefined
                 return (
                   <th
                     key={header.id}
@@ -587,7 +604,7 @@ export function DataTable<T extends RowData>({
                     aria-sort={richtung === 'asc' ? 'ascending' : richtung === 'desc' ? 'descending' : undefined}
                     className={cn(
                       'label bg-canvas border-line-strong h-8 border-b px-2.5 pb-2.5 text-left align-bottom leading-[1.2] font-semibold whitespace-normal',
-                      sticky && 'sticky top-[var(--head-h)] z-[5]',
+                      sticky && 'xl:sticky xl:top-[var(--head-h)] xl:z-[5]',
                       meta.rechts && 'text-right',
                       meta.ausblenden === 'lg' && 'max-lg:hidden',
                       meta.ausblenden === 'xl' && 'max-xl:hidden',
@@ -598,10 +615,11 @@ export function DataTable<T extends RowData>({
                       <button
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}
-                        className="label hover:text-ink inline-flex items-center gap-1 whitespace-nowrap"
-                        title="Sortieren · ⇧Klick: sekundär"
+                        // max-w-full + truncate: „Letzte Bewegung“ lief bei 1440 px unter die Nachbarspalte und war ohne „…“ abgeschnitten
+                        className="label hover:text-ink inline-flex max-w-full min-w-0 items-center gap-1 whitespace-nowrap"
+                        title={kopfText ? `${kopfText} – sortieren · ⇧Klick: sekundär` : 'Sortieren · ⇧Klick: sekundär'}
                       >
-                        {inhalt}
+                        <span className="min-w-0 truncate">{inhalt}</span>
                         {richtung ? (
                           <span className="text-ink font-mono tracking-normal" aria-hidden>
                             {richtung === 'asc' ? '↑' : '↓'}

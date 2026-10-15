@@ -11,6 +11,7 @@ import { istEmailTab, type EmailTab } from './links'
 import { TabEntwuerfe } from './TabEntwuerfe'
 import { TabFaellig } from './TabFaellig'
 import { TabGesendet } from './TabGesendet'
+import { anzeigeName } from '@/lib/mitglied'
 
 const HINWEIS_KEY = 'crm.email.hinweis'
 
@@ -48,13 +49,14 @@ export function Component() {
   }
 
   const faellig = zaehler?.email ?? 0
-  const postfach = me?.email_address ?? 'dein Gmail-Postfach'
+  // Ohne hinterlegte Adresse kein „(dein Gmail-Postfach)“ in Klammern – das doppelte den Satz (Sichtprüfung)
+  const postfach = me?.email_address?.trim() ? ` (${me.email_address.trim()})` : ''
 
   return (
     <>
       <SeitenKopf
         titel="E-Mail"
-        kontext={me?.short_name ?? undefined}
+        kontext={anzeigeName(me) || undefined}
         rechts={
           <KopfStats
             eintraege={[
@@ -67,7 +69,7 @@ export function Component() {
       />
       {hinweis ? (
         <HinweisKarte
-          text={`Versand läuft über dein Gmail-Postfach (${postfach}). Antworten kommen dort an.`}
+          text={`Versand läuft über dein Gmail-Postfach${postfach}. Antworten kommen dort an.`}
           onAusblenden={hinweisAus}
         />
       ) : null}

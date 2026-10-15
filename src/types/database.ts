@@ -426,6 +426,130 @@ export type Database = {
           },
         ]
       }
+      eingang: {
+        Row: {
+          absender_name: string | null
+          activity_id: number | null
+          art: string
+          created_at: string
+          empfangen_at: string
+          ergebnis: string | null
+          external_id: string
+          id: string
+          lead_id: string | null
+          linkedin_slug: string | null
+          member_id: string
+          quelle: string
+          roh: Json
+          status: string
+          text: string | null
+          verarbeitet_at: string | null
+        }
+        Insert: {
+          absender_name?: string | null
+          activity_id?: number | null
+          art?: string
+          created_at?: string
+          empfangen_at?: string
+          ergebnis?: string | null
+          external_id: string
+          id?: string
+          lead_id?: string | null
+          linkedin_slug?: string | null
+          member_id: string
+          quelle: string
+          roh?: Json
+          status?: string
+          text?: string | null
+          verarbeitet_at?: string | null
+        }
+        Update: {
+          absender_name?: string | null
+          activity_id?: number | null
+          art?: string
+          created_at?: string
+          empfangen_at?: string
+          ergebnis?: string | null
+          external_id?: string
+          id?: string
+          lead_id?: string | null
+          linkedin_slug?: string | null
+          member_id?: string
+          quelle?: string
+          roh?: Json
+          status?: string
+          text?: string | null
+          verarbeitet_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'eingang_activity_id_fkey'
+            columns: ['activity_id']
+            isOneToOne: false
+            referencedRelation: 'activities'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'eingang_lead_id_fkey'
+            columns: ['lead_id']
+            isOneToOne: false
+            referencedRelation: 'leads'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'eingang_lead_id_fkey'
+            columns: ['lead_id']
+            isOneToOne: false
+            referencedRelation: 'v_leads_ohne_bewegung'
+            referencedColumns: ['lead_id']
+          },
+          {
+            foreignKeyName: 'eingang_member_id_fkey'
+            columns: ['member_id']
+            isOneToOne: false
+            referencedRelation: 'members'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      eingang_tokens: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          last_used_at: string | null
+          member_id: string
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          member_id: string
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          last_used_at?: string | null
+          member_id?: string
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'eingang_tokens_member_id_fkey'
+            columns: ['member_id']
+            isOneToOne: false
+            referencedRelation: 'members'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       emails: {
         Row: {
           body_html: string | null
@@ -673,6 +797,75 @@ export type Database = {
             referencedColumns: ['id']
           },
         ]
+      }
+      feedback: {
+        Row: {
+          antwort: string | null
+          antwort_at: string | null
+          app_version: string | null
+          art: string
+          beschreibung: string
+          created_at: string
+          id: string
+          konsole: Json
+          member_id: string | null
+          notiz: string | null
+          notiz_at: string | null
+          notiz_von: string | null
+          route: string | null
+          screenshot_path: string | null
+          status: string
+          titel: string | null
+          updated_at: string
+          url: string | null
+          user_agent: string | null
+          viewport: string | null
+        }
+        Insert: {
+          antwort?: string | null
+          antwort_at?: string | null
+          app_version?: string | null
+          art?: string
+          beschreibung: string
+          created_at?: string
+          id?: string
+          konsole?: Json
+          member_id?: string | null
+          notiz?: string | null
+          notiz_at?: string | null
+          notiz_von?: string | null
+          route?: string | null
+          screenshot_path?: string | null
+          status?: string
+          titel?: string | null
+          updated_at?: string
+          url?: string | null
+          user_agent?: string | null
+          viewport?: string | null
+        }
+        Update: {
+          antwort?: string | null
+          antwort_at?: string | null
+          app_version?: string | null
+          art?: string
+          beschreibung?: string
+          created_at?: string
+          id?: string
+          konsole?: Json
+          member_id?: string | null
+          notiz?: string | null
+          notiz_at?: string | null
+          notiz_von?: string | null
+          route?: string | null
+          screenshot_path?: string | null
+          status?: string
+          titel?: string | null
+          updated_at?: string
+          url?: string | null
+          user_agent?: string | null
+          viewport?: string | null
+        }
+        Relationships: []
       }
       import_batches: {
         Row: {
@@ -2090,6 +2283,98 @@ export type Database = {
         }
       }
       due_on: { Args: { p: string }; Returns: string }
+      eingang_aufraeumen: { Args: never; Returns: number }
+      eingang_eigene_antwort: {
+        Args: { p_bis?: string; p_lead_id: string; p_von: string }
+        Returns: boolean
+      }
+      eingang_ignorieren: {
+        Args: { p_id: string }
+        Returns: {
+          absender_name: string | null
+          activity_id: number | null
+          art: string
+          created_at: string
+          empfangen_at: string
+          ergebnis: string | null
+          external_id: string
+          id: string
+          lead_id: string | null
+          linkedin_slug: string | null
+          member_id: string
+          quelle: string
+          roh: Json
+          status: string
+          text: string | null
+          verarbeitet_at: string | null
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'eingang'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      eingang_textgleich: {
+        Args: { p_a: string; p_b: string }
+        Returns: boolean
+      }
+      eingang_token_erzeugen: { Args: { p_label?: string }; Returns: string }
+      eingang_token_widerrufen: { Args: never; Returns: number }
+      eingang_verarbeiten: {
+        Args: { p_id: string }
+        Returns: {
+          absender_name: string | null
+          activity_id: number | null
+          art: string
+          created_at: string
+          empfangen_at: string
+          ergebnis: string | null
+          external_id: string
+          id: string
+          lead_id: string | null
+          linkedin_slug: string | null
+          member_id: string
+          quelle: string
+          roh: Json
+          status: string
+          text: string | null
+          verarbeitet_at: string | null
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'eingang'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      eingang_zuordnen: {
+        Args: { p_id: string; p_lead_id: string }
+        Returns: {
+          absender_name: string | null
+          activity_id: number | null
+          art: string
+          created_at: string
+          empfangen_at: string
+          ergebnis: string | null
+          external_id: string
+          id: string
+          lead_id: string | null
+          linkedin_slug: string | null
+          member_id: string
+          quelle: string
+          roh: Json
+          status: string
+          text: string | null
+          verarbeitet_at: string | null
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'eingang'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       enroll: {
         Args: {
           p_first_due?: string
@@ -2419,6 +2704,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_reply_label: {
+        Args: {
+          p_activity_id: number
+          p_label: Database['crm']['Enums']['reply_label']
+          p_note?: string
+        }
+        Returns: number
       }
       set_stage: {
         Args: {

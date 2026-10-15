@@ -21,6 +21,7 @@ import {
   type AktionProps,
 } from './_gemeinsam'
 import { AktionButton, ScopeFormular, TriggerHuelle } from './_Teile'
+import { anzeigeName } from '@/lib/mitglied'
 
 export function Uebergeben({
   leadId,
@@ -42,7 +43,7 @@ export function Uebergeben({
   const { anbieten } = useUndo()
   const inval = useLeadInvalidierung()
 
-  const name = andere?.short_name ?? andere?.display_name ?? 'die andere Person'
+  const name = anzeigeName(andere, 'die andere Person')
   const note = getrimmt(notiz)
 
   const schliessen = (o: boolean) => {

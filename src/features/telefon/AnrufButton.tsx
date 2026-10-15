@@ -12,7 +12,7 @@ import { toastFehler } from '@/components/toast'
 import { Button } from '@/components/ui/Button'
 import { sperrlistenEintraege, telefonGate, type TelefonGate } from '@/lib/gates'
 import { eventNachBinding, istEingabe } from '@/lib/keyboard'
-import { GATE_GRUND_LABEL } from '@/texte/de'
+import { GATE_GRUND_LABEL, telefonGrundLabel } from '@/texte/de'
 import { istAktiverAnrufButton } from './anrufButtonAktiv'
 
 export function AnrufButton({ leadId, groesse = 'M' }: { leadId: string; groesse?: 'S' | 'M' | 'L' }) {
@@ -23,7 +23,7 @@ export function AnrufButton({ leadId, groesse = 'M' }: { leadId: string; groesse
 
   const treffer = sperrlistenEintraege(sperrliste, lead ?? { id: leadId })
   const gate: TelefonGate = lead ? telefonGate(lead, treffer) : { erlaubt: false }
-  const grund = lead ? (gate.grund ? GATE_GRUND_LABEL[gate.grund] : undefined) : 'Lädt …'
+  const grund = lead ? (gate.grund ? telefonGrundLabel(gate.grund) : undefined) : 'Lädt …'
 
   const anrufen = () => {
     if (gate.erlaubt) navigate(PFADE.anruf(leadId))

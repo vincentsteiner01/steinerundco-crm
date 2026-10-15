@@ -1,0 +1,758 @@
+/* Steiner & Co. CRM – Erweiterung. Design-System „Editorial Terminal“ (tokens.css des CRM, ohne Tailwind):
+   dunkle Tinte, Papier-Text, Lime = heute/Primär/Fokus, Amber = überfällig/offener Platzhalter, Sage = gerade erledigt,
+   Rot = Sperre/Fehler. Newsreader kursiv nur für Namen, Geist Mono für jede Zahl. */
+
+@font-face {
+  font-family: 'Geist';
+  src: url('/fonts/geist-latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geist Mono';
+  src: url('/fonts/geist-mono-latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Newsreader';
+  src: url('/fonts/newsreader-italic-latin.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: dark;
+  --canvas: #07080d;
+  --surface: #0a0b11;
+  --surface-raised: #0f1119;
+  --surface-hover: #161924;
+  --surface-pressed: #1e2230;
+  --ink: #f1f0ea;
+  --ink-bright: #fbfaf6;
+  --ink-2: rgb(241 240 234 / 0.68);
+  --ink-3: rgb(241 240 234 / 0.5);
+  --ink-4: rgb(241 240 234 / 0.4);
+  --deco: rgb(241 240 234 / 0.32);
+  --line: rgb(241 240 234 / 0.1);
+  --line-strong: rgb(241 240 234 / 0.2);
+  --signal: #caff68;
+  --signal-hover: #d8ff8f;
+  --signal-ink: #07080d;
+  --signal-tint: rgb(202 255 104 / 0.14);
+  --overdue: #ffb269;
+  --overdue-tint: rgb(255 178 105 / 0.14);
+  --done: #86c79f;
+  --done-tint: rgb(134 199 159 / 0.14);
+  --danger: #ff5b52;
+  --danger-tint: rgb(255 91 82 / 0.12);
+  --sans: 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-1: 160ms;
+  --t-2: 200ms;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13.5px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+body.popup {
+  width: 340px;
+}
+body.leiste {
+  min-width: 300px;
+}
+body.optionen {
+  min-height: 100vh;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ── Typografie ─────────────────────────────────────────────── */
+.label {
+  font-size: 11px;
+  line-height: 1.3;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.name {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  color: var(--ink-bright);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.voice {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  line-height: 1.4;
+  color: var(--ink-2);
+  margin: 0;
+}
+.marke {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink-bright);
+  white-space: nowrap;
+}
+.klein {
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.mono,
+.tnum {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.mono-s {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.ink-2 {
+  color: var(--ink-2);
+}
+.ink-3 {
+  color: var(--ink-3);
+}
+.amber {
+  color: var(--overdue);
+}
+.lime {
+  color: var(--signal);
+}
+.rot {
+  color: var(--danger);
+}
+.zeilen-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Rahmen der Seiten ──────────────────────────────────────── */
+.kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.kopf .links {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.abschnitt {
+  padding: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.abschnitt:last-child {
+  border-bottom: 0;
+}
+.abschnitt-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.stapel {
+  display: grid;
+  gap: 6px;
+}
+.reihe {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.reihe.zwischen {
+  justify-content: space-between;
+}
+.fuss {
+  padding: 12px 16px 16px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
+/* ── Knöpfe ─────────────────────────────────────────────────── */
+.knopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--t-1) var(--ease),
+    border-color var(--t-1) var(--ease),
+    color var(--t-1) var(--ease);
+  text-decoration: none;
+}
+.knopf:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+.knopf:active:not(:disabled) {
+  transform: translateY(0.5px);
+}
+.knopf:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.knopf.primaer {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--signal-ink);
+  font-weight: 600;
+}
+.knopf.primaer:hover:not(:disabled) {
+  background: var(--signal-hover);
+}
+.knopf.leise {
+  border-color: transparent;
+  color: var(--ink-2);
+}
+.knopf.leise:hover:not(:disabled) {
+  color: var(--ink);
+}
+.knopf.klein {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12.5px;
+}
+.knopf.gross {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+.knopf.voll {
+  width: 100%;
+}
+.knopf.kopiert {
+  background: var(--done-tint);
+  border-color: transparent;
+  color: var(--done);
+}
+.knopf-reihe {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.knopf-reihe .knopf.wachsen {
+  flex: 1 1 auto;
+}
+
+kbd,
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  background: transparent;
+}
+.knopf kbd {
+  color: inherit;
+  opacity: 0.6;
+  border-color: currentColor;
+}
+.knopf.primaer kbd {
+  border-color: rgb(7 8 13 / 0.35);
+}
+
+/* ── Chips ──────────────────────────────────────────────────── */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 3px;
+  border: 1px solid var(--line-strong);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--ink);
+  background: transparent;
+}
+.chip.muted {
+  color: var(--ink-2);
+}
+.chip.ended {
+  border-color: var(--line);
+  color: var(--ink-3);
+}
+.chip.won {
+  background: var(--ink);
+  color: var(--canvas);
+  border-color: var(--ink);
+}
+.chip.heute {
+  background: var(--signal-tint);
+  border-color: transparent;
+  color: var(--signal);
+  font-family: var(--mono);
+}
+.chip.ueberfaellig {
+  background: var(--overdue-tint);
+  border-color: transparent;
+  color: var(--overdue);
+  font-family: var(--mono);
+}
+.chip.spaeter {
+  color: var(--ink-3);
+  font-family: var(--mono);
+}
+.chip.gefahr {
+  color: var(--danger);
+  border-color: rgb(255 91 82 / 0.4);
+}
+.chip.auswahl {
+  cursor: pointer;
+  height: 28px;
+  padding: 0 10px;
+}
+.chip.auswahl[aria-pressed='true'] {
+  background: var(--surface-hover);
+  border-color: var(--ink);
+}
+.chip.auswahl:hover {
+  background: var(--surface-hover);
+}
+
+/* ── Avatar ─────────────────────────────────────────────────── */
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  overflow: hidden;
+  flex: none;
+  background: var(--surface-pressed);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+.avatar.mike {
+  background: var(--ink-bright);
+  color: var(--canvas);
+}
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.avatar.frei {
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+}
+
+/* ── Felder ─────────────────────────────────────────────────── */
+.feld {
+  display: grid;
+  gap: 4px;
+}
+.feld > span:first-child {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.eingabe,
+.textfeld {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-hover);
+  color: var(--ink);
+  outline: none;
+}
+.eingabe::placeholder,
+.textfeld::placeholder {
+  color: var(--ink-4);
+}
+.eingabe:focus,
+.textfeld:focus {
+  border-color: var(--signal);
+}
+.textfeld {
+  height: auto;
+  min-height: 72px;
+  padding: 8px 10px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.eingabe.passcode {
+  height: 40px;
+  font-family: var(--mono);
+  font-size: 15px;
+  letter-spacing: 0.3em;
+}
+.raster-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.segment {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  overflow: hidden;
+  height: 32px;
+}
+.segment button {
+  border: 0;
+  border-right: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+  padding: 0 12px;
+  cursor: pointer;
+}
+.segment button:last-child {
+  border-right: 0;
+}
+.segment button[aria-pressed='true'] {
+  background: var(--surface-hover);
+  color: var(--ink);
+}
+.haken {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13.5px;
+}
+.haken input {
+  appearance: none;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  cursor: pointer;
+}
+.haken input:checked::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  background: var(--ink);
+}
+
+/* ── Nachrichten-Block ─────────────────────────────────────── */
+.nachricht {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-hover);
+  overflow: hidden;
+}
+.nachricht-kopf {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.nachricht-kopf button {
+  flex: none;
+  white-space: nowrap;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  cursor: pointer;
+  padding: 0;
+}
+.nachricht-kopf button:hover {
+  color: var(--ink);
+}
+.nachricht-text {
+  padding: 10px 12px 12px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.nachricht textarea {
+  display: block;
+  width: 100%;
+  min-height: 160px;
+  border: 0;
+  background: transparent;
+  padding: 10px 12px 12px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  resize: vertical;
+  outline: none;
+}
+mark.ph {
+  background: transparent;
+  color: inherit;
+  border-bottom: 1px dotted var(--line-strong);
+}
+mark.ph:hover {
+  border-bottom-color: var(--ink);
+}
+input.ph-offen {
+  display: inline-block;
+  min-width: 7ch;
+  max-width: 100%;
+  height: 22px;
+  margin: 0 1px;
+  padding: 0 4px;
+  border: 1px dashed var(--overdue);
+  border-radius: 3px;
+  background: var(--overdue-tint);
+  color: var(--overdue);
+  font-size: 13.5px;
+  vertical-align: baseline;
+  outline: none;
+}
+input.ph-offen:focus {
+  border-style: solid;
+}
+input.ph-offen::placeholder {
+  color: var(--overdue);
+  opacity: 0.8;
+}
+
+.zitat {
+  border-left: 1px solid var(--line-strong);
+  padding: 2px 0 2px 10px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  white-space: pre-wrap;
+}
+
+/* ── Zeilen (Verbindungen, Vorschläge) ─────────────────────── */
+.zeile {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  border-bottom: 1px solid var(--line);
+}
+.zeile:last-child {
+  border-bottom: 0;
+}
+.zeile .wachsen {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.vorschlag {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.vorschlag:last-child {
+  border-bottom: 0;
+}
+
+/* ── Hinweise ───────────────────────────────────────────────── */
+.hinweis {
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
+.hinweis.gefahr {
+  border-color: rgb(255 91 82 / 0.4);
+  color: var(--danger);
+}
+.fehler {
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
+/* ── Rückgängig-Leiste ─────────────────────────────────────── */
+.rueckgaengig {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0;
+  padding: 10px 12px 10px 14px;
+  background: var(--surface-raised);
+  border-top: 1px solid var(--line);
+  box-shadow: inset 2px 0 0 var(--done);
+  font-size: 13px;
+  animation: hoch var(--t-2) var(--ease);
+}
+.rueckgaengig .text {
+  min-width: 0;
+}
+.rueckgaengig .zeit {
+  color: var(--done);
+}
+/* nur Bewegung, keine Deckkraft: die Leiste ist sofort lesbar, auch wenn Animationen pausieren */
+@keyframes hoch {
+  from {
+    transform: translateY(6px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* ── Zahlen (Popup) ─────────────────────────────────────────── */
+.zahlen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.zahl {
+  padding: 12px 0;
+  display: grid;
+  gap: 2px;
+}
+.zahl + .zahl {
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+.zahl b {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--ink-bright);
+}
+.zahl b.lime {
+  color: var(--signal);
+}
+
+/* ── Login-Kacheln ──────────────────────────────────────────── */
+.kacheln {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.kachel {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--t-1) var(--ease),
+    background var(--t-1) var(--ease);
+}
+.kachel:hover {
+  background: var(--surface-raised);
+}
+.kachel[aria-pressed='true'] {
+  border-color: var(--ink);
+  background: var(--surface-raised);
+}
+.passcode-feld {
+  position: relative;
+}
+.passcode-feld button {
+  position: absolute;
+  right: 6px;
+  top: 6px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 12px;
+  cursor: pointer;
+}
+.laden {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-3);
+}

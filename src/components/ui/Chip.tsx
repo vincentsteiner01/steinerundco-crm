@@ -1,7 +1,7 @@
 import { ChevronDown, X } from 'lucide-react'
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode, Ref } from 'react'
 import type { LeadStage, Settings } from '@/types/domain'
-import { heuteBerlin, relativ } from '@/lib/format'
+import { fmtDatumKurz, heuteBerlin, relativ } from '@/lib/format'
 import { phaseVon } from '@/lib/stufen'
 import { berlinTag, tageDifferenz } from '@/lib/zeit'
 import { PHASE_LABEL, STUFEN_LABEL } from '@/texte/de'
@@ -33,7 +33,7 @@ export type ChipProps = {
   Pick<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'disabled'>
 
 const BASIS =
-  'inline-flex h-[22px] items-center gap-1.5 whitespace-nowrap rounded-xs border px-2 text-[12px] font-medium leading-none tnum'
+  'inline-flex h-[22px] max-w-full items-center gap-1.5 whitespace-nowrap rounded-xs border px-2 text-[12px] font-medium leading-none tnum'
 
 /** DESIGN-SYSTEM § 5.3: 22 px, 0 8, Radius xs, Text 12/500, Rahmen 1 px. Töne = Phase (neutral/muted/ended/won) oder Zeit (today/overdue/later/done). */
 export function Chip({
@@ -51,7 +51,7 @@ export function Chip({
   const inhalt = (
     <>
       {icon ? <span className="inline-flex [&_svg]:h-3 [&_svg]:w-3">{icon}</span> : null}
-      <span>{children}</span>
+      <span className="min-w-0 truncate leading-tight">{children}</span>
       {interaktiv ? <ChevronDown size={12} strokeWidth={1.75} aria-hidden className="text-ink-3" /> : null}
       {onRemove ? (
         <button
@@ -117,14 +117,16 @@ export function StatusChip({
   )
 }
 
-/** Zeit-Chip: heute (Lime) · −2 T (Amber) · in 3 T / Mi 14.10. (ink-3). */
+/** Zeit-Chip: heute (Lime) · −2 T / −12 T (Amber, immer Tage – ein Datum verschleierte, wie lange etwas liegt) ·
+ * in 3 T / Mi 14.10. (ink-3). `title` trägt immer das Datum. */
 export function ZeitChip({ datum, heute, className }: { datum: string; heute?: string; className?: string }) {
   const h = heute ?? heuteBerlin()
   const diff = tageDifferenz(berlinTag(h), berlinTag(datum))
   const zustand: ChipTon = diff === 0 ? 'today' : diff < 0 ? 'overdue' : 'later'
+  const text = diff < -1 ? `\u2212${Math.abs(diff)}\u00a0T` : relativ(datum, h)
   return (
-    <Chip ton={zustand} className={cn('font-mono', className)}>
-      {relativ(datum, h)}
+    <Chip ton={zustand} className={cn('font-mono', className)} title={fmtDatumKurz(datum)}>
+      {text}
     </Chip>
   )
 }

@@ -1,4 +1,4 @@
-// STUB (Feedback) – Melde-Knopf + Dialog (⌥F, Event „crm:feedback“), in AppShell eingehängt. Wird vom Feedback-Agenten ersetzt.
-export function FeedbackKnopf(): null {
-  return null
-}
+// Vertrag (AppShell lädt nach): Feedback-Knopf + Dialog (⌥F, Fenster-Ereignis „crm:feedback“) und der Realtime-Kanal der
+// Feedback-Tabelle mit „Claude hat geantwortet“-Toasts.
+export { FeedbackKnopf } from './FeedbackKnopf'
+export { FEEDBACK_EVENT } from './texte'

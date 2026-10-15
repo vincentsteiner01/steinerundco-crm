@@ -100,7 +100,7 @@ function HinzufuegenDialog({
           <FormField label="LinkedIn-URL" htmlFor={`${id}-url`} fehler={fehler.url}>
             <Input id={`${id}-url`} value={e.url} onChange={(ev) => setE((x) => ({ ...x, url: ev.target.value }))} />
           </FormField>
-          <div className="grid gap-3.5 sm:grid-cols-2">
+          <div className="grid items-start gap-3.5 sm:grid-cols-2">
             <FormField label="E-Mail" htmlFor={`${id}-mail`} fehler={fehler.email}>
               <Input
                 id={`${id}-mail`}
@@ -119,7 +119,7 @@ function HinzufuegenDialog({
               />
             </FormField>
           </div>
-          <div className="grid gap-3.5 sm:grid-cols-2">
+          <div className="grid items-start gap-3.5 sm:grid-cols-2">
             <FormField label="Name" htmlFor={`${id}-name`}>
               <Input
                 id={`${id}-name`}
@@ -259,7 +259,7 @@ export function Sperrliste() {
     return h.columns([
       h.accessor('name', {
         header: 'Name',
-        meta: { oeffnet: true, breite: '20%' },
+        meta: { oeffnet: true, breite: '15%' },
         cell: (c) => (
           <span className="grid">
             <span className="text-ink font-medium">{c.getValue() ?? '–'}</span>
@@ -271,16 +271,16 @@ export function Sperrliste() {
           </span>
         ),
       }),
-      h.accessor('company', { header: 'Unternehmen', meta: { breite: '16%' }, cell: (c) => c.getValue() ?? '–' }),
+      h.accessor('company', { header: 'Unternehmen', meta: { breite: '13%' }, cell: (c) => c.getValue() ?? '–' }),
       h.accessor('channels', {
         header: 'Kanal-Umfang',
-        meta: { breite: '14%' },
+        meta: { breite: '16%' },
         enableSorting: false,
         cell: (c) => kanalUmfang(c.getValue()),
       }),
       h.accessor('reason', {
         header: 'Grund',
-        meta: { breite: '18%' },
+        meta: { breite: '15%' },
         cell: (c) => {
           const text = sperrGrundText(c.getValue(), c.row.original.note)
           return (
@@ -292,13 +292,13 @@ export function Sperrliste() {
       }),
       h.accessor('created_at', {
         header: 'Datum',
-        meta: { mono: true, rechts: true, breite: '10%' },
+        meta: { mono: true, rechts: true, breite: '9%' },
         cell: (c) => fmtDatum(c.getValue()),
       }),
-      h.accessor('created_by', { header: 'Erfasst von', meta: { breite: '10%' }, cell: (c) => name(c.getValue()) }),
+      h.accessor('created_by', { header: 'Erfasst von', meta: { breite: '12%' }, cell: (c) => name(c.getValue()) }),
       h.accessor('lead_id', {
         header: 'Quelle',
-        meta: { breite: '8%' },
+        meta: { breite: '7.5%' },
         enableSorting: false,
         cell: (c) => (c.getValue() ? 'Lead' : 'manuell'),
       }),

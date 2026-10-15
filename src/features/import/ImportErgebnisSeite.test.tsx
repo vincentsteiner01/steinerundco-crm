@@ -130,6 +130,10 @@ describe('ImportErgebnisSeite', () => {
     rendern()
     await screen.findByRole('list', { name: 'Hinweise' })
     expect(screen.getByText('Unternehmen fehlt')).toBeInTheDocument()
+    // Runde 2: Überschrift mit Anzahl; Dateline mit Preset-Label statt „sheet_crm“
+    expect(screen.getByRole('heading', { name: /Hinweise\s*1/ })).toBeInTheDocument()
+    expect(screen.queryByText(/sheet_crm/)).toBeNull()
+    expect(screen.getByText(/CRM-Tabelle/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Rückgängig' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Zu den Leads/ })).not.toBeInTheDocument()
     expect(screen.getByText(/idempotent/)).toBeInTheDocument()

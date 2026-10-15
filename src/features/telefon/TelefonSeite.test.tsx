@@ -102,6 +102,18 @@ describe('TelefonSeite', () => {
     expect(screen.getByRole('button', { name: /Alle mit LinkedIn-Antwort/ })).toHaveTextContent('(1)')
   })
 
+  it('verpasster Rückruf zeigt „verpasst · hh:mm“ ohne Sekunden; Zeilen tragen Name · Unternehmen als title (Ellipse)', async () => {
+    stand.tasks = [{ ...TASK_RUECKRUF, due_at: new Date(Date.now() - (2 * 3600 + 5 * 60 + 30) * 1000).toISOString() }]
+    rendern(<TelefonSeite />, '/telefon', '/telefon')
+    await waitFor(() => expect(screen.getByRole('listbox', { name: 'Rückrufe' })).toBeInTheDocument())
+    const rueckruf = within(screen.getByRole('listbox', { name: 'Rückrufe' })).getAllByRole('option')[0] as HTMLElement
+    expect(rueckruf).toHaveTextContent(/verpasst · 02:0[56]/)
+    expect(rueckruf.textContent).not.toMatch(/verpasst · \d+:\d\d:\d\d/)
+    expect(rueckruf.querySelector('[title*="Lukas Feldhaus · Lichtwerk Solar GmbH"]')).not.toBeNull()
+    const zeile = within(screen.getByRole('listbox', { name: 'Anrufliste' })).getAllByRole('option')[0] as HTMLElement
+    expect(zeile.querySelector('[title^="Timo Kranich · Nordwind Energie GmbH"]')).not.toBeNull()
+  })
+
   it('J/K bewegen den Cursor, Enter öffnet den Anruf-Screen des Cursor-Leads mit Task-Parameter', async () => {
     const { router } = rendern(<TelefonSeite />, '/telefon', '/telefon')
     await waitFor(() => expect(screen.getByRole('listbox', { name: 'Anrufliste' })).toBeInTheDocument())
@@ -152,13 +164,14 @@ describe('TelefonSeite', () => {
     await waitFor(() => expect(screen.getByRole('listbox', { name: 'Anrufliste' })).toBeInTheDocument())
   })
 
-  it('Leerzustand: „Niemand anzurufen.“ mit Hinweis auf wartende Leads und Aktion „Anrufgrund setzen“', async () => {
+  it('Leerzustand: „Niemand anzurufen.“ zählt nach Grund (ohne Nummer · ohne Anrufgrund), Knopf nach dem häufigsten Grund', async () => {
     stand.leads = [LEAD_OHNE_GRUND, LEAD_OHNE_NUMMER]
     stand.tasks = []
     stand.enrollments = []
     rendern(<TelefonSeite />, '/telefon', '/telefon')
     await waitFor(() => expect(screen.getByText('Niemand anzurufen.')).toBeInTheDocument())
-    expect(screen.getByText('2 Leads warten auf einen Anrufgrund.')).toBeInTheDocument()
+    // Runde 2: echte Daten hatten 119 „Keine Nummer“ + 2 „Firma gesperrt“ – „121 warten auf einen Anrufgrund“ war falsch
+    expect(screen.getByText('Noch nicht anrufbar: 1 ohne Telefonnummer · 1 ohne Anrufgrund.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Anrufgrund setzen' }))
     expect(screen.getByRole('button', { name: /Noch nicht anrufbar/ })).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('button', { name: /Call-Block starten/ })).toBeDisabled()

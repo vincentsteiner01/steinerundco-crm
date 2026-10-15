@@ -13,6 +13,7 @@ import type { Member } from '@/types/domain'
 import { kurzDatum, pruefeNull } from './_helfer'
 import { qk } from './queryKeys'
 import { supabase } from './supabase'
+import { anzeigeName } from '@/lib/mitglied'
 
 export const REALTIME_KANAL = 'crm:sync'
 
@@ -146,7 +147,7 @@ export async function realtimeToast(qc: QueryClient, e: RealtimeEreignis, me: st
     if (nachher === me && vorher !== me && leadId && toastErlaubt()) {
       const von = mitgliedAusCache(qc, vorher)
       const name = str(e.neu, 'full_name') ?? (await leadName(leadId))
-      toastRealtime(TOAST.uebergeben(von?.short_name ?? von?.display_name ?? 'Jemand', name), von, leadId)
+      toastRealtime(TOAST.uebergeben(anzeigeName(von, 'Jemand'), name), von, leadId)
     }
     return
   }
@@ -158,7 +159,7 @@ export async function realtimeToast(qc: QueryClient, e: RealtimeEreignis, me: st
       const m = mitgliedAusCache(qc, wer)
       const name = await leadName(leadId)
       toastRealtime(
-        TOAST.terminAnderePerson(m?.short_name ?? m?.display_name ?? 'Jemand', name, kurzDatum(wann)),
+        TOAST.terminAnderePerson(anzeigeName(m, 'Jemand'), name, kurzDatum(wann)),
         m,
         leadId,
       )

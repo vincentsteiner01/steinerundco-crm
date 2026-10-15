@@ -13,6 +13,8 @@ export type KanalzeileProps = {
   telefon: boolean
   onListeEinfuegen: () => void
   onCallBlock: () => void
+  /** Der Tageszähler steht ab 1180 px rechts in der Rail (reference.html): dann den LinkedIn-Block nicht doppelt zeigen (Runde 2). */
+  zaehlerImRail?: boolean
   className?: string
 }
 
@@ -25,13 +27,27 @@ function Zahl({ wert, label, warn }: { wert: string; label: string; warn?: boole
   )
 }
 
-export function Kanalzeile({ daten, linkedin, telefon, onListeEinfuegen, onCallBlock, className }: KanalzeileProps) {
+export function Kanalzeile({
+  daten,
+  linkedin,
+  telefon,
+  onListeEinfuegen,
+  onCallBlock,
+  zaehlerImRail,
+  className,
+}: KanalzeileProps) {
   if (!linkedin && !telefon) return null
   const b = daten.budget
   return (
-    <div className={cn('mb-4 grid gap-2.5', className)} data-kanalzeile>
+    <div className={cn('mb-4 grid gap-2.5', zaehlerImRail && !telefon && 'wide:hidden', className)} data-kanalzeile>
       {linkedin ? (
-        <div className="border-line text-small flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border px-3.5 py-2.5">
+        <div
+          data-kanal-linkedin
+          className={cn(
+            'border-line text-small flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md border px-3.5 py-2.5',
+            zaehlerImRail && 'wide:hidden',
+          )}
+        >
           <Glyph kanal="linkedin" aktiv />
           <Zahl label="Anfragen heute" wert={fmtVerhaeltnis(daten.wert, b.tagesziel)} />
           <Zahl label="Woche" wert={fmtVerhaeltnis(daten.woche, b.wochenbudget)} warn={b.warnung} />

@@ -1,5 +1,6 @@
 // Reine Helfer des Moduls M6: Schlüssel-Vergabe (BAUPLAN § 3.7 „DB“), Statistik aus Aktivitäten (LF-06), Suche, Baum-Gruppen.
 import type { ActivityZeitraum } from '@/data/activities'
+import { fmtProzent, fmtZahl } from '@/lib/format'
 import { berlinTag, tagPlus, tageDifferenz } from '@/lib/zeit'
 import type { Channel, Template, TemplatePerformance, TemplatePhase } from '@/types/domain'
 import { KANAELE, KEY_PRAEFIX, phaseRang, phasenFuer, type PhaseDef } from './phasen'
@@ -169,6 +170,11 @@ export function nutzung(perf: TemplatePerformance | undefined): { gesendet: numb
   return { gesendet: perf.gesendet, quote: perf.antwort_quote ?? null }
 }
 
+/** Klartext der Nutzung für title/aria-label: „148 gesendet · 5 % Antwort“ (Runde 2: Werte standen unbeschriftet im Baum). */
+export function nutzungText(n: { gesendet: number; quote: number | null }): string {
+  return `${fmtZahl(n.gesendet)} gesendet · ${n.quote === null ? 'Antwortquote –' : `${fmtProzent(n.quote)} Antwort`}`
+}
+
 /** Standard-Verwendung in Sequenzschritten: „Standard für Schritt 2“ (Sequenzname · Position). */
 export function schrittVerwendungen(
   templateId: string,
@@ -185,4 +191,20 @@ export function schrittVerwendungen(
       if (st.template_id === templateId)
         out.push({ sequenceId: s.id, sequenzName: s.name, position: st.position, stepId: st.id })
   return out
+}
+
+/**
+ * Ein Chip statt vieler: Positionen dedupliziert und sortiert („Standard für Schritt 2“ bzw. „… Schritt 1, 3, 5“),
+ * der Titel nennt jede Sequenz. Echte Daten: „Kurzfristig 1“ ist Schritt 2 in drei Sequenzen und Schritt 1 in einer.
+ */
+export function standardChip(
+  verwendungen: readonly { sequenzName: string; position: number }[],
+): { text: string; titel: string } | null {
+  if (!verwendungen.length) return null
+  const positionen = [...new Set(verwendungen.map((v) => v.position))].sort((a, b) => a - b)
+  const titel = [...verwendungen]
+    .sort((a, b) => a.position - b.position || a.sequenzName.localeCompare(b.sequenzName, 'de'))
+    .map((v) => `${v.sequenzName} · Schritt ${v.position}`)
+    .join('\n')
+  return { text: `Standard für Schritt ${positionen.join(', ')}`, titel }
 }

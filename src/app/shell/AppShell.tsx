@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
+import { peekLeadId } from '@/app/peekParam'
 import { PFADE } from '@/app/pfade'
 import { useUiStore } from '@/app/uiStore'
 import { cn } from '@/components/ui/cn'
@@ -11,6 +12,7 @@ import { OfflineBanner } from './OfflineBanner'
 import { PeekOutlet } from './PeekOutlet'
 import { Sidebar } from './Sidebar'
 import { TabLeiste } from './TabLeiste'
+import { useSeitenwechselScroll } from './useSeitenwechselScroll'
 
 // Palette (cmdk) und Tastenliste erst beim ersten Öffnen laden – hält das initiale Bundle unter E22.
 const CommandPalette = lazy(() => import('./CommandPalette').then((m) => ({ default: m.CommandPalette })))
@@ -27,14 +29,15 @@ const OnboardingTour = lazy(() => import('@/features/hilfe/public').then((m) => 
  */
 export function AppShell() {
   const [params] = useSearchParams()
-  const peekOffen = !!params.get('lead')
   const location = useLocation()
+  const peekOffen = !!peekLeadId(location.pathname, params)
   const navigate = useNavigate()
   const abmelden = useAuth((s) => s.abmelden)
   const setPaletteOffen = useUiStore((s) => s.setPaletteOffen)
   const paletteOffen = useUiStore((s) => s.paletteOffen)
   const hilfeOffen = useUiStore((s) => s.hilfeOffen)
   const telefon = useIstTelefon()
+  useSeitenwechselScroll()
 
   useEffect(() => {
     const h = () => void abmelden(false).then(() => navigate(PFADE.anmelden, { replace: true }))
@@ -77,7 +80,8 @@ export function AppShell() {
         <main
           id="main"
           tabIndex={-1}
-          className="px-gutter min-w-0 pb-16 outline-none max-md:pb-[calc(var(--spacing-tabbar)+24px+env(safe-area-inset-bottom))]"
+          // Unten Luft für Tab-Leiste und schwebenden Feedback-Knopf (Telefon 40 px über der Leiste) – das Seitenende liegt nie darunter
+          className="px-gutter min-w-0 pb-12 outline-none max-md:pb-[calc(var(--spacing-tabbar)+24px+env(safe-area-inset-bottom))]"
         >
           <div key={location.pathname} className="max-w-content animate-screen-in">
             <Outlet />

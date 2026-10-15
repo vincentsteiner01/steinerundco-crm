@@ -42,7 +42,7 @@ export function Dialog({
           ) : (
             <RD.Description className="sr-only">{titel}</RD.Description>
           )}
-          {kinder ? <div className="mt-4 grid gap-3.5">{kinder}</div> : null}
+          {kinder ? <div className="mt-4 grid min-w-0 grid-cols-1 gap-3.5">{kinder}</div> : null}
           <div className="mt-6 flex justify-end gap-1.5">
             <RD.Close asChild>
               <Button variante="quiet">{abbrechen}</Button>

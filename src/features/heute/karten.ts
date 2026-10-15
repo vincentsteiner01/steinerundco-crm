@@ -17,6 +17,14 @@ export function kartenLabel(item: Pick<QueueItem, 'title' | 'subtitle'>): string
   return [item.title, item.subtitle].filter((s): s is string => !!s && s.trim().length > 0).join(' · ')
 }
 
+/** Label ohne „seit n T“-Teil (eingebettete Karte im Peek: die Dauer steht im Zeit-Chip daneben). */
+export function ohneSeit(label: string): string {
+  return label
+    .split(' · ')
+    .filter((t) => !/^seit\s/i.test(t.trim()))
+    .join(' · ')
+}
+
 /** Text „Kurzfristig 2 vorbereitet“ / „Rückruf vorbereitet“ / „Ja (V1) vorgeschlagen“ der kollabierten Karte. */
 export function vorbereitetText(item: Pick<QueueItem, 'item_kind' | 'title'>, vorlageName?: string | null): string {
   if (item.item_kind === 'antworten') return vorlageName ? `${vorlageName} vorgeschlagen` : 'Antwort offen'

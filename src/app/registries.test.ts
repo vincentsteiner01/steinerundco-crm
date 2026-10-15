@@ -61,3 +61,35 @@ describe('Tasten-Registry', () => {
     }
   })
 })
+
+describe('Runde 2: Team ist registriert', () => {
+  it('Palette kennt die Team-Befehle, die ?-Liste die Gruppe „Team“', () => {
+    expect(BEFEHLE.map((b) => b.id)).toEqual(expect.arrayContaining(['team-woche', 'team-heute', 'team-monat']))
+    expect(TASTEN.map((g) => g.gruppe)).toContain('Team')
+  })
+})
+
+describe('Runde 2: Hilfe und Feedback sind registriert', () => {
+  it('Palette kennt Tour, Handbuch und Feedback; Seiten Team · Hilfe · Feedback stehen in der Gruppe „seiten“', () => {
+    const ids = BEFEHLE.map((b) => b.id)
+    expect(ids).toEqual(expect.arrayContaining(['hilfe:tour', 'hilfe:handbuch', 'hilfe:grenzen', 'feedback-geben']))
+    expect(ids).toEqual(expect.arrayContaining(['seite:/team', 'seite:/hilfe', 'seite:/feedback']))
+    for (const id of ['seite:/team', 'seite:/hilfe', 'seite:/feedback'])
+      expect(BEFEHLE.find((b) => b.id === id)?.gruppe, id).toBe('seiten')
+  })
+  it('?-Liste: Gruppen „Hilfe & Tour“ und „Feedback“, globale Akkorde G A · G S · G B', () => {
+    expect(TASTEN.map((g) => g.gruppe)).toEqual(expect.arrayContaining(['Hilfe & Tour', 'Feedback']))
+    const global = TASTEN.find((g) => g.gruppe === 'Global')!.eintraege.flatMap((e) => e.tasten)
+    expect(global).toEqual(expect.arrayContaining(['G A', 'G S', 'G B']))
+  })
+})
+
+describe('Tastenliste: Gehe-zu-Akkorde (Runde 2)', () => {
+  it('eine Zeile je Ziel mit genau einem Akkord – nicht zehn Einzeltasten in einer Zeile', async () => {
+    const { GLOBALE_TASTEN } = await import('./tasten')
+    const gehe = GLOBALE_TASTEN.flatMap((g) => g.eintraege).filter((e) => e.beschreibung.startsWith('Gehe zu '))
+    expect(gehe.length).toBe(12)
+    for (const e of gehe) expect(e.tasten).toHaveLength(1)
+    expect(gehe.find((e) => e.beschreibung === 'Gehe zu Pipeline')?.tasten).toEqual(['G P'])
+  })
+})

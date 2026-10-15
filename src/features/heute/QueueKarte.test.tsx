@@ -36,6 +36,7 @@ import {
 } from './_testHilfe'
 import { ErledigtZeile } from './ErledigtZeile'
 import { kartenZustand, useKartenStore } from './kartenStore'
+import { NachrichtBlock } from './NachrichtBlock'
 import { HeuteKontext } from './kontext'
 import { QueueKarte } from './QueueKarte'
 import { useQueueAktionen, type AktionenKontext } from './useQueueAktionen'
@@ -98,7 +99,11 @@ describe('QueueKarte', () => {
   it('kollabiert: nur Kopfzeile, Name und „Kurzfristig 2 vorbereitet“ – keine Aktionen', () => {
     const item = zeile('heute', 1, { title: 'Kurzfristig 2', subtitle: 'Tag 7 nach KF 1' })
     mitKontext(<QueueKarte item={item} aktiv={false} onAktion={vi.fn()} />)
-    expect(screen.getByText('Kurzfristig 2 · Tag 7 nach KF 1')).toBeInTheDocument()
+    // gekürzt am iPhone → voller Text im title (Integration Runde 2)
+    expect(screen.getByText('Kurzfristig 2 · Tag 7 nach KF 1')).toHaveAttribute(
+      'title',
+      'Kurzfristig 2 · Tag 7 nach KF 1',
+    )
     expect(screen.getByText('Max Muster1')).toBeInTheDocument()
     expect(screen.getByText('Kurzfristig 2 vorbereitet')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Kopieren/ })).not.toBeInTheDocument()
@@ -240,6 +245,9 @@ describe('QueueKarte', () => {
     const onAktion = vi.fn()
     mitKontext(<QueueKarte item={item} aktiv kontext="peek" onAktion={onAktion} />)
     await screen.findByText('Muster3')
+    // Runde 2: eingebettet – keine Namenszeile (steht im Panelkopf), kein eigener Rahmen (keine Box in der Box)
+    expect(document.querySelector('[data-eingebettet]')).toBeTruthy()
+    expect(document.querySelector('.lead-name')).toBeNull()
     await waitFor(() => expect(screen.getByRole('button', { name: /Kopieren/ })).toBeEnabled())
     taste('c')
     await waitFor(() =>
@@ -353,6 +361,34 @@ describe('QueueKarte – M0-Aktionen auf der Karte', () => {
     await screen.findByText(/Leitfaden · Kurzfristig 2/)
     taste('s')
     expect(await screen.findByText('Dreimal verschoben – beenden oder Wiedervorlage?')).toBeInTheDocument()
+  })
+
+  it('Runde 2: Telefon ohne Skript zeigt einen Hinweis statt eines leeren Kastens', async () => {
+    mitKontext(
+      <NachrichtBlock
+        itemKey="x"
+        vorlage={undefined}
+        lead={{}}
+        ctx={{}}
+        ergebnis={{ text: '', offen: [], gefuellt: {}, alle: [], bearbeitet: false }}
+        zustand={kartenZustand('x')}
+        kanal="telefon"
+        skript
+      />,
+    )
+    expect(await screen.findByText('Kein Skript hinterlegt – über „ändern“ wählen.')).toBeInTheDocument()
+    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+  })
+
+  it('Runde 2: Unterzeile zählt „1 Follow-up“ (Singular) und „2 Follow-ups“', async () => {
+    leadsSetzen(leadMitBezug(1))
+    const item = zeile('heute', 1, { template_id: T_KF2.id, follow_up_count: 1, enrollment_id: 'enr-1' })
+    const { unmount } = mitKontext(<QueueKarte item={item} aktiv onAktion={vi.fn()} />)
+    expect(await screen.findByText(/(^|· )1 Follow-up($| ·)/)).toBeInTheDocument()
+    expect(screen.queryByText(/1 Follow-ups/)).not.toBeInTheDocument()
+    unmount()
+    mitKontext(<QueueKarte item={{ ...item, follow_up_count: 2 }} aktiv onAktion={vi.fn()} />)
+    expect(await screen.findByText(/2 Follow-ups/)).toBeInTheDocument()
   })
 
   it('H-07: S öffnet „Später“ 1–5/D; H-09: A öffnet „Antwort erhalten“ mit Reaktions-Chips', async () => {

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect } from 'react'
-import { useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
+import { peekLeadId } from '@/app/peekParam'
 import { useUiStore } from '@/app/uiStore'
 
 // Container (PeekPanel) und Inhalt (M2: Kanal-Karten, Timeline, Aktionen, Sequenzen …) laden erst beim ersten `?lead=` und
@@ -26,7 +27,8 @@ const LeadPeek = lazy(async () => {
  */
 export function PeekOutlet() {
   const [params, setParams] = useSearchParams()
-  const leadId = params.get('lead')
+  const { pathname } = useLocation()
+  const leadId = peekLeadId(pathname, params)
 
   const oeffne = useCallback(
     (id: string) => {

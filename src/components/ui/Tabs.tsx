@@ -1,4 +1,4 @@
-import { useId, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { cn } from './cn'
 
 export type TabsProps<K extends string = string> = {
@@ -6,12 +6,29 @@ export type TabsProps<K extends string = string> = {
   wert: K
   onChange: (k: K) => void
   ariaLabel?: string
+  /** In mehrere Zeilen umbrechen statt quer scrollen – alle Tabs bleiben sichtbar (Runde 2: Skript im Anruf-Screen, 9 Tabs in 318 px) */
+  umbrechen?: boolean
   className?: string
 }
 
 /** Native Tabs (BAUPLAN § 1.5 Nr. 21): role=tablist, Buttons 32 px, aktiv Lime-Unterstrich 2 px; ←/→ wechseln. Router-Tabs: Aufrufer bindet `wert` an `?tab=`. */
-export function Tabs<K extends string>({ tabs, wert, onChange, ariaLabel, className }: TabsProps<K>) {
+export function Tabs<K extends string>({ tabs, wert, onChange, ariaLabel, umbrechen, className }: TabsProps<K>) {
   const id = useId()
+  const leiste = useRef<HTMLDivElement | null>(null)
+  // Rechter Fade, solange rechts noch Tabs verborgen sind – „Pitc…“ war sonst hart abgeschnitten (Runde 2, Anruf-Screen)
+  const [mehrRechts, setMehrRechts] = useState(false)
+  const pruefe = useCallback(() => {
+    const el = leiste.current
+    if (el) setMehrRechts(el.scrollLeft + el.clientWidth < el.scrollWidth - 1)
+  }, [])
+  useEffect(() => {
+    pruefe()
+    const el = leiste.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(pruefe)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [pruefe, tabs.length])
   const tasten = (e: KeyboardEvent<HTMLDivElement>) => {
     const i = tabs.findIndex((t) => t.key === wert)
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
@@ -28,8 +45,16 @@ export function Tabs<K extends string>({ tabs, wert, onChange, ariaLabel, classN
     <div
       role="tablist"
       aria-label={ariaLabel}
+      ref={leiste}
       onKeyDown={tasten}
-      className={cn('border-line flex [scrollbar-width:none] overflow-auto border-b', className)}
+      onScroll={pruefe}
+      data-mehr-rechts={mehrRechts || undefined}
+      className={cn(
+        'border-line flex border-b',
+        umbrechen ? 'flex-wrap' : '[scrollbar-width:none] overflow-auto',
+        !umbrechen && mehrRechts && '[mask-image:linear-gradient(to_right,black_85%,transparent)]',
+        className,
+      )}
     >
       {tabs.map((t) => {
         const aktiv = t.key === wert

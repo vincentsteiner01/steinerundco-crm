@@ -86,6 +86,8 @@ describe('Sequenzen', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^A$/ }))
     expect(router.state.location.search).toBe(`?id=${SEQUENZEN[0]!.id}`)
     expect(await screen.findByTestId('editor')).toHaveTextContent(SEQUENZEN[0]!.id)
+    // kein doppelter Titel über dem Editor (der Editor zeigt Name + Kanal selbst)
+    expect(document.querySelector('.text-h3')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /Alle Sequenzen/ }))
     expect(router.state.location.search).toBe('')
     expect(await screen.findByRole('table', { name: 'Sequenzen' })).toBeInTheDocument()

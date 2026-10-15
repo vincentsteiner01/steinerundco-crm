@@ -12,7 +12,7 @@ import { cn } from '@/components/ui/cn'
 import { Popover, PopoverEintrag } from '@/components/ui/Popover'
 import { useEmails } from '@/data/emails'
 import { heuteBerlin } from '@/lib/format'
-import { emailGate, nachfassZaehler, type SperrlistenTreffer, telefonGate } from '@/lib/gates'
+import { emailGate, hatSperrlistenTreffer, nachfassZaehler, type SperrlistenTreffer, telefonGate } from '@/lib/gates'
 import { kurzId } from '@/lib/ids'
 import { PHASEN, phaseVon } from '@/lib/stufen'
 import { linkedinHref } from '@/lib/url'
@@ -20,6 +20,7 @@ import { emailGateText, GATE_GRUND_LABEL } from '@/texte/de'
 import type { LeadMitBezug, Member, PhaseKey, Settings, Tag } from '@/types/domain'
 import { ohneBewegungTage } from '@/features/pipeline/logik'
 import { istFrei, schrittText } from './spalten'
+import { anzeigeName } from '@/lib/mitglied'
 
 export function KopfAktionen({
   lead,
@@ -148,7 +149,7 @@ export function KopfChips({
         trigger={
           <button
             type="button"
-            aria-label={`Zuständig: ${owner ? (owner.short_name ?? owner.display_name) : 'Frei'} – ändern`}
+            aria-label={`Zuständig: ${owner ? (anzeigeName(owner)) : 'Frei'} – ändern`}
             className="rounded-full"
           >
             <Avatar member={owner} zweiter={sales} />
@@ -167,7 +168,7 @@ export function KopfChips({
           </Chip>
         ))}
       {lead.released ? <Chip ton="muted">Freigegeben</Chip> : null}
-      {sperrliste ? <Chip ton="danger">Sperrliste</Chip> : null}
+      {hatSperrlistenTreffer(sperrliste) ? <Chip ton="danger">Sperrliste</Chip> : null}
       {lead.companies?.do_not_contact ? <Chip ton="danger">Firma gesperrt</Chip> : null}
       {lead.do_not_contact ? <Chip ton="danger">Widerspruch</Chip> : null}
       {ohne !== null ? <Chip ton="muted">{ohne} T ohne Bewegung</Chip> : null}

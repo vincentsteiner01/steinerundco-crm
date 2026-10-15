@@ -49,6 +49,7 @@ import {
   type Zeitraum,
   type ZeitraumArt,
 } from './zeitraum'
+import { anzeigeName } from '@/lib/mitglied'
 
 type Person = { slug: string; id: string; label: string }
 type PersonWahl = Person | 'team'
@@ -61,7 +62,7 @@ const KANAELE: { key: KanalWahl; label: string }[] = [
 ]
 
 const slugVon = (m: Member): string =>
-  PERSONEN.find((p) => p.email === m.email)?.id ?? (m.short_name ?? m.display_name ?? m.id ?? '').toLowerCase()
+  PERSONEN.find((p) => p.email === m.email)?.id ?? anzeigeName(m, m.id ?? '').toLowerCase()
 
 /** Mitglieder in fester Reihenfolge (Vincent · Mike, Rest alphabetisch) als Segment-Personen. */
 function personenAus(members: readonly Member[]): Person[] {
@@ -71,7 +72,7 @@ function personenAus(members: readonly Member[]): Person[] {
   }
   return members
     .filter((m): m is Member & { id: string } => !!m.id)
-    .map((m) => ({ slug: slugVon(m), id: m.id, label: m.short_name ?? m.display_name ?? m.id }))
+    .map((m) => ({ slug: slugVon(m), id: m.id, label: anzeigeName(m, m.id ?? '') }))
     .sort((a, b) => rang(a) - rang(b) || a.label.localeCompare(b.label))
 }
 
@@ -315,8 +316,8 @@ function KpisInhalt({ wahl, personen }: { wahl: PersonWahl; personen: Person[] }
           sekundaer={{ label: 'Letzte 30 Tage', onClick: () => setzeZeitraum(zeitraumFuerArt('30t', heute, zeitraum)) }}
         />
       ) : (
-        <div className="grid gap-10">
-          <div className="grid gap-6">
+        <div className="grid grid-cols-1 gap-10">
+          <div className="grid min-w-0 grid-cols-1 gap-6">
             {kanal === 'alle' || kanal === 'linkedin' ? (
               <Kennzahlenzeile
                 kacheln={linkedin}
@@ -335,7 +336,7 @@ function KpisInhalt({ wahl, personen }: { wahl: PersonWahl; personen: Person[] }
           {/* Layout wie reference.html (kpi-grid 7fr/5fr ab 1180 px): Funnel links, rechts Tagesverlauf · Wochen · Sales-Calls · No-Shows.
               § 7.4 Nr. 4 „nebeneinander ab 1180 px“ ist damit als Zweispalter erfüllt; der Mock ist der visuelle Vertrag. */}
           <div className="wide:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] grid items-start gap-10">
-            <section aria-label="Funnel">
+            <section aria-label="Funnel" className="min-w-0">
               <div className="mb-3.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
                 <h2 className="text-h3 text-ink">Funnel</h2>
                 <span className="text-small text-ink-3">
@@ -344,7 +345,8 @@ function KpisInhalt({ wahl, personen }: { wahl: PersonWahl; personen: Person[] }
               </div>
               <FunnelTabelle zeilen={zeilen} vorLabel={zeitraum.vorperiode.label} kontext={leadsKontext} />
             </section>
-            <div className="grid gap-8">
+            {/* min-w-0 + eine minmax(0,1fr)-Spur: sonst wächst die Spalte auf die min-content-Breite der Wochentabelle (1440 px: +33 px Querscroll) */}
+            <div className="grid min-w-0 grid-cols-1 gap-8">
               <Tagesverlauf
                 tage={d.tage}
                 metrik={metrik}
@@ -359,6 +361,7 @@ function KpisInhalt({ wahl, personen }: { wahl: PersonWahl; personen: Person[] }
                 metriken={metriken}
                 aktiv={metrik}
                 gesamtLabel={zeitraum.art === 'monat' ? 'Monat gesamt' : 'Gesamt'}
+                leereAusblenden={kanal === 'alle'}
               />
               <SalesCalls werte={d.werte} naechsterTermin={d.naechsterTermin} zeitraumLabel={zeitraum.label} />
               <NoShows werte={d.werte} />

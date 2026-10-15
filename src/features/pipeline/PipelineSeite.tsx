@@ -3,7 +3,7 @@
 // (Zähler · Konversion zur Vorstufe aus dem Bestand · Ø Tage aus v_pipeline_counts), dnd-kit-Drag mit Drop-Regeln (dropRegeln.ts),
 // Pflicht-Popovers (Termin · Grund · Datum · Vertragsabschluss), Tastatur J K H L ⇧→ ⇧← ↵. Ein Drop ändert nie Zuständig.
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { PFADE } from '@/app/pfade'
 import { useUiStore } from '@/app/uiStore'
@@ -31,6 +31,7 @@ import { effektiverFilter, filterAusUrl, filterInUrl, type UrlFilter } from '@/f
 import { useStabileListe } from '@/features/leads/hilfen'
 import { istFrei, mitFirmensperre, type LeadZeile } from '@/features/leads/spalten'
 import { fmtDatum, heuteBerlin } from '@/lib/format'
+import { anzeigeName } from '@/lib/mitglied'
 import { PHASEN, phaseNachKey, phaseVon, type Phase } from '@/lib/stufen'
 import type { Channel, LeadStage, PhaseKey } from '@/types/domain'
 import { stufenwechselAlsPipeline } from './daten/stufenwechsel'
@@ -39,6 +40,7 @@ import { Karte } from './Karte'
 import { konversion, liesEingeklappt, schreibeEingeklappt, sortiereSpalte } from './logik'
 import { Spalte, type SpaltenKopf } from './Spalte'
 import { dragEnde, useDragSensoren } from './useDrag'
+import { useBoardHoehe } from './useBoardHoehe'
 import { usePipelineHotkeys, type PipelineCursor } from './usePipelineHotkeys'
 
 type Offen = { leadId: string; aktion: DropAktion; von: LeadStage } | null
@@ -227,6 +229,17 @@ export function Component() {
     aktiv: !offen,
   })
 
+  // Board bis zum Fensterende, Spalten scrollen einzeln (Runde 2); der Cursor (J/K/H/L) bleibt in seiner Spalte sichtbar
+  const board = useRef<HTMLDivElement | null>(null)
+  const boardBereit = !(istLaden && rows.length === 0 && !fehler)
+  const hoehe = useBoardHoehe(board, boardBereit)
+  useEffect(() => {
+    if (!cursor.leadId) return
+    board.current
+      ?.querySelector<HTMLElement>(`[data-id="${CSS.escape(cursor.leadId)}"]`)
+      ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+  }, [cursor.leadId])
+
   const zustaendigWert = Array.isArray(filter.zustaendig) ? 'alle' : (filter.zustaendig ?? 'alle')
   const gesamt = rows.length
   const anker = <span className="absolute bottom-0 left-2 h-px w-px" aria-hidden />
@@ -307,7 +320,7 @@ export function Component() {
           optionen={[
             { key: 'alle', label: 'Alle' },
             { key: 'me', label: 'Ich' },
-            { key: 'andere', label: members?.find((m) => m.id !== me)?.short_name ?? 'Andere' },
+            { key: 'andere', label: anzeigeName(members?.find((m) => m.id !== me), 'Andere') },
             { key: 'frei', label: 'Frei' },
           ]}
         />
@@ -352,7 +365,14 @@ export function Component() {
           onDragEnd={onDragEnd}
           onDragCancel={() => setAktiv(null)}
         >
-          <div className="flex snap-x gap-3 overflow-x-auto pb-4" role="list" aria-label="Pipeline" data-kanban>
+          <div
+            ref={board}
+            className="flex snap-x gap-3 overflow-x-auto pb-3"
+            style={hoehe ? { height: hoehe } : undefined}
+            role="list"
+            aria-label="Pipeline"
+            data-kanban
+          >
             {spalten.map((s, i) => {
               const kopf: SpaltenKopf = {
                 zaehler: s.leads.length,
@@ -403,7 +423,7 @@ export function Component() {
           </DragOverlay>
         </DndContext>
       )}
-      <p className="text-ink-3 mt-1 text-[12.5px]" data-fuss>
+      <p className="text-ink-3 mt-1 text-[12.5px] max-md:hidden" data-fuss>
         <kbd className="kbd">J</kbd> <kbd className="kbd">K</kbd> Karte · <kbd className="kbd">H</kbd>{' '}
         <kbd className="kbd">L</kbd> Spalte · <kbd className="kbd">⇧→</kbd> <kbd className="kbd">⇧←</kbd> Phase
         vor/zurück · <kbd className="kbd">↵</kbd> öffnet

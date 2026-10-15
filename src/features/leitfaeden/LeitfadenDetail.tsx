@@ -35,7 +35,7 @@ import {
   zeileAusEntwurf,
   type Entwurf,
 } from './entwurf'
-import { kopieKey, neuerKey, schrittVerwendungen } from './helfer'
+import { kopieKey, neuerKey, schrittVerwendungen, standardChip } from './helfer'
 import { KANAELE, phaseDef, phasenFuer } from './phasen'
 import { Statistik } from './Statistik'
 import { Vorschau } from './Vorschau'
@@ -51,6 +51,11 @@ export type LeitfadenDetailProps = {
   nurLesen?: boolean
   /** Nach dem ersten Speichern einer neuen Vorlage */
   onAngelegt?: (id: string) => void
+  /**
+   * Vollseite: der Name steht schon als H1 im Seitenkopf – hier dann als normales Feld „Name“ statt als zweite Überschrift
+   * (Runde 2: Titel stand doppelt). Mobil (nur lesen) entfällt die Zeile ganz.
+   */
+  nameAlsFeld?: boolean
 }
 
 /** Lädt Vorlagen, Nutzung und Sequenzen; rendert das Formular erst, wenn die Vorlage da ist (Entwurf wird einmal initialisiert). */
@@ -106,6 +111,7 @@ function Formular({
   onVorschauLead,
   nurLesen,
   onAngelegt,
+  nameAlsFeld,
 }: FormularProps) {
   const uid = useId()
   const navigate = useNavigate()
@@ -123,6 +129,7 @@ function Formular({
   const basis = vorlage ? entwurfVon(vorlage) : entwurfLeer(kanalNeu)
   const geaendert = !istGleich(entwurf, basis)
   const verwendungen = useMemo(() => schrittVerwendungen(id, sequenzen), [sequenzen, id])
+  const standard = standardChip(verwendungen)
   const verwendet = (perfZeile?.gesendet ?? 0) > 0 || verwendungen.length > 0
   const keys = useMemo(() => alle.map((t) => t.key), [alle])
   const original = vorlage?.variant_of ? (alle.find((t) => t.id === vorlage.variant_of) ?? null) : null
@@ -209,12 +216,12 @@ function Formular({
         <div className="flex flex-wrap items-start gap-2.5">
           <div className="min-w-0 flex-1">
             {nurLesen ? (
-              <h2 id={`${uid}-name`} className="text-h2 text-ink-bright">
+              <h2 id={`${uid}-name`} className={cn('text-h2 text-ink-bright', nameAlsFeld && 'sr-only')}>
                 {entwurf.name || 'Ohne Namen'}
               </h2>
             ) : (
               <>
-                <label htmlFor={`${uid}-name`} className="sr-only">
+                <label htmlFor={`${uid}-name`} className={nameAlsFeld ? 'label mb-1.5 block' : 'sr-only'}>
                   Name
                 </label>
                 <input
@@ -224,7 +231,9 @@ function Formular({
                   placeholder="Name des Leitfadens"
                   aria-invalid={fehler.name ? true : undefined}
                   className={cn(
-                    'text-h2 text-ink-bright placeholder:text-ink-4 w-full border-b bg-transparent pb-1 outline-none',
+                    nameAlsFeld
+                      ? 'text-ui text-ink placeholder:text-ink-4 w-full border-b bg-transparent pb-1 outline-none'
+                      : 'text-h2 text-ink-bright placeholder:text-ink-4 w-full border-b bg-transparent pb-1 outline-none',
                     'ease-brand focus:border-signal transition-[border-color] duration-[var(--t-1)]',
                     fehler.name ? 'border-danger' : 'hover:border-line-strong border-transparent',
                   )}
@@ -238,11 +247,11 @@ function Formular({
             )}
           </div>
           {vorlage && !vorlage.active ? <Chip ton="ended">inaktiv</Chip> : null}
-          {verwendungen.map((v) => (
-            <Chip key={v.stepId} ton="muted" title={`${v.sequenzName} · Schritt ${v.position}`}>
-              Standard für Schritt {v.position}
+          {standard ? (
+            <Chip ton="muted" title={standard.titel}>
+              {standard.text}
             </Chip>
-          ))}
+          ) : null}
           {vorlage && !nurLesen ? (
             <DropdownMenu
               trigger={
@@ -274,7 +283,7 @@ function Formular({
           <p className="text-small text-ink-3 col-span-2">Am Desktop bearbeiten.</p>
         </dl>
       ) : (
-        <div className="grid grid-cols-2 gap-x-5 gap-y-3.5 max-sm:grid-cols-1">
+        <div className="grid grid-cols-2 items-start gap-x-5 gap-y-3.5 max-sm:grid-cols-1">
           <FormField label="Kanal" htmlFor={`${uid}-kanal`}>
             {neu ? (
               <Select
@@ -301,10 +310,12 @@ function Formular({
               optionen={phasen.map((p) => ({ value: p.key, label: p.label }))}
             />
           </FormField>
+          {/* volle Breite: bei 1024 schnitt das halbe Raster „Vernetzung mit Nachricht (Wissensassistent)“ ab (Runde 2) */}
           <FormField
             label="Wann verwenden?"
             htmlFor={`${uid}-wann`}
             hinweis={phaseDef(kanal, entwurf.phase).beschreibung}
+            className="col-span-2 max-sm:col-span-1"
           >
             <Input
               id={`${uid}-wann`}

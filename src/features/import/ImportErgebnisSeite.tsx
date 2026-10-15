@@ -14,6 +14,8 @@ import { DIALOG, PHASE_LABEL } from '@/texte/de'
 import type { ImportErgebnis, LeadStage } from '@/types/domain'
 import { StatusChipImport, Zaehler } from './components/Assistent'
 import type { SheetDryRunZeile } from './presets/crmTabelle'
+import { batchPresetLabel } from './presets'
+import { anzeigeName } from '@/lib/mitglied'
 
 type BatchZeile = ImportErgebnis['rows'][number] & { i: number }
 const UNDO_TAGE = 30
@@ -69,7 +71,10 @@ export function Component() {
               {r.status === 'duplikat' && r.existing_stage ? (
                 <span className="text-small text-ink-3">
                   {PHASE_LABEL[phaseVon(r.existing_stage as LeadStage).key]} ·{' '}
-                  {members.data?.find((m) => m.id === r.existing_owner)?.short_name ?? '–'}
+                  {anzeigeName(
+                    members.data?.find((m) => m.id === r.existing_owner),
+                    '–',
+                  )}
                 </span>
               ) : null}
             </span>
@@ -118,12 +123,21 @@ export function Component() {
     <>
       <SeitenKopf
         titel={b.label ?? 'Import-Ergebnis'}
-        dateline={`${fmtDatumZeit(b.created_at)} · ${b.preset ?? b.source}${b.file_name ? ` · ${b.file_name}` : ''} · ${members.data?.find((m) => m.id === b.member_id)?.short_name ?? '–'}`}
+        // Runde 2: Preset-Label statt internem Schlüssel („sheet_crm“), leere Teile („· –“) entfallen
+        dateline={[
+          fmtDatumZeit(b.created_at),
+          batchPresetLabel(b.preset, b.source),
+          b.file_name,
+          anzeigeName(members.data?.find((m) => m.id === b.member_id)) || null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
         rechts={
           <KopfStats
             eintraege={[
               { wert: fmtZahl(b.row_count ?? 0), label: 'Zeilen' },
-              { wert: fmtZahl(b.inserted ?? 0), label: 'neu', ton: 'signal' },
+              // Lime bleibt „heute“ vorbehalten (DESIGN-SYSTEM) – „neu“ in ink-bright
+              { wert: fmtZahl(b.inserted ?? 0), label: 'neu' },
               { wert: fmtZahl(b.updated ?? 0), label: 'aktualisiert' },
               { wert: fmtZahl(b.skipped ?? 0), label: 'übersprungen' },
               { wert: fmtZahl(b.blocked ?? 0), label: 'gesperrt', ton: b.blocked ? 'overdue' : undefined },
@@ -156,7 +170,7 @@ export function Component() {
         {!kannUndo && !b.undone_at ? (
           <p className="text-small text-ink-3">
             {sheet
-              ? 'Sheet-Import ist idempotent und wird durch einen erneuten Lauf korrigiert, nicht per Rückgängig (§ 6.4).'
+              ? 'Sheet-Import ist idempotent und wird durch einen erneuten Lauf korrigiert, nicht per Rückgängig.'
               : 'Rückgängig ist nur bis 30 Tage nach dem Import möglich.'}
           </p>
         ) : null}
@@ -181,18 +195,23 @@ export function Component() {
             />
           </>
         ) : hinweise.length > 0 ? (
-          <ul className="border-line-strong rounded-md border" aria-label="Hinweise">
-            {hinweise.slice(0, 200).map((h, i) => (
-              <li
-                key={i}
-                className="hairline text-small text-ink-2 flex min-h-8 items-center gap-3 px-3 py-1 last:border-b-0"
-              >
-                <span className="text-ink-3 tnum w-10 font-mono">{h.id ?? '–'}</span>
-                <span className="text-ink min-w-0 flex-1 truncate">{h.name ?? '–'}</span>
-                <span>{h.hinweis ?? h.warnung ?? ''}</span>
-              </li>
-            ))}
-          </ul>
+          <section aria-labelledby="import-hinweise">
+            <h2 id="import-hinweise" className="label mb-2 flex items-baseline gap-2">
+              Hinweise <span className="tnum font-mono tracking-normal normal-case">{fmtZahl(hinweise.length)}</span>
+            </h2>
+            <ul className="border-line-strong rounded-md border" aria-label="Hinweise">
+              {hinweise.slice(0, 200).map((h, i) => (
+                <li
+                  key={i}
+                  className="hairline text-small text-ink-2 flex min-h-8 items-center gap-3 px-3 py-1 last:border-b-0"
+                >
+                  <span className="text-ink-3 tnum w-10 font-mono">{h.id ?? '–'}</span>
+                  <span className="text-ink min-w-0 flex-1 truncate">{h.name ?? '–'}</span>
+                  <span>{h.hinweis ?? h.warnung ?? ''}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         ) : (
           <p className="text-ui text-ink-2">Keine Zeilen gespeichert.</p>
         )}

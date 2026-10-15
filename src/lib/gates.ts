@@ -7,6 +7,11 @@ import { berlinTag, type Tag } from './zeit'
 /** Sperrlisten-Treffer: `true` (irgendein Treffer), `false`/`null` oder die Einträge mit ihren Kanälen. */
 export type SperrlistenTreffer = boolean | null | undefined | readonly { channels?: readonly Channel[] | null }[]
 
+/** Steht die Person überhaupt auf der Sperrliste? Ein leeres Array ist KEIN Treffer (Runde 2: Chip stand an jedem Lead). */
+export function hatSperrlistenTreffer(t: SperrlistenTreffer): boolean {
+  return t === true || (Array.isArray(t) && t.length > 0)
+}
+
 /** Sperrlisten-Eintrag (Teilmenge von `crm.sperrliste`), wie ihn die Gates brauchen. */
 export type SperrlistenEintragKurz = {
   lead_id?: string | null

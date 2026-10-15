@@ -23,6 +23,7 @@ import {
   nutzung,
   passtSuche,
   schrittVerwendungen,
+  standardChip,
   slug,
   sortiert,
   statistikAusAktivitaeten,
@@ -136,6 +137,24 @@ describe('Nutzung und Verwendungen', () => {
     expect(v).toHaveLength(1)
     expect(v[0]).toMatchObject({ sequenzName: 'A', position: 2 })
     expect(schrittVerwendungen(BEDARF[1]?.id ?? '', SEQUENZEN_MIT_STANDARD)).toEqual([])
+  })
+  it('standardChip: ein Chip, Positionen dedupliziert und sortiert, Titel nennt jede Sequenz (echte Daten: „Kurzfristig 1“)', () => {
+    expect(standardChip([])).toBeNull()
+    expect(standardChip([{ sequenzName: 'A', position: 2 }])).toEqual({
+      text: 'Standard für Schritt 2',
+      titel: 'A · Schritt 2',
+    })
+    const chip = standardChip([
+      { sequenzName: 'LinkedIn Standard (ohne Notiz)', position: 2 },
+      { sequenzName: 'LinkedIn Nachfassen im Gespräch', position: 1 },
+      { sequenzName: 'LinkedIn „A alt“', position: 2 },
+    ])
+    expect(chip?.text).toBe('Standard für Schritt 1, 2')
+    expect(chip?.titel.split('\n')).toEqual([
+      'LinkedIn Nachfassen im Gespräch · Schritt 1',
+      'LinkedIn „A alt“ · Schritt 2',
+      'LinkedIn Standard (ohne Notiz) · Schritt 2',
+    ])
   })
 })
 

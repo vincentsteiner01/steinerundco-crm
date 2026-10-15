@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react'
+import { MessageSquareWarning, Search } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 import { NAV } from '@/app/nav'
 import { PFADE } from '@/app/pfade'
@@ -9,6 +9,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/components/ui/cn'
 import { useNavZaehler } from '@/data/nav'
 import { useAuth } from '@/features/auth/authStore'
+import { FEEDBACK_EVENT } from '@/features/feedback/texte'
 import { ALLGEMEIN } from '@/texte/de'
 
 /** 768–1023 px: Sidebar als Icon-Rail 64 px (Tooltips mit Label + G-Akkord). */
@@ -64,14 +65,14 @@ export function IconRail() {
               <NavLink
                 to={n.pfad}
                 aria-label={n.label}
-                className={({ isActive }) =>
-                  cn(
-                    'ease-brand hover:bg-surface-hover hover:text-ink relative grid h-[34px] place-items-center rounded-sm transition-[background,color] duration-[var(--t-1)]',
-                    isActive
-                      ? 'bg-surface-hover text-ink before:bg-signal before:absolute before:top-2 before:bottom-2 before:-left-2.5 before:w-0.5 before:content-[""]'
-                      : 'text-ink-2',
-                  )
-                }
+                data-tour={`nav:${n.pfad}`}
+                // Fester String statt className-Funktion: der Tooltip-Trigger (Radix Slot) verkettet className als Text –
+                // die Funktion landete als Quelltext im DOM und gab JEDEM Eintrag den Lime-Balken (Runde 2, 900 px).
+                className={cn(
+                  'ease-brand hover:bg-surface-hover hover:text-ink text-ink-2 relative grid h-[34px] place-items-center rounded-sm transition-[background,color] duration-[var(--t-1)]',
+                  'aria-[current=page]:bg-surface-hover aria-[current=page]:text-ink',
+                  'aria-[current=page]:before:bg-signal aria-[current=page]:before:absolute aria-[current=page]:before:top-2 aria-[current=page]:before:bottom-2 aria-[current=page]:before:-left-2.5 aria-[current=page]:before:w-0.5 aria-[current=page]:before:content-[""]',
+                )}
               >
                 <n.icon size={18} strokeWidth={1.75} aria-hidden />
                 {n.zaehler === 'heute' && zaehler.heute > 0 ? (
@@ -83,6 +84,17 @@ export function IconRail() {
         )}
       </nav>
       <div className="mt-auto grid justify-items-center gap-2">
+        <Tooltip text="Feedback geben (⌥F)" side="right">
+          <button
+            type="button"
+            data-tour="feedback"
+            aria-label="Feedback geben (⌥F)"
+            onClick={() => window.dispatchEvent(new Event(FEEDBACK_EVENT))}
+            className="text-ink-2 hover:bg-surface-hover hover:text-ink grid h-[34px] w-[34px] place-items-center rounded-sm"
+          >
+            <MessageSquareWarning size={18} strokeWidth={1.75} aria-hidden />
+          </button>
+        </Tooltip>
         <Tooltip text={ALLGEMEIN.abmelden} side="right">
           <button
             type="button"

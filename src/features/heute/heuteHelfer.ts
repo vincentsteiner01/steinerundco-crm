@@ -15,6 +15,15 @@ export function personAusParam(members: readonly Member[], param: string | null,
   )
 }
 
+/**
+ * Runde 2: Karten, die höher sind als der Platz unter dem Sticky-Kopf (`--head-h`), oben ausrichten – `nearest` richtete sie an der
+ * Unterkante aus und schob Kopf und Namen unter den Seitenkopf. Sonst nur so weit wie nötig scrollen.
+ */
+export function scrollBlock(el: Element, fensterHoehe = window.innerHeight): ScrollLogicalPosition {
+  const kopf = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--head-h')) || 0
+  return el.getBoundingClientRect().height > fensterHoehe - kopf - 32 ? 'start' : 'nearest'
+}
+
 /** „Nächster Schritt: Fr 16.10. · 4 Follow-ups, 1 Rückruf.“ aus den kommenden Zeilen (ux § 4.1). */
 export function naechsterSchritt(items: readonly QueueItem[], heute: string): string | null {
   const kommend = items
@@ -57,4 +66,10 @@ export function listeAbgearbeitet(gesendet: number, uebersprungen: number): stri
   const teile = [`${gesendet} ${gesendet === 1 ? 'Anfrage' : 'Anfragen'} gesendet`]
   if (uebersprungen) teile.push(`${uebersprungen} übersprungen`)
   return `Liste abgearbeitet – ${teile.join(', ')}.`
+}
+
+/** „00:35“ / „02:48“ – Stunden:Minuten seit dem verpassten Rückruf (DESIGN-SYSTEM § 5.8). Vorher h:mm:ss („2:48:50“). */
+export function verpasstSeit(ms: number): string {
+  const min = Math.max(0, Math.floor(ms / 60_000))
+  return `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
 }

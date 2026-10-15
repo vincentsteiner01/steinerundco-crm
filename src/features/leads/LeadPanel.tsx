@@ -170,7 +170,7 @@ function PanelInhalt({ lead }: { lead: LeadMitBezug }) {
 
   return (
     <div className="flex min-h-full flex-col" data-lead-panel={lead.id}>
-      <div className="border-line border-b px-6 pb-4">
+      <div className="border-line border-b px-6 pb-4 max-md:px-4">
         <h2 className="lead-name">{lead.full_name ?? '–'}</h2>
         <p className="text-small text-ink-2 mt-0.5">
           {[lead.company_name, lead.role !== 'unbekannt' ? ROLLE_LABEL[lead.role] : lead.role_title, lead.city]
@@ -223,7 +223,7 @@ function PanelInhalt({ lead }: { lead: LeadMitBezug }) {
           </Button>
         </div>
       </div>
-      <div className="flex-1 px-6 pt-5 pb-6">
+      <div className="flex-1 px-6 pt-5 pb-6 max-md:px-4">
         <NaechsterSchritt lead={lead} item={item} kontext="peek" aktiv sperrliste={treffer} />
         <div data-felder>
           <FelderRaster lead={lead} members={members ?? []} settings={settings} />

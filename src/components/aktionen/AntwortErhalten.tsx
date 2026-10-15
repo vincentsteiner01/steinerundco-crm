@@ -31,6 +31,7 @@ import {
 } from './_gemeinsam'
 import { AktionButton, ScopeFormular, TriggerHuelle } from './_Teile'
 import { chipBlockiert, REAKTION_CHIPS, vorlageFuerChip, ZITAT_PFLICHT_TEXT, type ReaktionChip } from './reaktionen'
+import { anzeigeName } from '@/lib/mitglied'
 
 export type AntwortErhaltenProps = AktionProps & {
   /** Kanal der Antwort (Standard LinkedIn; E-Mail-Antwort → `email_erhalten`). */
@@ -182,7 +183,7 @@ export function AntwortErhalten({
           </div>
           {fremd ? (
             <p className="text-small text-overdue">
-              Zuständig ist {andere?.short_name ?? 'die andere Person'} – trotzdem loggen?
+              Zuständig ist {anzeigeName(andere, 'die andere Person')} – trotzdem loggen?
             </p>
           ) : null}
           <div className="flex items-center justify-end gap-1.5">

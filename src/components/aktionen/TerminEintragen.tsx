@@ -23,6 +23,7 @@ import {
   type AktionProps,
 } from './_gemeinsam'
 import { AktionButton, ScopeFormular, TriggerHuelle } from './_Teile'
+import { anzeigeName } from '@/lib/mitglied'
 
 const TYP_LABEL: Record<Extract<MeetingType, 'erstgespraech' | 'strategiegespraech'>, string> = {
   erstgespraech: 'Erstgespräch',
@@ -173,7 +174,7 @@ export function TerminEintragen({
                   .map((m) => ({
                     value: m.id as string,
                     label:
-                      m.id === me ? `${m.short_name ?? m.display_name} (ich)` : (m.short_name ?? m.display_name ?? ''),
+                      m.id === me ? `${anzeigeName(m)} (ich)` : (anzeigeName(m, '')),
                   }))}
               />
             </FormField>

@@ -1,13 +1,16 @@
 // BAUPLAN § 3.1.8 – Zusammenführung aller features/<m>/tasten.ts + globale Tasten (Anhang A). Quelle des `?`-Overlays.
 import { TASTEN as EINSTELLUNGEN } from '@/features/einstellungen/tasten'
 import { TASTEN as EMAIL } from '@/features/email/tasten'
+import { TASTEN as FEEDBACK } from '@/features/feedback/tasten'
 import { TASTEN as HEUTE } from '@/features/heute/tasten'
+import { TASTEN as HILFE } from '@/features/hilfe/tasten'
 import { TASTEN as IMPORT } from '@/features/import/tasten'
 import { TASTEN as KPIS } from '@/features/kpis/tasten'
 import { TASTEN as LEADS } from '@/features/leads/tasten'
 import { TASTEN as LEITFAEDEN } from '@/features/leitfaeden/tasten'
 import { TASTEN as PIPELINE } from '@/features/pipeline/tasten'
 import { TASTEN as SEQUENZEN } from '@/features/sequenzen/tasten'
+import { TASTEN as TEAM } from '@/features/team/tasten'
 import { TASTEN as TELEFON } from '@/features/telefon/tasten'
 
 export type TastenEintrag = { tasten: string[]; beschreibung: string }
@@ -20,8 +23,23 @@ export const GLOBALE_TASTEN: TastenGruppe[] = [
       { tasten: ['⌘K'], beschreibung: 'Palette' },
       { tasten: ['/'], beschreibung: 'Suche fokussieren' },
       { tasten: ['?'], beschreibung: 'Tastenkürzel' },
-      { tasten: ['G H', 'G L', 'G P', 'G T', 'G M'], beschreibung: 'Heute · Leads · Pipeline · Telefon · E-Mail' },
-      { tasten: ['G K', 'G F', 'G I', 'G E'], beschreibung: 'KPIs · Leitfäden · Import · Einstellungen' },
+      // Runde 2: eine Zeile je Ziel – zehn Einzeltasten „G H G L G P …“ in einer Zeile waren nicht zuzuordnen
+      ...(
+        [
+          ['G H', 'Gehe zu Heute'],
+          ['G L', 'Gehe zu Leads'],
+          ['G P', 'Gehe zu Pipeline'],
+          ['G T', 'Gehe zu Telefon'],
+          ['G M', 'Gehe zu E-Mail'],
+          ['G K', 'Gehe zu KPIs'],
+          ['G A', 'Gehe zu Team'],
+          ['G F', 'Gehe zu Leitfäden'],
+          ['G I', 'Gehe zu Import'],
+          ['G E', 'Gehe zu Einstellungen'],
+          ['G S', 'Gehe zu Hilfe'],
+          ['G B', 'Gehe zu Feedback'],
+        ] as const
+      ).map(([t, b]) => ({ tasten: [t], beschreibung: b })),
       { tasten: ['⌥N'], beschreibung: 'Lead anlegen' },
       { tasten: ['⌘⇧O'], beschreibung: 'Schnellimport' },
       { tasten: ['Z'], beschreibung: 'Rückgängig (letzter Toast)' },
@@ -58,7 +76,10 @@ export const TASTEN: TastenGruppe[] = [
   ...TELEFON,
   ...EMAIL,
   ...KPIS,
+  ...TEAM,
   ...LEITFAEDEN,
   ...IMPORT,
   ...EINSTELLUNGEN,
+  ...FEEDBACK,
+  ...HILFE,
 ].filter((g) => g.eintraege.length > 0)

@@ -13,6 +13,7 @@ vi.mock('@/features/auth/authStore', () => ({
   ) => sel({ status: 'mitglied', member: { user_id: 'u1', email: 'test@example.com', display_name: 'Test' } }),
 }))
 
+import { supabase } from '@/data/supabase'
 import { CommandPalette } from './CommandPalette'
 import { GlobaleTasten } from './GlobaleTasten'
 
@@ -91,5 +92,24 @@ describe('CommandPalette', () => {
     await waitFor(() => expect(useUiStore.getState().paletteOffen).toBe(false))
     fireEvent.keyDown(document.body, { key: 'Dead', code: 'KeyN', altKey: true })
     await waitFor(() => expect(router.state.location.pathname).toBe('/leads/neu'))
+  })
+
+  it('Runde 2: solange die Lead-Suche läuft „Suche …“ statt „Nichts gefunden.“', async () => {
+    const orig = vi.mocked(supabase.from).getMockImplementation()
+    const haengt: Record<string, unknown> = {}
+    for (const m of ['select', 'is', 'or', 'order', 'limit', 'eq', 'in', 'not', 'neq', 'maybeSingle', 'single'])
+      haengt[m] = () => haengt
+    haengt['then'] = () => new Promise(() => {})
+    vi.mocked(supabase.from).mockImplementation(() => haengt as never)
+    try {
+      rendern()
+      useUiStore.getState().setPaletteOffen(true)
+      const eingabe = await screen.findByPlaceholderText(/Lead, Aktion/)
+      fireEvent.change(eingabe, { target: { value: 'qqxx' } })
+      expect(await screen.findByText('Suche …')).toBeInTheDocument()
+      expect(screen.queryByText('Nichts gefunden.')).toBeNull()
+    } finally {
+      if (orig) vi.mocked(supabase.from).mockImplementation(orig)
+    }
   })
 })

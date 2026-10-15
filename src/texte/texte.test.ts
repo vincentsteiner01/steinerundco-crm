@@ -156,3 +156,17 @@ describe('texte/de.ts', () => {
     expect(de.STUFEN_LABEL.langfristig.label).toBe('Wiedervorlage')
   })
 })
+
+const { nichtAnrufbarAktion, nichtAnrufbarSatz, telefonGrundLabel } = de
+
+describe('Telefon: Noch nicht anrufbar nach Grund (Runde 2, echte Daten)', () => {
+  it('119 ohne Nummer + 2 gesperrt → Satz nach Grund und Knopf „Leads ohne Nummer zeigen“', () => {
+    const z = { keineNummer: 119, keinAnrufgrund: 0, gesperrt: 2 }
+    expect(nichtAnrufbarSatz(z)).toBe('Noch nicht anrufbar: 119 ohne Telefonnummer · 2 gesperrt.')
+    expect(nichtAnrufbarAktion(z)).toBe('Leads ohne Nummer zeigen')
+  })
+  it('Firma gesperrt heißt am Telefon „nicht anrufen“', () => {
+    expect(telefonGrundLabel('firma_gesperrt')).toBe('Firma gesperrt – nicht anrufen')
+    expect(telefonGrundLabel('keine_nummer')).toBe('Keine Nummer')
+  })
+})

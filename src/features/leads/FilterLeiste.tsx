@@ -25,6 +25,7 @@ import type {
 import type { AnsichtDef } from './ansichten'
 import { hatOverrides, type UrlFilter } from './filter'
 import { ANREDE_LABEL, ROLLE_LABEL } from './spalten'
+import { anzeigeName } from '@/lib/mitglied'
 
 const FAELLIG_LABEL: Record<NonNullable<LeadFilter['faellig']>, string> = {
   ueberfaellig: 'Überfällig',
@@ -70,9 +71,9 @@ export function FilterLeiste({ ansicht, overrides, onChange, members, tags, batc
   }
   const zustaendigLabel = (z: UrlFilter['zustaendig']) => {
     if (!z) return null
-    if (Array.isArray(z)) return z.map((id) => members.find((m) => m.id === id)?.short_name ?? '?').join(', ')
+    if (Array.isArray(z)) return z.map((id) => anzeigeName(members.find((m) => m.id === id), '?')).join(', ')
     if (z === 'me') return 'Ich'
-    if (z === 'andere') return members.find((m) => m.id !== me)?.short_name ?? 'Andere'
+    if (z === 'andere') return anzeigeName(members.find((m) => m.id !== me), 'Andere')
     if (z === 'frei') return 'Frei'
     return 'Alle'
   }
@@ -110,7 +111,7 @@ export function FilterLeiste({ ansicht, overrides, onChange, members, tags, batc
   if (overrides.ereignis) {
     // § 7.5: Funnel-Klick aus den KPIs (K-05) – Ereignis im Zeitraum, optional nur einer Person
     const e = overrides.ereignis
-    const wer = e.person ? ` · ${members.find((m) => m.id === e.person)?.short_name ?? '?'}` : ''
+    const wer = e.person ? ` · ${anzeigeName(members.find((m) => m.id === e.person), '?')}` : ''
     chips.push({ key: 'ereignis', label: `${EREIGNIS_LABEL(e)} · ${fmtZeitraum(e.von, e.bis)}${wer}` })
   }
 
@@ -171,7 +172,7 @@ export function FilterLeiste({ ansicht, overrides, onChange, members, tags, batc
               onChange={(k) => setze('zustaendig', k === 'alle' && !ansicht.filter.zustaendig ? undefined : k)}
               optionen={[
                 { key: 'me', label: 'Ich' },
-                { key: 'andere', label: members.find((m) => m.id !== me)?.short_name ?? 'Andere' },
+                { key: 'andere', label: anzeigeName(members.find((m) => m.id !== me), 'Andere') },
                 { key: 'frei', label: 'Frei' },
                 { key: 'alle', label: 'Alle' },
               ]}

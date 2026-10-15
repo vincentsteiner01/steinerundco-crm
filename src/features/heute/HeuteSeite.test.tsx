@@ -228,6 +228,17 @@ describe('HeuteSeite', () => {
     await waitFor(() => expect(toastUndo).toHaveBeenCalledWith('1 Schritt auf heute verschoben.', [880]))
   })
 
+  it('Runde 2: beim Laden kein scrollIntoView (lange Karte schob Kopf und Namen unter den Sticky-Kopf), erst bei J', async () => {
+    const scroll = vi.spyOn(Element.prototype, 'scrollIntoView')
+    rendern(<HeuteSeite />)
+    await waitFor(() => expect(aktiveKarte()).toBeTruthy())
+    expect(scroll).not.toHaveBeenCalled()
+    taste('j')
+    await waitFor(() => expect(scroll).toHaveBeenCalled())
+    expect(aktiveKarte()?.className).toContain('scroll-mt-[calc(var(--head-h,0px)+16px)]')
+    scroll.mockRestore()
+  })
+
   it('J/K bewegt den Cursor über Karten und Sektionen', async () => {
     rendern(<HeuteSeite />)
     await waitFor(() => expect(aktiveKarte()).toBeTruthy())
@@ -460,6 +471,8 @@ describe('HeuteSeite', () => {
     expect(sektion('rueckrufe')).toHaveTextContent(/verpasst · /)
     // Rechte Spalte „Später heute“: der Rückruf um 15:00
     expect(screen.getByText('Später heute').parentElement).toHaveTextContent('15:00')
+    // Runde 2: „verpasst · HH:MM“ statt h:mm:ss
+    expect(sektion('rueckrufe')).toHaveTextContent(/verpasst · \d\d:\d\d(?!:)/)
   })
 
   it('Antworten-Karte „Später“: bis morgen ausgeblendet (+1 Tag), Zeile „Später · morgen, Do 15.10.“', async () => {

@@ -65,4 +65,5 @@ export const qk = {
   tags: ['tags'] as const,
   companies: ['companies'] as const,
   nav: ['nav'] as const,
+  feedback: ['feedback'] as const,
 } as const

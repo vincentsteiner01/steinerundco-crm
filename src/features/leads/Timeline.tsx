@@ -126,24 +126,36 @@ export function Timeline({
         <>
           <span className="label mb-2 block">Nächstes</span>
           <ol className="mb-2" aria-label="Nächstes">
-            {naechstes.map((n, i) => (
-              <li key={n.key} className="relative grid grid-cols-[88px_14px_1fr] gap-x-2.5 pb-4">
-                <span className="mono-sm text-ink-3 pt-0.5">{fmtDatumKurz(n.wann)}</span>
-                <span className="relative grid justify-items-center">
-                  <span
-                    className={cn(
-                      'z-[1] mt-1.5 h-1.5 w-1.5 rounded-full',
-                      i === 0 ? 'bg-signal' : 'border-ink-3 border bg-transparent',
-                    )}
-                  />
-                  {i < naechstes.length - 1 ? <span className="bg-line absolute top-3 -bottom-4 w-px" /> : null}
-                </span>
-                <span className={cn('min-w-0 text-[12.5px] leading-[1.45]', i === 0 ? 'text-ink' : 'text-ink-3')}>
-                  {n.text}
-                  <span className="mono-sm text-ink-3 ml-1.5">{i === 0 ? 'geplant' : ''}</span>
-                </span>
-              </li>
-            ))}
+            {naechstes.map((n, i) => {
+              // Runde 2: überfällige „Nächstes“-Daten in Amber (Datum, Punkt, „überfällig“ statt „geplant“)
+              const ueberfaellig = !!n.wann && berlinTag(n.wann) < heute
+              return (
+                <li
+                  key={n.key}
+                  className="relative grid grid-cols-[88px_14px_1fr] gap-x-2.5 pb-4"
+                  data-ueberfaellig={ueberfaellig || undefined}
+                >
+                  <span className={cn('mono-sm pt-0.5', ueberfaellig ? 'text-overdue' : 'text-ink-3')}>
+                    {fmtDatumKurz(n.wann)}
+                  </span>
+                  <span className="relative grid justify-items-center">
+                    <span
+                      className={cn(
+                        'z-[1] mt-1.5 h-1.5 w-1.5 rounded-full',
+                        ueberfaellig ? 'bg-overdue' : i === 0 ? 'bg-signal' : 'border-ink-3 border bg-transparent',
+                      )}
+                    />
+                    {i < naechstes.length - 1 ? <span className="bg-line absolute top-3 -bottom-4 w-px" /> : null}
+                  </span>
+                  <span className={cn('min-w-0 text-[12.5px] leading-[1.45]', i === 0 ? 'text-ink' : 'text-ink-3')}>
+                    {n.text}
+                    <span className={cn('mono-sm ml-1.5', ueberfaellig ? 'text-overdue' : 'text-ink-3')}>
+                      {ueberfaellig ? 'überfällig' : i === 0 ? 'geplant' : ''}
+                    </span>
+                  </span>
+                </li>
+              )
+            })}
           </ol>
         </>
       ) : null}

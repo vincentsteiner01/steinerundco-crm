@@ -117,8 +117,8 @@ export function SchrittFertig({ api }: { api: ImportApi }) {
       </div>
       {f.art === 'sheet' ? (
         <p className="text-small text-ink-3">
-          Sheet-Import ist idempotent: ein zweiter Lauf derselben Datei legt nichts doppelt an, sondern korrigiert (kein
-          Rückgängig, § 6.4).
+          Sheet-Import ist idempotent: ein zweiter Lauf derselben Datei legt nichts doppelt an, sondern korrigiert –
+          deshalb kein Rückgängig.
         </p>
       ) : null}
       <Dialog

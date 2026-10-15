@@ -2,6 +2,7 @@
 // Abgelehnt · Abgelaufen · Kontakt entfernt), Felder, Aktionen „Anfrage gesendet“ (log_request) · „Angenommen“ (mark_accepted) ·
 // „Antwort erhalten“ (A) · „Nachricht gesendet (ohne Sequenz)“ (log_outbound + VorlageWaehlen) · Sequenz pausieren/fortsetzen/stoppen ·
 // „Kontakt entfernt“ (→ Freigeben). Alle Kontaktaktionen über lib/gates.kontaktGate gesperrt (Widerspruch, Sperrliste, Firmensperre).
+import { Copy, ExternalLink } from 'lucide-react'
 import { AntwortErhalten, Freigeben } from '@/components/aktionen'
 import { toast } from '@/components/toast'
 import { Button } from '@/components/ui/Button'
@@ -22,6 +23,7 @@ import type { LeadMitBezug, Member } from '@/types/domain'
 import { useLeadInvalidierungLokal } from './_invalidierung'
 import { Akkordeon, KarteAktionen, KarteFeld, KarteFelder } from './_Akkordeon'
 import { linkedinZustand } from './zustaende'
+import { anzeigeName } from '@/lib/mitglied'
 
 const VARIANTE: Record<string, string> = { ohne: 'ohne Notiz', note_v1: 'Notiz V1', note_v2: 'Notiz V2' }
 
@@ -61,7 +63,7 @@ export function LinkedInKarte({
 
   const name = (id: string | null | undefined) => {
     const m = id ? members.find((x) => x.id === id) : null
-    return m?.short_name ?? m?.display_name ?? '–'
+    return anzeigeName(m, '–')
   }
   const cs = [...(lead.linkedin_connections ?? [])].sort((a, b) =>
     (a.requested_at ?? a.created_at).localeCompare(b.requested_at ?? b.created_at),
@@ -131,23 +133,30 @@ export function LinkedInKarte({
           mono
           wert={
             lead.linkedin_url ? (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="truncate">{linkedinAnzeige(lead.linkedin_url, 36)}</span>
+              <span className="flex min-w-0 items-center gap-1.5">
+                <span className="min-w-0 truncate" title={lead.linkedin_url}>
+                  {linkedinAnzeige(lead.linkedin_url, 36)}
+                </span>
+                {/* Icons statt „kopieren“/„öffnen ↗“: in der Drittel-Spalte der Vollseite blieb sonst nur „in…“ von der URL übrig */}
                 <button
                   type="button"
-                  className="text-ink-3 hover:text-ink text-[12px]"
+                  aria-label="Profil-URL kopieren"
+                  title="Kopieren"
+                  className="text-ink-3 hover:text-ink grid h-5 w-5 shrink-0 place-items-center"
                   onClick={() => void kopierenUrl()}
                 >
-                  kopieren
+                  <Copy size={13} strokeWidth={1.75} aria-hidden />
                 </button>
                 {href ? (
                   <a
-                    className="text-ink-3 hover:text-ink text-[12px]"
+                    aria-label="Profil öffnen"
+                    title="Öffnen ↗"
+                    className="text-ink-3 hover:text-ink grid h-5 w-5 shrink-0 place-items-center"
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    öffnen ↗
+                    <ExternalLink size={13} strokeWidth={1.75} aria-hidden />
                   </a>
                 ) : null}
               </span>

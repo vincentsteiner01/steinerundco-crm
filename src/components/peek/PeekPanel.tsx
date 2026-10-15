@@ -171,7 +171,13 @@ export function PeekPanel({ leadId, children, kopfRechts, onSchliessen, onWechse
   return (
     <>
       {modal ? (
-        <div data-scrim className="split:hidden bg-canvas/35 fixed inset-0 z-[39]" onClick={schliesse} aria-hidden />
+        <div
+          data-scrim
+          // Sheet (< 768) liegt über der Tab-Leiste (z-50) – sonst scrollte der Lead-Inhalt unter ihr weg (Runde 2, 390 px)
+          className={cn('split:hidden bg-canvas/35 fixed inset-0', modus === 'sheet' ? 'z-[54]' : 'z-[39]')}
+          onClick={schliesse}
+          aria-hidden
+        />
       ) : null}
       <aside
         ref={setRef}
@@ -181,7 +187,8 @@ export function PeekPanel({ leadId, children, kopfRechts, onSchliessen, onWechse
         tabIndex={-1}
         data-modus={modus}
         className={cn(
-          'bg-surface-raised z-40 flex flex-col outline-none',
+          'bg-surface-raised flex flex-col outline-none',
+          modus === 'sheet' ? 'z-[55] pb-[env(safe-area-inset-bottom)]' : 'z-40',
           modus === 'overlay' &&
             'shadow-float fixed inset-y-0 right-0 w-[min(var(--spacing-peek),100vw)] animate-[peek-in_var(--t-3)_var(--ease-brand)]',
           modus === 'sheet' &&
@@ -210,7 +217,8 @@ export function PeekPanel({ leadId, children, kopfRechts, onSchliessen, onWechse
             <span className="bg-line-strong absolute top-2 left-1/2 h-1 w-9 -translate-x-1/2 rounded-full" />
           </div>
         ) : null}
-        <div className="flex shrink-0 items-center gap-1.5 px-6 pt-5 pb-3.5">
+        {/* Sheet (390 px): px-4, kleinere Abstände und nur das ×-Symbol – „Schließen“ wurde rechts abgeschnitten (397 px, Runde 2) */}
+        <div className="flex min-w-0 shrink-0 items-center gap-1.5 px-6 pt-5 pb-3.5 max-md:gap-0.5 max-md:px-4">
           {pos >= 0 ? (
             <>
               <span className="text-ink-3 tnum mr-1.5 font-mono text-[12px] whitespace-nowrap">
@@ -240,9 +248,13 @@ export function PeekPanel({ leadId, children, kopfRechts, onSchliessen, onWechse
           ) : null}
           <span className="flex-1" />
           <TastenBereich.Provider value="peek">{kopfRechts}</TastenBereich.Provider>
-          <Button variante="quiet" groesse="S" kbd="Esc" icon={X} onClick={schliesse}>
-            Schließen
-          </Button>
+          {modus === 'sheet' ? (
+            <Button variante="icon" icon={X} aria-label="Schließen" title="Schließen · Esc" onClick={schliesse} />
+          ) : (
+            <Button variante="quiet" groesse="S" kbd="Esc" icon={X} onClick={schliesse}>
+              Schließen
+            </Button>
+          )}
         </div>
         <div className="min-h-0 flex-1 overflow-auto">
           <TastenBereich.Provider value="peek">{children}</TastenBereich.Provider>

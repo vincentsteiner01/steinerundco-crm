@@ -148,6 +148,30 @@ export const GATE_GRUND_LABEL = {
   aelter_12_monate: 'Erlaubnis älter als 12 Monate',
 } as const
 
+/** Telefon-Kontext (Anrufliste, Anruf-Knopf): „nicht anrufen“ statt „nicht anschreiben“ (Runde 2). */
+export function telefonGrundLabel(grund: keyof typeof GATE_GRUND_LABEL): string {
+  return grund === 'firma_gesperrt' ? 'Firma gesperrt – nicht anrufen' : GATE_GRUND_LABEL[grund]
+}
+
+/** Zählung „Noch nicht anrufbar“ nach Grund (Runde 2: 119 ohne Nummer, 2 gesperrt – nicht „121 warten auf einen Anrufgrund“). */
+export type NichtAnrufbarZaehlung = { keineNummer: number; keinAnrufgrund: number; gesperrt: number }
+
+export function nichtAnrufbarSatz(z: NichtAnrufbarZaehlung): string {
+  const teile = [
+    z.keineNummer ? `${z.keineNummer} ohne Telefonnummer` : null,
+    z.keinAnrufgrund ? `${z.keinAnrufgrund} ohne Anrufgrund` : null,
+    z.gesperrt ? `${z.gesperrt} gesperrt` : null,
+  ].filter(Boolean)
+  return teile.length ? `Noch nicht anrufbar: ${teile.join(' · ')}.` : ''
+}
+
+/** Primärknopf im Leerzustand nach dem häufigsten Grund. */
+export function nichtAnrufbarAktion(z: NichtAnrufbarZaehlung): string {
+  if (z.keinAnrufgrund >= z.keineNummer && z.keinAnrufgrund >= z.gesperrt) return 'Anrufgrund setzen'
+  if (z.keineNummer >= z.gesperrt) return 'Leads ohne Nummer zeigen'
+  return 'Gesperrte Leads zeigen'
+}
+
 // ux § 4.1 – Leere Zustände (eine Überschrift, ein Satz, max. eine Primäraktion)
 /**
  * Gate-Wortlaute für E-Mail (ux § 3.3.3 Tooltip, § 3.6.3; Regel 5 = offene Platzhalter § 3.1.9a). Eine Quelle für
@@ -195,7 +219,6 @@ export const LEER = {
   leadsSucheVorschlag: (name: string) => `Meintest du ${name}?`,
   pipelineSpalte: { titel: 'Keine Leads' },
   telefonListe: { titel: 'Niemand anzurufen.', aktion: 'Anrufgrund setzen' },
-  telefonListeWartend: (n: number) => `${n} Leads warten auf einen Anrufgrund.`,
   emailFaellig: { titel: 'Keine E-Mail fällig.', satz: 'E-Mails gehen nur an Personen, die darum gebeten haben.' },
   kpisPeriode: (monat: string) => ({
     titel: `Keine Daten für ${monat}.`,

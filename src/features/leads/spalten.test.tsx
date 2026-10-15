@@ -16,7 +16,11 @@ import {
   leadSpalten,
   mitFirmensperre,
   mobilZeile,
+  naechsteAktionKurz,
   naechsteAktionText,
+  ohneLeereRolle,
+  ohneVerdeckte,
+  rolleAnzeige,
   schrittText,
   zeitBalken,
   type Bearbeitung,
@@ -75,6 +79,77 @@ describe('Zeitfarben und Fälligkeit', () => {
     })
     expect(naechsteAktionText(l('2026-10-16T09:00:00+02:00'), HEUTE)).toEqual({ text: 'Fr 16.10.', ton: 'later' })
     expect(naechsteAktionText(l(null), HEUTE)).toEqual({ text: '–', ton: null })
+  })
+
+  it('überfällig immer „Datum −N T“: Datum nur einmal (echte Daten: „Do 08.10. Do 08.10.“), auch −1 statt „gestern“', () => {
+    const l = (at: string, kind: 'sequenz_schritt' | 'rueckruf' = 'sequenz_schritt') => ({
+      next_action_at: at,
+      next_action_kind: kind,
+      stage: 'pitch' as const,
+    })
+    expect(naechsteAktionText(l('2026-10-07T09:00:00+02:00'), HEUTE)).toEqual({
+      text: 'Mi 07.10. −7 T',
+      ton: 'overdue',
+    })
+    expect(naechsteAktionText(l('2026-09-30T09:00:00+02:00'), HEUTE).text).toBe('Mi 30.09. −14 T')
+    expect(naechsteAktionText(l('2026-10-13T09:00:00+02:00'), HEUTE).text).toBe('Di 13.10. −1 T')
+  })
+
+  it('ohneVerdeckte: unter 1280 fehlen Unternehmen, Rolle, Letzte Bewegung und Notiz – Nächste Aktion bleibt (Runde 2, 1024)', () => {
+    const defs = leadSpalten(STANDARD_SPALTEN, {
+      heute: HEUTE,
+      settings: SETTINGS,
+      members: MEMBERS,
+      bearbeitung: null,
+      onSave: vi.fn(),
+      onCancel: vi.fn(),
+      onTab: vi.fn(),
+    })
+    const ids = (d: typeof defs) => d.map((x) => x.id)
+    expect(ids(ohneVerdeckte(defs, false, false))).toEqual(ids(defs))
+    const schmal = ids(ohneVerdeckte(defs, true, false))
+    for (const weg of ['unternehmen', 'rolle', 'letzteBewegung', 'notiz']) expect(schmal).not.toContain(weg)
+    expect(schmal).toContain('naechsteAktion')
+    expect(schmal.length).toBeLessThanOrEqual(8)
+  })
+
+  it('ohneLeereRolle: Rolle fällt weg, wenn alle Leads „unbekannt“ sind (echte Daten), bleibt bei einer echten Rolle', () => {
+    const defs = leadSpalten(STANDARD_SPALTEN, {
+      heute: HEUTE,
+      settings: SETTINGS,
+      members: MEMBERS,
+      bearbeitung: null,
+      onSave: vi.fn(),
+      onCancel: vi.fn(),
+      onTab: vi.fn(),
+    })
+    const ids = (d: typeof defs) => d.map((x) => x.id)
+    expect(ids(ohneLeereRolle(defs, [{ role: 'unbekannt' }, { role: null }]))).not.toContain('rolle')
+    expect(ids(ohneLeereRolle(defs, [{ role: 'unbekannt' }, { role: 'geschaeftsfuehrer' }]))).toContain('rolle')
+  })
+
+  it('Rolle: Titel gleich Rollenwort nur einmal („Geschäftsführer · Geschäftsführer“ aus dem Import)', () => {
+    expect(rolleAnzeige('geschaeftsfuehrer', 'Geschäftsführer')).toBe('Geschäftsführer')
+    expect(rolleAnzeige('geschaeftsfuehrer', 'geschäftsführer ')).toBe('Geschäftsführer')
+    expect(rolleAnzeige('geschaeftsfuehrer', 'CEO')).toBe('Geschäftsführer · CEO')
+    expect(rolleAnzeige('unbekannt', 'Leitung Technik')).toBe('Leitung Technik')
+    expect(rolleAnzeige('unbekannt', null)).toBeNull()
+  })
+
+  it('Kanban-Kurzform: genau ein Datum, heute als Wort, Rückruf mit Uhrzeit', () => {
+    const l = (at: string | null, kind: 'sequenz_schritt' | 'rueckruf' = 'sequenz_schritt') => ({
+      next_action_at: at,
+      next_action_kind: kind,
+      stage: 'pitch' as const,
+    })
+    expect(naechsteAktionKurz(l('2026-10-08T09:00:00+02:00'), HEUTE)).toEqual({ text: 'Do 08.10.', ton: 'overdue' })
+    expect(naechsteAktionKurz(l('2026-10-14T09:00:00+02:00'), HEUTE)).toEqual({ text: 'heute', ton: 'today' })
+    expect(naechsteAktionKurz(l('2026-10-14T10:30:00+02:00', 'rueckruf'), HEUTE)).toEqual({
+      text: 'heute 10:30',
+      ton: 'today',
+    })
+    expect(naechsteAktionKurz(l('2026-10-16T09:00:00+02:00'), HEUTE)).toEqual({ text: 'Fr 16.10.', ton: 'later' })
+    expect(naechsteAktionKurz(l(null), HEUTE)).toEqual({ text: '–', ton: null })
   })
 
   it('Gruppierung Fälligkeit (LE-09): Überfällig · Heute · Diese Woche (≤ Sonntag) · Später · Ohne', () => {
@@ -235,5 +310,13 @@ describe('CSV und Mobil', () => {
     expect(screen.getByText('Mi 14.10. heute')).toBeInTheDocument()
     expect(screen.getByText('Firma gesperrt')).toBeInTheDocument()
     expect(screen.getByText('gewählt')).toBeInTheDocument()
+    // feste 56 px (h-14), drei Zeilen 22 + 18 + 16 – Inhalt darf die virtualisierte Zeilenhöhe nicht sprengen
+    const z = document.querySelector('[data-mobil-zeile]') as HTMLElement
+    expect(z.className).toContain('h-14')
+    expect([...z.children].map((c) => c.className.split(' ').find((k) => k.startsWith('h-')))).toEqual([
+      'h-[22px]',
+      'h-[18px]',
+      'h-4',
+    ])
   })
 })

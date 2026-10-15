@@ -52,7 +52,8 @@ export function Akkordeon({
 
 /** Felder-Zeile innerhalb einer Karte (zwei Spalten). */
 export function KarteFelder({ children }: { children: ReactNode }) {
-  return <div className="mb-3 grid grid-cols-2 gap-x-5 gap-y-3">{children}</div>
+  // Runde 2: so viele Spalten wie 200 px passen – fest drei bzw. zwei kürzten „in/götz-matthias-al…“ trotz Platz
+  return <div className="mb-3 grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-x-5 gap-y-3">{children}</div>
 }
 
 export function KarteFeld({
@@ -78,6 +79,7 @@ export function KarteFeld({
           mono && 'tnum font-mono text-[13px]',
           warnung ? 'text-overdue' : leerWert ? 'text-ink-4' : mono ? 'text-ink-2' : 'text-ink',
         )}
+        title={typeof wert === 'string' ? wert : undefined}
       >
         {leerWert ? leer : wert}
       </span>

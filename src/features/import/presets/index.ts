@@ -68,3 +68,19 @@ export function presetInfo(key: PresetKey | null | undefined): PresetInfo | null
 export function istPresetKey(s: string | null | undefined): s is PresetKey {
   return PRESETS.some((p) => p.key === s)
 }
+
+/** Interne Batch-Schlüssel (`import_batches.preset`) → Anzeigename. Runde 2: die Dateline zeigte „sheet_crm“. */
+const BATCH_PRESET_LABEL: Record<string, string> = {
+  sheet_crm: 'CRM-Tabelle',
+  sheet_kpi: 'KPI-Sheet',
+  sheet_text: 'Sheet-Texte',
+  schnellimport: 'Schnellimport',
+  import_csv: 'CSV-Import',
+  import_sheet: 'Sheet-Import',
+}
+
+export function batchPresetLabel(preset: string | null | undefined, source: string | null | undefined): string | null {
+  const key = preset ?? source
+  if (!key) return null
+  return presetInfo(key as PresetKey)?.name ?? BATCH_PRESET_LABEL[key] ?? null
+}

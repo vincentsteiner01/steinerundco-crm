@@ -323,7 +323,8 @@ export function Component() {
           </span>
         }
       >
-        <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)]">
+        {/* Gleich breite Spalten: das Ziel-Modus-Segment braucht 311 px, bei 1 : 1,25 blieben 288 („Als Leads (bereits vernetz“) */}
+        <div className="grid gap-5 md:grid-cols-2">
           <div className="grid content-start gap-4">
             <FormField
               label="Liste"
@@ -426,14 +427,16 @@ export function Component() {
                   </div>
                 ) : null}
                 <div role="grid" aria-label="Erkannte Zeilen" className="border-line-strong rounded-md border">
+                  {/* Zwei Zeilen je Eintrag: in der 326-px-Spalte blieben bei vier Spalten 50 px für Name + Unternehmen
+                      („Maximil…“, „Elektr…“) und die Kopfzeile lief ineinander. */}
                   <div
                     role="row"
-                    className="label hairline grid h-8 grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto_auto] items-center gap-3 px-3"
+                    className="label hairline grid h-8 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-3"
                   >
-                    <span role="columnheader">Name</span>
-                    <span role="columnheader">Unternehmen</span>
-                    <span role="columnheader">Status</span>
-                    <span role="columnheader">Anrede</span>
+                    <span role="columnheader">Name · Unternehmen</span>
+                    <span role="columnheader" className="text-right">
+                      Status · Anrede
+                    </span>
                   </div>
                   {zeilen.map((z, i) => {
                     const { status, server: s } = statusVon(z)
@@ -450,22 +453,15 @@ export function Component() {
                         data-cursor={istCursor || undefined}
                         onClick={() => setCursor(i)}
                         className={cn(
-                          'hairline grid min-h-10 grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_auto_auto] items-center gap-3 px-3 py-1 last:border-b-0',
+                          'hairline grid min-h-10 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-1.5 last:border-b-0',
                           istCursor && 'cursor-bar',
                           pflicht && 'bg-overdue-tint',
                         )}
                       >
-                        <span role="gridcell" className="min-w-0">
-                          <span className="text-ui text-ink block truncate">{z.name ?? z.linkedin_url ?? '–'}</span>
-                          <span className="text-ink-3 block truncate font-mono text-[11.5px]">
-                            {z.role_title ?? ''}
-                            {z.city ? `${z.role_title ? ' · ' : ''}${z.city}` : ''}
-                          </span>
+                        <span role="gridcell" className="text-ui text-ink min-w-0 truncate" title={z.name ?? undefined}>
+                          {z.name ?? z.linkedin_url ?? '–'}
                         </span>
-                        <span role="gridcell" className="text-ui text-ink-2 min-w-0 truncate">
-                          {z.company ?? <span className="text-ink-3">–</span>}
-                        </span>
-                        <span role="gridcell" className="flex flex-wrap items-center gap-1">
+                        <span role="gridcell" className="flex flex-wrap items-center justify-end gap-1">
                           <StatusChipImport
                             status={status}
                             title={
@@ -481,7 +477,20 @@ export function Component() {
                           ) : null}
                           {gesperrt ? <StatusChipImport status="firma_gesperrt" /> : null}
                         </span>
-                        <span role="gridcell" className="flex items-center gap-1.5">
+                        <span
+                          role="gridcell"
+                          className="text-small text-ink-2 min-w-0 truncate"
+                          title={[z.company, z.role_title, z.city].filter(Boolean).join(' · ') || undefined}
+                        >
+                          {z.company ?? <span className="text-ink-3">–</span>}
+                          {z.role_title || z.city ? (
+                            <span className="text-ink-3">
+                              {' · '}
+                              {[z.role_title, z.city].filter(Boolean).join(' · ')}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span role="gridcell" className="flex items-center justify-end gap-1.5">
                           {brauchtAnrede(z) ? (
                             <Segment<Salutation>
                               klein
@@ -526,7 +535,8 @@ export function Component() {
             )}
           </div>
         </div>
-        <div className="hairline-t mt-6 flex flex-wrap items-center gap-2 pt-4">
+        {/* Aktionsleiste klebt am Sheet-Boden – bei 900 px Fensterhöhe lag „Übernehmen“ sonst unter dem Rand */}
+        <div className="hairline-t bg-surface-raised sticky -bottom-5 z-10 -mx-6 mt-6 -mb-5 flex flex-wrap items-center gap-2 px-6 pt-4 pb-5">
           <Button variante="quiet" kbd="Esc" onClick={schliessen}>
             Abbrechen
           </Button>

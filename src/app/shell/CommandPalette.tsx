@@ -1,3 +1,4 @@
+import { useIsFetching } from '@tanstack/react-query'
 import { Command } from 'cmdk'
 import { Search } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
@@ -85,19 +86,31 @@ function QuelleGruppe({
           }}
           className="text-ui data-[selected=true]:cursor-bar relative flex h-10 cursor-default items-center gap-3 rounded-sm px-2.5"
         >
+          {/* Einzeilig wie die 40-px-Zeile verlangt: lange Namen/Firmen enden mit „…“ (Runde 2: zweizeilige Treffer) */}
           {gruppe === 'leads' ? (
-            <span className="text-ink-bright font-serif text-[18px] leading-none italic">{t.name}</span>
+            <span
+              className="text-ink-bright max-w-[60%] flex-none truncate font-serif text-[18px] leading-[1.2] italic"
+              title={t.name}
+            >
+              {t.name}
+            </span>
           ) : (
-            <span>{t.name}</span>
+            <span className="min-w-0 truncate" title={t.name}>
+              {t.name}
+            </span>
           )}
-          {t.untertitel ? <span className="text-small text-ink-3">{t.untertitel}</span> : null}
+          {t.untertitel ? (
+            <span className="text-small text-ink-3 min-w-0 truncate" title={t.untertitel}>
+              {t.untertitel}
+            </span>
+          ) : null}
           {t.chip ? (
-            <Chip ton={t.chip.ton} className="ml-1.5">
+            <Chip ton={t.chip.ton} className="ml-1.5 flex-none">
               {t.chip.label}
             </Chip>
           ) : null}
           {t.tasten?.length ? (
-            <span className="ml-auto flex gap-1">
+            <span className="ml-auto flex flex-none gap-1">
               {t.tasten.map((k) => (
                 <Kbd key={k}>{k}</Kbd>
               ))}
@@ -136,6 +149,7 @@ export function CommandPalette() {
 
 /** Inhalt der Palette – wird mit dem Dialog ge- und entmountet, der Suchtext startet also immer leer. */
 function PaletteInhalt({ schliessen }: { schliessen: () => void }) {
+  const sucheLaeuft = useIsFetching({ queryKey: ['leads', 'suche'] }) > 0
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const member = useAuth((s) => s.member)
@@ -213,7 +227,10 @@ function PaletteInhalt({ schliessen }: { schliessen: () => void }) {
         <Kbd>Esc</Kbd>
       </div>
       <Command.List className="max-h-[min(60vh,520px)] overflow-auto max-md:max-h-none">
-        <Command.Empty className="text-small text-ink-3 px-[18px] py-6">Nichts gefunden.</Command.Empty>
+        <Command.Empty className="text-small text-ink-3 px-[18px] py-6">
+          {/* Runde 2: während die Lead-Suche läuft stand ~1 s „Nichts gefunden.“, dann kamen 12 Treffer */}
+          {sucheLaeuft ? 'Suche …' : 'Nichts gefunden.'}
+        </Command.Empty>
         {kuerzlich.length > 0 ? (
           <Command.Group heading="Zuletzt" className={gruppeKlasse}>
             {kuerzlich.map((b) => eintrag(b, 'zuletzt:'))}

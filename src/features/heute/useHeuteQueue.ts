@@ -26,6 +26,7 @@ import {
   type BatchFilter,
   type Sektionen,
 } from './sektionen'
+import { anzeigeName } from '@/lib/mitglied'
 
 export const NEU_MS = 4000
 
@@ -190,7 +191,7 @@ export function useHeuteQueue(memberId: string | null, opts: HeuteQueueOptionen 
         sektion: v.sektion,
         name: v.item.lead_name ?? '',
         zeit: fmtZeit(jetzt()),
-        von: andere?.short_name ?? andere?.display_name ?? 'der anderen Person',
+        von: anzeigeName(andere, 'der anderen Person'),
       })
     }
     store.setState({ vorher: aktuell })

@@ -74,6 +74,11 @@ describe('LeitfadenSeite', () => {
   it('zeigt Kopf (Name, Kanal · Phase), Felder, Editor, Vorschau, Statistik; Speichern ist ohne Änderung gesperrt', async () => {
     rendern(<LeitfadenSeite />, `/leitfaeden/${JA_V1_ID}`)
     await screen.findByRole('heading', { level: 1, name: 'Ja (V1)' })
+    // Runde 2: der Name steht nur einmal groß (H1) – im Detail als normales Feld „Name“, nicht als zweite Überschrift
+    const name = screen.getByLabelText('Name')
+    expect(name).toHaveValue('Ja (V1)')
+    expect(name).toHaveClass('text-ui')
+    expect(name).not.toHaveClass('text-h2')
     expect(screen.getByText(/LinkedIn · 2 Bedarfsermittlung/)).toBeInTheDocument()
     expect(screen.getByLabelText('Phase')).toHaveValue('bedarfsermittlung')
     expect(screen.getByLabelText('Anredeform')).toHaveValue('du')

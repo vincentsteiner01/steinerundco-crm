@@ -7,6 +7,7 @@ import { ZIEL_FELDER, ZIEL_LABEL, type ZielFeld } from './parser/kopfwort'
 import { textZuIso, zelleZuText, type Zelle } from './parser/xlsx'
 import { tagesSumme } from './presets/kpiMonat'
 import type { ImportApi } from './useImport'
+import { anzeigeName } from '@/lib/mitglied'
 
 function Punkt({ erkannt }: { erkannt: boolean }) {
   return (
@@ -95,7 +96,7 @@ export function SchrittSpalten({ api }: { api: ImportApi }) {
                 { value: '', label: 'Ich' },
                 ...(members.data ?? []).map((m) => ({
                   value: m.id ?? '',
-                  label: m.short_name ?? m.display_name ?? '–',
+                  label: anzeigeName(m, '–'),
                 })),
               ]}
             />
@@ -159,7 +160,7 @@ export function SchrittSpalten({ api }: { api: ImportApi }) {
             onChange={(e) => api.setzePerson(e.target.value)}
             optionen={
               members.data && members.data.length > 0
-                ? members.data.map((m) => ({ value: m.short_name ?? '', label: m.short_name ?? m.display_name ?? '–' }))
+                ? members.data.map((m) => ({ value: m.short_name ?? '', label: anzeigeName(m, '–') }))
                 : [
                     { value: 'Vincent', label: 'Vincent' },
                     { value: 'Mike', label: 'Mike' },

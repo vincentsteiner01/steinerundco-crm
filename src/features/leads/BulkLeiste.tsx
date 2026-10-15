@@ -34,6 +34,7 @@ import { monatePlus } from '@/lib/zeit'
 import { ANRUFGRUND_LABEL, GATE_GRUND_LABEL, KANAL_LABEL } from '@/texte/de'
 import type { ActivityType, CallBasis, PhaseKey } from '@/types/domain'
 import type { LeadZeile } from './spalten'
+import { anzeigeName } from '@/lib/mitglied'
 
 type DialogArt =
   | 'zustaendig'
@@ -197,7 +198,7 @@ export function BulkLeiste({ ausgewaehlt, csvSpalten, ansichtKey, menuOffen, onM
                 optionen={[
                   ...(members ?? [])
                     .filter((m) => !!m.id)
-                    .map((m) => ({ value: m.id as string, label: m.short_name ?? m.display_name ?? '' })),
+                    .map((m) => ({ value: m.id as string, label: anzeigeName(m, '') })),
                   { value: 'frei', label: 'Frei' },
                 ]}
               />
@@ -206,13 +207,13 @@ export function BulkLeiste({ ausgewaehlt, csvSpalten, ansichtKey, menuOffen, onM
         }
       case 'uebergeben':
         return {
-          titel: `An ${andere?.short_name ?? 'die andere Person'} übergeben`,
+          titel: `An ${anzeigeName(andere, 'die andere Person')} übergeben`,
           primaer: {
             label: 'Übergeben',
             disabled: !notiz.trim() || !andere?.id,
             onClick: () =>
               void stapel(
-                (ok) => `${leads(ok)} an ${andere?.short_name ?? 'die andere Person'} übergeben.`,
+                (ok) => `${leads(ok)} an ${anzeigeName(andere, 'die andere Person')} übergeben.`,
                 ['uebergabe'],
                 (l) => rpc.transferLead({ leadId: l.id, toMember: andere?.id as string, note: notiz.trim() }),
               ),

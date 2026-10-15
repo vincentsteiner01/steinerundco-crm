@@ -30,7 +30,14 @@ import type { ActivityType, Member, QueueItem, UiSektion } from '@/types/domain'
 import { AbhakListe, type AbhakDialog } from './AbhakListe'
 import { BatchChips } from './BatchChips'
 import { ErledigtZeile } from './ErledigtZeile'
-import { listeAbgearbeitet, naechsterSchritt, personAusParam, spaeterHeute, spaeterText } from './heuteHelfer'
+import {
+  listeAbgearbeitet,
+  naechsterSchritt,
+  personAusParam,
+  scrollBlock,
+  spaeterHeute,
+  spaeterText,
+} from './heuteHelfer'
 import { HinweisKarten } from './HinweisKarten'
 import { Kanalzeile } from './Kanalzeile'
 import { jetzt } from './karten'
@@ -47,6 +54,7 @@ import { useHeuteQueue, type HeuteQueue } from './useHeuteQueue'
 import { useQueueAktionen, type AktionenKontext, type ErledigtEintrag } from './useQueueAktionen'
 import { useQueueHotkeys, type QueueTaste } from './useQueueHotkeys'
 import { useTageszaehler, type TageszaehlerDaten } from './useTageszaehler'
+import { anzeigeName, personSlug } from '@/lib/mitglied'
 
 /** „Erledigt“ im Kopf = eigene Aktivitäten heute dieser Typen (+ abgehakte Annahmen/Anfragen der Sitzung, § 3.2). */
 const ERLEDIGT_TYPEN: ActivityType[] = [
@@ -287,14 +295,22 @@ function HeuteInhalt({
     setParams(p, { replace: true })
   }, [sprungLead, q.laden, q.byKey, sichtbar, store, params, setParams])
 
+  // Runde 2 (echte Daten): beim ersten Cursor NICHT scrollen – sonst richtete scrollIntoView eine 650 px hohe Karte an ihrer
+  // Unterkante aus, Dateline, Batch-Chips und Name lagen unter dem Sticky-Kopf. Ausnahme: Sprung über `?lead=`.
+  const ersterCursor = useRef(true)
   useEffect(() => {
     if (!cursor) return
+    if (ersterCursor.current) {
+      ersterCursor.current = false
+      if (!sprungLead) return
+    }
     // Karten tragen data-key; Abhakzeilen markieren den Cursor selbst (data-cursor)
     const el =
       document.querySelector<HTMLElement>(`[data-key="${CSS.escape(cursor)}"]`) ??
       document.querySelector<HTMLElement>('[data-sektion] li[data-cursor]')
-    el?.scrollIntoView?.({ block: 'nearest' })
-  }, [cursor])
+    if (!el) return
+    el.scrollIntoView?.({ block: scrollBlock(el) })
+  }, [cursor, sprungLead])
 
   const listeEinfuegen = useCallback(() => navigate(PFADE.schnellimport(PFADE.heute)), [navigate])
   const personWechseln = useCallback(
@@ -302,7 +318,7 @@ function HeuteInhalt({
       const p = new URLSearchParams(params)
       const m = members.find((x) => x.id === id)
       if (!m || m.id === me.id) p.delete('person')
-      else p.set('person', (m.short_name ?? m.display_name ?? 'andere').toLowerCase())
+      else p.set('person', personSlug(m) || 'andere')
       setParams(p, { replace: true })
     },
     [me.id, members, params, setParams],
@@ -457,8 +473,8 @@ function HeuteInhalt({
       />
       <SeitenKopf
         titel="Heute"
-        kontext={person.short_name ?? person.display_name ?? undefined}
-        voice={begruessung(me.short_name ?? me.display_name ?? '')}
+        kontext={(anzeigeName(person) || undefined)}
+        voice={begruessung(anzeigeName(me, ''))}
         rechts={
           <>
             <KopfStats
@@ -478,7 +494,7 @@ function HeuteInhalt({
                 onChange={personWechseln}
                 optionen={[me, ...members.filter((m) => m.id !== me.id)].map((m) => ({
                   key: m.id ?? '',
-                  label: m.short_name ?? m.display_name ?? '–',
+                  label: anzeigeName(m, '–'),
                 }))}
               />
             ) : null}
@@ -490,7 +506,7 @@ function HeuteInhalt({
           role="status"
           className="border-line-strong text-ui mb-4 flex items-center gap-3 rounded-md border px-3.5 py-2.5"
         >
-          <span className="flex-1">Du siehst {person.short_name ?? person.display_name}s Heute.</span>
+          <span className="flex-1">Du siehst {anzeigeName(person)}s Heute.</span>
           <Button variante="quiet" groesse="S" onClick={zurueckZuMir}>
             Zurück zu deinem ↩
           </Button>
@@ -505,6 +521,7 @@ function HeuteInhalt({
             telefon={telefonAktiv}
             onListeEinfuegen={listeEinfuegen}
             onCallBlock={() => navigate(`${PFADE.telefon}?block=start`)}
+            zaehlerImRail={!fremd}
           />
           {!fremd ? (
             <HinweisKarten
@@ -559,7 +576,7 @@ function HeuteInhalt({
             ) : fremd ? (
               <HeuteLeer
                 art="anderePerson"
-                name={person.short_name ?? person.display_name ?? 'Die andere Person'}
+                name={anzeigeName(person, 'Die andere Person')}
                 onZurueck={zurueckZuMir}
               />
             ) : leadsGesamt === 0 && q.items.length === 0 ? (
@@ -626,7 +643,7 @@ function SpaeterHeute({ items, heute }: { items: readonly QueueItem[]; heute: st
             key={itemKey(i)}
             className="border-line flex justify-between gap-2.5 border-b py-[7px] text-[13.5px] last:border-b-0"
           >
-            <span className="min-w-0">
+            <span className="line-clamp-2 min-w-0" title={`${i.lead_name ?? ''} · ${i.title ?? ''}`}>
               <span className="font-medium">{i.lead_name}</span> <span className="text-ink-3">· {i.title}</span>
             </span>
             <span className="text-ink tnum flex-none font-mono text-[12.5px] font-medium">

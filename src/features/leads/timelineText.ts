@@ -6,6 +6,7 @@ import { fmtDatumKurz } from '@/lib/format'
 import { stageLabel, stageRank, STUFEN } from '@/lib/stufen'
 import { TIMELINE_TEXT } from '@/texte/de'
 import type { Activity, ActivityType, LeadStage, Member, Settings, Template } from '@/types/domain'
+import { anzeigeName } from '@/lib/mitglied'
 
 export type TimelineKontext = {
   templates?: readonly Template[] | null
@@ -22,7 +23,7 @@ export function timelineText(a: Activity, ctx: TimelineKontext = {}): string {
     rang: (s) => ((STUFEN as readonly string[]).includes(s) ? stageRank(s as LeadStage) : 0),
     mitglied: (id) => {
       const m = id ? ctx.members?.find((x) => x.id === id) : null
-      return m?.short_name ?? m?.display_name ?? 'die andere Person'
+      return anzeigeName(m, 'die andere Person')
     },
     datum: (iso) => fmtDatumKurz(iso),
   })

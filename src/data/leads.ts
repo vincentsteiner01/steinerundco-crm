@@ -13,7 +13,6 @@ import type {
   LeadStage,
   LeadUpdate,
   PhaseKey,
-  PipelineCount,
 } from '@/types/domain'
 import {
   berlinMitternachtIso,
@@ -29,6 +28,7 @@ import {
 import { MELDUNG, mutationFehler } from './errors'
 import { qk } from './queryKeys'
 import { supabase } from './supabase'
+import { anzeigeName } from '@/lib/mitglied'
 
 /** Phase → Feinstufen (§ 1.5 Nr. 1). Lokale Kopie der Daten-Schicht; die UI-Quelle ist src/lib/stufen.ts (anderer Besitzer). */
 export const PHASE_STUFEN: Record<PhaseKey, LeadStage[]> = {
@@ -244,9 +244,9 @@ export function useLeadUpdate() {
       if ((e as { code?: string }).code === 'KONFLIKT') {
         // Die andere Person relativ zur angemeldeten (LE-16) – im Team von zwei hat sie den Lead zuletzt geändert
         const andere = qc
-          .getQueryData<{ id: string | null; short_name: string | null }[]>(qk.members)
+          .getQueryData<{ id: string | null; short_name: string | null; display_name?: string | null; email?: string | null }[]>(qk.members)
           ?.find((m) => m.id !== me)
-        toastFehler(MELDUNG.konflikt(andere?.short_name ?? 'Jemand'))
+        toastFehler(MELDUNG.konflikt(anzeigeName(andere, 'Jemand')))
         void qc.invalidateQueries({ queryKey: qk.leads.detail(id) })
         void qc.invalidateQueries({ queryKey: qk.leads.all })
         return
@@ -364,9 +364,5 @@ export function useLeadsOhneBewegung() {
   })
 }
 
-export function usePipelineCounts() {
-  return useQuery({
-    queryKey: qk.leads.pipeline,
-    queryFn: async (): Promise<PipelineCount[]> => pruefe(await supabase.from('v_pipeline_counts').select('*')),
-  })
-}
+// Zähler je Stufe: eigenes Modul (Start-Bundle der Navigation), hier weiter erreichbar
+export { usePipelineCounts } from './pipelineCounts'

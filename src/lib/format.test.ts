@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import {
   MINUS,
   dateline,
+  datelineKurz,
   fmtDatum,
   fmtDatumKurz,
   fmtDatumZeit,
@@ -46,6 +47,10 @@ describe('Datum und Zeit (Europe/Berlin)', () => {
     expect(dateline(MI)).toBe('Mittwoch, 14. Oktober 2026 · KW 42')
     expect(dateline('2027-01-01')).toBe('Freitag, 1. Januar 2027 · KW 53')
     expect(dateline('2026-01-01')).toBe('Donnerstag, 1. Januar 2026 · KW 1')
+  })
+  it('datelineKurz (Telefon, Runde 2)', () => {
+    expect(datelineKurz(MI)).toBe('Mi 14.10. · KW 42')
+    expect(datelineKurz('2027-01-01')).toBe('Fr 01.01. · KW 53')
   })
   it('heuteBerlin / monatLabel / fmtZeitraum', () => {
     expect(heuteBerlin(new Date('2026-10-14T22:30:00Z'))).toBe('2026-10-15')

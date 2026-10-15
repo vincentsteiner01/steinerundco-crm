@@ -53,10 +53,11 @@ export function ShortcutHilfe() {
                 {g.eintraege.map((e) => (
                   <div
                     key={`${g.gruppe}:${e.beschreibung}`}
-                    className="border-line text-ui text-ink-2 flex h-8 items-center justify-between gap-3 border-b"
+                    className="border-line text-ui text-ink-2 flex min-h-8 items-center justify-between gap-3 border-b py-1"
                   >
-                    <span className="truncate-1 min-w-0 font-normal">{e.beschreibung}</span>
-                    <span className="flex flex-none gap-1">
+                    {/* Runde 2: lange Beschreibungen („Später (1 morgen · 2 +3 T …)“) brechen um statt mit „…“ zu enden */}
+                    <span className="min-w-0 leading-snug font-normal">{e.beschreibung}</span>
+                    <span className="flex max-w-[55%] flex-none flex-wrap justify-end gap-1">
                       {e.tasten.map((t) =>
                         t.includes(' ') && t.length <= 5 ? <Kbd key={t} akkord={t} /> : <Kbd key={t}>{t}</Kbd>,
                       )}

@@ -68,4 +68,16 @@ describe('Wochentabelle', () => {
     expect(within(zeilen[0]!).getAllByRole('cell')[2]).toHaveTextContent('12')
     expect(within(zeilen[1]!).getAllByRole('cell')[1]).toHaveTextContent('12')
   })
+
+  it('Kanal „Alle“: Spalten ohne Wert im Zeitraum fallen weg, die aktive bleibt (sechs Spalten passten nicht in die Spalte)', () => {
+    const tage = tageswerte(DAILY.filter((d) => d.member_id === MEMBER_V) as never, '2026-10-01', '2026-10-31')
+    render(<Wochentabelle tage={tage} heute="2026-10-14" metriken={TAGES_METRIKEN} aktiv="anrufe" leereAusblenden />)
+    const koepfe = within(screen.getByRole('table', { name: 'Wochentabelle' }))
+      .getAllByRole('columnheader')
+      .map((h) => h.textContent)
+    expect(koepfe).toContain('Eröffnet')
+    expect(koepfe).toContain('Dials') // aktiv, auch wenn leer
+    expect(koepfe).not.toContain('E-Mails')
+    expect(koepfe.length).toBeLessThan(2 + TAGES_METRIKEN.length)
+  })
 })

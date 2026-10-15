@@ -3,13 +3,16 @@ import type { NavigateFunction } from 'react-router'
 import type { Member } from '@/types/domain'
 import { BEFEHLE as EINSTELLUNGEN } from '@/features/einstellungen/befehle'
 import { BEFEHLE as EMAIL } from '@/features/email/befehle'
+import { BEFEHLE as FEEDBACK } from '@/features/feedback/befehle'
 import { BEFEHLE as HEUTE } from '@/features/heute/befehle'
+import { BEFEHLE as HILFE } from '@/features/hilfe/befehle'
 import { BEFEHLE as IMPORT } from '@/features/import/befehle'
 import { BEFEHLE as KPIS } from '@/features/kpis/befehle'
 import { BEFEHLE as LEADS } from '@/features/leads/befehle'
 import { BEFEHLE as LEITFAEDEN } from '@/features/leitfaeden/befehle'
 import { BEFEHLE as PIPELINE } from '@/features/pipeline/befehle'
 import { BEFEHLE as SEQUENZEN } from '@/features/sequenzen/befehle'
+import { BEFEHLE as TEAM } from '@/features/team/befehle'
 import { BEFEHLE as TELEFON } from '@/features/telefon/befehle'
 import { useLeadSuche } from '@/data/leads'
 import { useTemplates } from '@/data/templates'
@@ -169,8 +172,11 @@ export const BEFEHLE: Befehl[] = [
   ...TELEFON,
   ...EMAIL,
   ...KPIS,
+  ...TEAM,
   ...LEITFAEDEN,
   ...IMPORT,
   ...EINSTELLUNGEN,
+  ...FEEDBACK,
+  ...HILFE,
   ...SEITEN,
 ]

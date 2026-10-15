@@ -5,7 +5,7 @@ import { Chip } from '@/components/ui/Chip'
 import { cn } from '@/components/ui/cn'
 import { fmtProzent, fmtZahl } from '@/lib/format'
 import type { Channel, Template, TemplatePerformance, TemplatePhase } from '@/types/domain'
-import { baumGruppen, nutzung } from './helfer'
+import { baumGruppen, nutzung, nutzungText, standardChip } from './helfer'
 import { labelTeile } from './phasen'
 
 export type Verwendung = { sequenzName: string; position: number }
@@ -34,7 +34,7 @@ export function Baum({ kanal, vorlagen, perf, verwendungen, q, phase, cursorId, 
   }, [cursorId])
 
   return (
-    <div ref={wurzel} role="tree" aria-label="Leitfäden" className="grid content-start gap-3">
+    <div ref={wurzel} role="tree" aria-label="Leitfäden" className="grid min-w-0 grid-cols-1 content-start gap-3">
       {gruppen.length === 0 ? (
         <p className="text-small text-ink-3 px-2.5 py-3">Nichts gefunden für ‚{q.trim()}‘.</p>
       ) : null}
@@ -45,8 +45,15 @@ export function Baum({ kanal, vorlagen, perf, verwendungen, q, phase, cursorId, 
             <div className="flex min-h-[34px] flex-col justify-center px-2.5 py-1">
               <span className="text-ui text-ink flex items-center gap-2 font-medium">
                 {ziffer ? <span className="text-ink-3 tnum w-4 font-mono text-[12.5px]">{ziffer}</span> : null}
-                <span>{text}</span>
-                <span className="text-ink-3 tnum ml-auto font-mono text-[11.5px]">{eintraege.length || '–'}</span>
+                <span className="min-w-0 truncate">{text}</span>
+                {eintraege.length ? (
+                  <span
+                    className="text-ink-3 tnum ml-auto shrink-0 font-mono text-[11.5px]"
+                    title={`${eintraege.length} ${eintraege.length === 1 ? 'Leitfaden' : 'Leitfäden'}`}
+                  >
+                    {eintraege.length}
+                  </span>
+                ) : null}
               </span>
               {def.beschreibung ? (
                 <span className="text-small text-ink-3 truncate-1 block" title={def.beschreibung}>
@@ -56,7 +63,7 @@ export function Baum({ kanal, vorlagen, perf, verwendungen, q, phase, cursorId, 
             </div>
             {eintraege.map((t) => {
               const n = nutzung(perf.get(t.id))
-              const verw = verwendungen.get(t.id) ?? []
+              const chip = standardChip(verwendungen.get(t.id) ?? [])
               const aktiv = t.id === cursorId
               return (
                 <div
@@ -76,25 +83,36 @@ export function Baum({ kanal, vorlagen, perf, verwendungen, q, phase, cursorId, 
                     }
                   }}
                   className={cn(
-                    'text-ui hover:bg-surface-hover flex min-h-[34px] cursor-default items-center gap-2 rounded-sm px-2.5 py-1 font-normal',
+                    'text-ui hover:bg-surface-hover grid min-h-[34px] min-w-0 cursor-default content-center gap-1 rounded-sm px-2.5 py-1 font-normal',
                     'ease-brand transition-[background] duration-[var(--t-1)]',
                     aktiv ? 'cursor-bar text-ink-bright' : t.active ? 'text-ink' : 'text-ink-3',
                   )}
                 >
-                  <span className="min-w-0 flex-1 truncate">{t.name}</span>
-                  {verw.map((v) => (
-                    <Chip
-                      key={`${v.sequenzName}-${v.position}`}
-                      ton="muted"
-                      title={`${v.sequenzName} · Schritt ${v.position}`}
-                    >
-                      Standard für Schritt {v.position}
-                    </Chip>
-                  ))}
-                  {!t.active ? <Chip ton="ended">inaktiv</Chip> : null}
-                  <span className="text-ink-3 tnum font-mono text-[12px] whitespace-nowrap" aria-label="Nutzung">
-                    {n ? `${fmtZahl(n.gesendet)} · ${n.quote === null ? '–' : fmtProzent(n.quote)}` : '–'}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate" title={t.name}>
+                      {t.name}
+                    </span>
+                    {!t.active ? <Chip ton="ended">inaktiv</Chip> : null}
+                    {/* Runde 2: unbeschriftete Werte („–“, „148 · 5 %“) wirkten wie verirrte Zeichen – ohne Nutzung nichts,
+                        sonst mit Klartext im title/aria-label */}
+                    {n && n.gesendet > 0 ? (
+                      <span
+                        className="text-ink-3 tnum shrink-0 font-mono text-[12px] whitespace-nowrap"
+                        title={nutzungText(n)}
+                        aria-label={nutzungText(n)}
+                      >
+                        {fmtZahl(n.gesendet)} · {n.quote === null ? '–' : fmtProzent(n.quote)}
+                      </span>
+                    ) : null}
                   </span>
+                  {/* Standard-Chip in eigener Zeile: in 280 px bliebe neben Name + Nutzung sonst kein Platz (echte Daten: bis zu 4 Sequenzen) */}
+                  {chip ? (
+                    <span className="flex min-w-0">
+                      <Chip ton="muted" title={chip.titel} className="max-w-full overflow-hidden text-ellipsis">
+                        {chip.text}
+                      </Chip>
+                    </span>
+                  ) : null}
                 </div>
               )
             })}

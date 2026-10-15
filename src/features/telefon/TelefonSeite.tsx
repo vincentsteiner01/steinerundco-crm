@@ -23,9 +23,9 @@ import { useLead } from '@/data/leads'
 import { useMe } from '@/data/members'
 import { useSettings } from '@/data/settings'
 import { useSavedViews } from '@/data/views'
-import { fmtDatumKurz, fmtDauer, fmtZeit, heuteBerlin } from '@/lib/format'
+import { fmtDatumKurz, fmtZeit, heuteBerlin } from '@/lib/format'
 import { useHotkeyScope, useHotkeys } from '@/lib/keyboard'
-import { ANRUFGRUND_LABEL, GATE_GRUND_LABEL, LEER } from '@/texte/de'
+import { ANRUFGRUND_LABEL, LEER, nichtAnrufbarAktion, nichtAnrufbarSatz, telefonGrundLabel } from '@/texte/de'
 import { anrufgrundVorbelegung, useAnrufgrundSetzen } from './anrufgrund'
 import { AnrufgrundSetzen } from './AnrufgrundSetzen'
 import { listeIds, type AnrufZeile, type GesperrtZeile, type RueckrufZeile } from './anrufliste'
@@ -35,9 +35,11 @@ import { useCallOutcomeDefs, type LetzterAnruf } from '@/data/calls'
 import { ERGEBNISSE } from './ergebnisse'
 import { SLOTS_STANDARD } from './kadenz'
 import { ListeEntfernen } from './ListeEntfernen'
+import { verpasstDauer } from './anzeige'
 import { RueckrufPlanen } from './RueckrufPlanen'
 import { useAnrufliste } from './useAnrufliste'
 import { blockZusammenfassung } from './zusammenfassung'
+import { anzeigeName } from '@/lib/mitglied'
 
 type Segmentwert = 'heute' | 'alle'
 
@@ -64,6 +66,10 @@ function mitWem(c: LetzterAnruf | null): string | null {
   if (c.reached_person === 'entscheider') return 'Entscheider'
   if (c.reached_person === 'assistenz') return 'Assistenz'
   return null
+}
+
+function rueckrufTitel(z: RueckrufZeile, mit: string | null): string {
+  return [z.lead.full_name, z.lead.company_name, mit ? `mit ${mit}` : null, z.task.note].filter(Boolean).join(' · ')
 }
 
 function anrufPfad(leadId: string, taskId?: string | null): string {
@@ -108,6 +114,16 @@ export function Component() {
       liste.nichtAnrufbar.filter(
         (z) => z.grund === 'kein_anrufgrund' && anrufgrundVorbelegung(z.lead) === 'linkedin_vernetzt_antwort',
       ),
+    [liste.nichtAnrufbar],
+  )
+
+  // Leerzustand nach Grund (Runde 2: 119 „Keine Nummer“ + 2 „Firma gesperrt“ hießen „121 warten auf einen Anrufgrund“)
+  const nichtZaehlung = useMemo(
+    () => ({
+      keineNummer: liste.nichtAnrufbar.filter((z) => z.grund === 'keine_nummer').length,
+      keinAnrufgrund: liste.nichtAnrufbar.filter((z) => z.grund === 'kein_anrufgrund').length,
+      gesperrt: liste.nichtAnrufbar.filter((z) => z.grund !== 'keine_nummer' && z.grund !== 'kein_anrufgrund').length,
+    }),
     [liste.nichtAnrufbar],
   )
 
@@ -213,7 +229,7 @@ export function Component() {
     <>
       <SeitenKopf
         titel="Telefon"
-        kontext={me?.short_name ?? me?.display_name ?? undefined}
+        kontext={(anzeigeName(me) || undefined)}
         rechts={
           <>
             <KopfStats
@@ -250,6 +266,7 @@ export function Component() {
               <Button
                 variante="primary"
                 kbd="↵"
+                data-tour="call-block"
                 onClick={() => {
                   const l = blockAktuellerLead(block)
                   if (l) navigate(`${PFADE.anruf(l)}?block=${block.id}`)
@@ -263,6 +280,7 @@ export function Component() {
                 kbd="↵"
                 disabled={!ids.length}
                 disabledGrund="Niemand anzurufen"
+                data-tour="call-block"
                 onClick={starten}
               >
                 Call-Block starten
@@ -305,10 +323,10 @@ export function Component() {
       ) : zeilen.length === 0 ? (
         <EmptyState
           titel={LEER.telefonListe.titel}
-          satz={liste.zaehler.nichtAnrufbar > 0 ? LEER.telefonListeWartend(liste.zaehler.nichtAnrufbar) : undefined}
+          satz={liste.zaehler.nichtAnrufbar > 0 ? nichtAnrufbarSatz(nichtZaehlung) : undefined}
           primaer={
             liste.zaehler.nichtAnrufbar > 0
-              ? { label: LEER.telefonListe.aktion, onClick: () => setNichtOffen(true) }
+              ? { label: nichtAnrufbarAktion(nichtZaehlung), onClick: () => setNichtOffen(true) }
               : undefined
           }
         />
@@ -348,7 +366,11 @@ export function Component() {
               zaehler={liste.anrufliste.length}
               eingeklappt={false}
               onToggle={() => {}}
-              rechts={<span className="text-small text-ink-3">Rückrufe → Versuche 2–{maxVersuche} → Versuch 1</span>}
+              rechts={
+                <span className="text-small text-ink-3 whitespace-nowrap max-lg:hidden">
+                  Rückrufe → Versuche 2–{maxVersuche} → Versuch 1
+                </span>
+              }
             />
             {liste.anrufliste.length ? (
               <ul role="listbox" aria-label="Anrufliste">
@@ -414,7 +436,8 @@ export function Component() {
           rechts={
             bulkKandidaten.length ? (
               <Button variante="quiet" groesse="S" busy={bulkLaeuft} onClick={() => void bulk()}>
-                Alle mit LinkedIn-Antwort → ‚LinkedIn vernetzt + Antwort‘ ({bulkKandidaten.length})
+                <span className="max-md:hidden">Alle mit LinkedIn-Antwort → ‚LinkedIn vernetzt + Antwort‘</span>
+                <span className="md:hidden">Anrufgrund für LinkedIn-Antworten</span> ({bulkKandidaten.length})
               </Button>
             ) : null
           }
@@ -511,13 +534,15 @@ type RowGemeinsam = {
 // Ergebnis-Pflicht) statt direkt `tel:` – BAUPLAN § 8.2 Nr. 3 (Ergebnis-Pflicht je Versuch) geht vor ux § 7.5 („tel:“ je Karte).
 const ZEILE = 'text-table flex items-center gap-3 px-3 max-md:h-auto max-md:flex-wrap max-md:gap-y-2 max-md:py-3'
 const AKTIONEN = 'flex flex-none items-center gap-1.5 max-md:w-full'
+/** Name-Block: wächst, schrumpft nie unter 8,5rem (sonst Breite 0 bei 1024 px, Sichtprüfung), auf Mobil eigene Zeile. */
+const NAME_BLOCK = 'truncate-1 min-w-[8.5rem] flex-1 max-md:min-w-[60%]'
 const ANRUFEN_MOBIL = 'max-md:h-12 max-md:flex-1 max-md:text-[15px]'
 
 function LeadName({ leadId, name }: { leadId: string; name: string | null }) {
   return (
     <button
       type="button"
-      className="hover:text-ink-bright font-medium"
+      className="hover:text-ink-bright inline font-medium"
       title="Im Peek öffnen"
       onClick={(e) => {
         e.stopPropagation()
@@ -552,7 +577,7 @@ function RueckrufRow({
     >
       <div className={cn(ZEILE, 'h-12')}>
         <span className="text-ink tnum w-14 flex-none font-mono text-[15px] font-medium">{fmtZeit(z.dueAt)}</span>
-        <span className="truncate-1 min-w-0 max-md:flex-1">
+        <span className={NAME_BLOCK} title={rueckrufTitel(z, mit)}>
           <LeadName leadId={z.lead.id} name={z.lead.full_name} />
           <span className="text-small text-ink-3">
             {z.lead.company_name ? ` · ${z.lead.company_name}` : ''} · vereinbart {fmtDatumKurz(z.task.created_at)}
@@ -560,9 +585,13 @@ function RueckrufRow({
             {z.task.note ? ` · ${z.task.note}` : ''}
           </span>
         </span>
-        {z.verpasst ? <Chip ton="overdue">verpasst · {fmtDauer(verpasstSec)}</Chip> : null}
+        {z.verpasst ? (
+          <Chip ton="overdue" className="tnum font-mono">
+            verpasst · {verpasstDauer(verpasstSec)}
+          </Chip>
+        ) : null}
         {z.wiederholung > 0 ? <Chip ton="muted">Wiederholung {z.wiederholung}</Chip> : null}
-        <span className="text-ink-3 tnum text-small ml-auto font-mono whitespace-nowrap">
+        <span className="text-ink-3 tnum text-small flex-none font-mono whitespace-nowrap max-xl:hidden max-md:inline">
           Versuch {z.versuch}/{maxVersuche}
         </span>
         <span className={AKTIONEN} onClick={(e) => e.stopPropagation()}>
@@ -613,25 +642,35 @@ function AnrufRow({
       className={cn('border-line border-b', cursor && 'cursor-bar')}
     >
       <div className={cn(ZEILE, 'h-11')}>
-        <span className="truncate-1 min-w-0 max-md:flex-1">
+        <span className={NAME_BLOCK} title={[z.lead.full_name, z.lead.company_name, rolle].filter(Boolean).join(' · ')}>
           <LeadName leadId={z.lead.id} name={z.lead.full_name} />
           <span className="text-small text-ink-3">
             {z.lead.company_name ? ` · ${z.lead.company_name}` : ''}
             {rolle ? ` · ${rolle}` : ''}
           </span>
         </span>
-        {z.faelligAt && z.ueberfaelligTage > 0 ? <ZeitChip datum={z.faelligAt} heute={heuteBerlin()} /> : null}
-        <span className="text-ink-3 tnum text-small font-mono whitespace-nowrap">
-          Versuch {z.versuch}/{maxVersuche} · Slot {z.slot} {slots[z.slot]}
-          {letzter ? ` · zuletzt ${fmtDatumKurz(letzter.started_at)}` : ''}
+        {z.faelligAt && z.ueberfaelligTage > 0 ? (
+          <ZeitChip datum={z.faelligAt} heute={heuteBerlin()} className="flex-none" />
+        ) : null}
+        {/* Meta in Prioritäten: Versuch immer, Slot ab 1280 px, „zuletzt“ ab 1440 px – nie umbrechen */}
+        <span className="text-ink-3 tnum text-small flex-none font-mono whitespace-nowrap">
+          Versuch {z.versuch}/{maxVersuche}
+          <span className="max-xl:hidden">
+            {' · '}Slot {z.slot} {slots[z.slot]}
+          </span>
+          {letzter ? <span className="max-2xl:hidden"> · zuletzt {fmtDatumKurz(letzter.started_at)}</span> : null}
         </span>
         {letzter ? (
-          <Chip ton="muted" data-testid="letztes-ergebnis">
+          <Chip ton="muted" data-testid="letztes-ergebnis" className="flex-none">
             {kurzErgebnis(letzter)}
           </Chip>
         ) : null}
-        {z.lead.call_basis ? <Chip className="max-md:hidden">{ANRUFGRUND_LABEL[z.lead.call_basis]}</Chip> : null}
-        <span className={cn('ml-auto', AKTIONEN)} onClick={(e) => e.stopPropagation()}>
+        {z.lead.call_basis ? (
+          <Chip className="flex-none max-xl:hidden" title={ANRUFGRUND_LABEL[z.lead.call_basis]}>
+            {ANRUFGRUND_LABEL[z.lead.call_basis]}
+          </Chip>
+        ) : null}
+        <span className={AKTIONEN} onClick={(e) => e.stopPropagation()}>
           {cursor && onEntfernen ? (
             <ListeEntfernen leadId={z.lead.id} offen={!!entfernenOffen} onOpenChange={onEntfernen} />
           ) : null}
@@ -667,13 +706,19 @@ function AnrufRow({
 
 function GesperrtRow({ zeile: z }: { zeile: GesperrtZeile }) {
   return (
-    <li className="border-line text-table flex h-11 items-center gap-3 border-b px-3" data-grund={z.grund}>
-      <span className="truncate-1 min-w-0">
+    <li
+      className="border-line text-table flex h-11 items-center gap-3 border-b px-3 max-md:h-auto max-md:flex-wrap max-md:gap-y-2 max-md:py-3"
+      data-grund={z.grund}
+    >
+      <span className={NAME_BLOCK} title={[z.lead.full_name, z.lead.company_name].filter(Boolean).join(' · ')}>
         <span className="font-medium">{z.lead.full_name}</span>
         <span className="text-small text-ink-3">{z.lead.company_name ? ` · ${z.lead.company_name}` : ''}</span>
       </span>
-      <Chip ton={z.grund === 'kein_anrufgrund' || z.grund === 'keine_nummer' ? 'muted' : 'danger'}>
-        {GATE_GRUND_LABEL[z.grund]}
+      <Chip
+        ton={z.grund === 'kein_anrufgrund' || z.grund === 'keine_nummer' ? 'muted' : 'danger'}
+        className="flex-none"
+      >
+        {telefonGrundLabel(z.grund)}
       </Chip>
       <span className="ml-auto flex flex-none items-center gap-1.5">
         {z.grund === 'kein_anrufgrund' ? <AnrufgrundSetzen lead={z.lead} /> : null}

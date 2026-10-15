@@ -62,7 +62,7 @@ describe('AnrufButton', () => {
   it('Sperrlisten-Treffer und Firmensperre sperren den Button', async () => {
     stand.lead = leadMitBezug(LEAD_A, { companies: { do_not_contact: true } as never })
     rendern(<AnrufButton leadId={LEAD_A.id} />, '/leads', '/leads')
-    expect(await screen.findByRole('button', { name: 'Anrufen – Firma gesperrt – nicht anschreiben' })).toBeDisabled()
+    expect(await screen.findByRole('button', { name: 'Anrufen – Firma gesperrt – nicht anrufen' })).toBeDisabled()
   })
 
   it('bei mehreren Buttons reagiert nur die Cursor-Zeile', async () => {

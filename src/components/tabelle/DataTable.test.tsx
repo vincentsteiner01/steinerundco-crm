@@ -251,3 +251,29 @@ describe('DataTable', () => {
     }
   })
 })
+
+describe('DataTable – Runde 2: Spaltenköpfe', () => {
+  it('sortierbare Köpfe kürzen mit „…“ und tragen den vollen Namen im title', () => {
+    render(<Harness daten={zeilen(3)} />)
+    const knopf = screen.getByTitle(/^Nächste Aktion – sortieren/)
+    expect(knopf).toHaveClass('max-w-full', 'min-w-0')
+    expect(within(knopf).getByText('Nächste Aktion')).toHaveClass('truncate')
+  })
+
+  it('Kopf klebt nur ≥ 1280 px; <col> blendet mit der Spalte aus; minBreite steuert die Querscroll-Breite', () => {
+    const spalten: DataTableSpalte<Zeile>[] = h.columns([
+      h.accessor('name', { header: 'Name' }),
+      h.accessor('firma', { header: 'Unternehmen', meta: { ausblenden: 'xl', breite: '13%' } }),
+    ])
+    const { container, unmount } = render(<Harness daten={zeilen(2)} spalten={spalten} />)
+    const th = screen.getByRole('columnheader', { name: /Name/ })
+    expect(th.className).toContain('xl:sticky')
+    expect(th.className.split(/\s+/)).not.toContain('sticky')
+    const cols = container.querySelectorAll('col')
+    expect(cols[cols.length - 1]).toHaveClass('max-xl:hidden')
+    expect(container.querySelector('table')?.style.getPropertyValue('--min-breite')).toBe('1040px')
+    unmount()
+    const r = render(<Harness daten={zeilen(2)} spalten={spalten} minBreite={null} />)
+    expect(r.container.querySelector('table')?.style.getPropertyValue('--min-breite')).toBe('0px')
+  })
+})

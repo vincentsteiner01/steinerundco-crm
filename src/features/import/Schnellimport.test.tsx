@@ -95,6 +95,14 @@ describe('Schnellimport', () => {
     expect(within(grid).getByText('Sales-Nav')).toBeInTheDocument()
     expect(within(grid).getByText('Unvollständig')).toBeInTheDocument()
     expect(rpcAufrufe(rpc, 'import_leads')).toHaveLength(0)
+    // Zwei Zeilen je Eintrag: Name oben, Unternehmen · Position · Ort darunter mit vollem Text im title (326-px-Spalte)
+    expect(
+      within(grid)
+        .getAllByRole('columnheader')
+        .map((h) => h.textContent),
+    ).toEqual(['Name · Unternehmen', 'Status · Anrede'])
+    const eva = within(grid).getByTitle('Sonnenfeld Solar Rostock & MV · Kundenbetreuung · Rostock')
+    expect(eva).toHaveTextContent('Sonnenfeld Solar Rostock & MV · Kundenbetreuung · Rostock')
     await within(grid).findByText('Firma gesperrt') // Firmen-Query (useCompanies) ist asynchron
     await waitFor(() => expect(rpcAufrufe(rpc, 'import_leads')).toHaveLength(1), { timeout: 2000 })
     const dry = rpcAufrufe(rpc, 'import_leads')[0]

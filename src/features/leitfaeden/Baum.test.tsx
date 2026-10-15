@@ -30,7 +30,7 @@ function rendern(props: Partial<Parameters<typeof Baum>[0]> = {}) {
 }
 
 describe('Baum', () => {
-  it('LinkedIn: Phasenköpfe mit Ziffer, Label, Zweck (LF-11) und Zähler; leere Phase zeigt „–“', () => {
+  it('LinkedIn: Phasenköpfe mit Ziffer, Label, Zweck (LF-11) und Zähler; leere Phase ohne „–“', () => {
     rendern()
     const tree = screen.getByRole('tree', { name: 'Leitfäden' })
     const gruppen = within(tree).getAllByRole('group')
@@ -51,7 +51,9 @@ describe('Baum', () => {
     ).toBeInTheDocument()
     expect(within(gruppen[4] as HTMLElement).getByText('Nicht-Antworter erneut aktivieren')).toBeInTheDocument()
     expect(within(gruppen[1] as HTMLElement).getByText('1')).toHaveClass('font-mono')
-    expect(within(gruppen[0] as HTMLElement).getByText('–')).toBeInTheDocument()
+    // Runde 2: leere Phase ohne „–“ (wirkte wie ein verirrtes Zeichen); Zähler mit Klartext im title
+    expect(within(gruppen[0] as HTMLElement).queryByText('–')).toBeNull()
+    expect(within(gruppen[2] as HTMLElement).getByTitle('9 Leitfäden')).toHaveTextContent('9')
     expect(within(gruppen[2] as HTMLElement).getByText('9')).toBeInTheDocument() // 8 aktive + 1 inaktive
   })
 
@@ -61,10 +63,13 @@ describe('Baum', () => {
     expect(jaV1).toHaveAttribute('aria-selected', 'true')
     expect(jaV1).toHaveAttribute('data-cursor', 'true')
     expect(within(jaV1).getByText('Standard für Schritt 2')).toBeInTheDocument()
-    expect(within(jaV1).getByLabelText('Nutzung')).toHaveTextContent(/12 · 25\s%/)
+    const nutzung = within(jaV1).getByLabelText(/^12 gesendet · 25\s% Antwort$/)
+    expect(nutzung).toHaveTextContent(/12 · 25\s%/)
+    expect(nutzung).toHaveAttribute('title', nutzung.getAttribute('aria-label'))
     const v2 = screen.getByRole('treeitem', { name: /Gesprächseröffnung \(V2\)/ })
     expect(within(v2).getByText('inaktiv')).toBeInTheDocument()
-    expect(within(v2).getByLabelText('Nutzung')).toHaveTextContent('–')
+    // ohne Nutzung: kein Wert, kein „–“
+    expect(within(v2).queryByLabelText(/gesendet/)).toBeNull()
     expect(v2).toHaveAttribute('aria-selected', 'false')
   })
 
@@ -143,6 +148,25 @@ describe('Baum', () => {
     )
     expect(screen.getByText('Nichts gefunden für ‚gibtsnicht‘.')).toBeInTheDocument()
     cleanupAndFilter()
+  })
+  it('zwei Sequenzen mit demselben Schritt → ein Chip statt zwei, in eigener Zeile unter dem Namen', () => {
+    rendern({
+      verwendungen: new Map<string, Verwendung[]>([
+        [
+          JA_V1_ID,
+          [
+            { sequenzName: 'A', position: 1 },
+            { sequenzName: 'B', position: 1 },
+          ],
+        ],
+      ]),
+    })
+    const eintrag = screen.getByRole('treeitem', { selected: true })
+    expect(within(eintrag).getAllByText(/^Standard für Schritt/)).toHaveLength(1)
+    expect(within(eintrag).getByText('Standard für Schritt 1').closest('[title]')).toHaveAttribute(
+      'title',
+      'A · Schritt 1\nB · Schritt 1',
+    )
   })
 })
 

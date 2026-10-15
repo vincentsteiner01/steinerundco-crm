@@ -38,6 +38,7 @@ export function AbhakZeile({
       onClick={onClick}
       className={cn(
         'border-line text-table ease-brand flex h-11 cursor-default items-center gap-3 border-b px-3 transition-[background] duration-[var(--t-1)]',
+        'scroll-mt-[calc(var(--head-h,0px)+16px)]',
         cursor && 'cursor-bar',
         ausgewaehlt && !cursor && 'bg-surface-hover',
         className,

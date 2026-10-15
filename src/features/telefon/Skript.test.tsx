@@ -81,4 +81,37 @@ describe('Skript', () => {
     expect(screen.getByRole('group', { name: 'Vorlage' }).querySelectorAll('button')).toHaveLength(2)
     expect(screen.getByTitle('Anrufer – offen')).toHaveClass('text-overdue')
   })
+
+  it('bricht die 9 Phasen-Tabs um statt sie quer zu verstecken (Runde 2: Pitch … Datenschutz waren unsichtbar)', () => {
+    render(
+      <Skript
+        templates={TEMPLATES}
+        lead={LEAD_A}
+        versuch={1}
+        tab="einstieg"
+        onTab={() => {}}
+        vorlageId={null}
+        onVorlage={() => {}}
+      />,
+    )
+    const leiste = screen.getByRole('tablist', { name: 'Skript-Phase' })
+    expect(leiste).toHaveClass('flex-wrap')
+    expect(leiste).not.toHaveClass('overflow-auto')
+  })
+
+  it('lange Vorlagennamen: Auswahl als Select über die volle Breite', () => {
+    const lang = TEMPLATES.map((t, i) => ({ ...t, name: `Sehr lange Vorlage für den Einstieg Nummer ${i + 1}` }))
+    render(
+      <Skript
+        templates={lang}
+        lead={{ ...LEAD_A, call_basis: 'bestandskontakt' }}
+        versuch={1}
+        tab="einstieg"
+        onTab={() => {}}
+        vorlageId={null}
+        onVorlage={() => {}}
+      />,
+    )
+    expect(screen.getByRole('combobox', { name: 'Vorlage' })).toHaveClass('w-full')
+  })
 })

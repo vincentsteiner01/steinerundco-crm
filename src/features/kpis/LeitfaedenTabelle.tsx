@@ -129,7 +129,7 @@ export function LeitfaedenTabelle({
   }, [sequenzen, nachSchritt, kanal])
 
   return (
-    <section aria-label="Leitfäden" className="grid gap-8">
+    <section aria-label="Leitfäden" className="grid min-w-0 grid-cols-1 gap-8">
       <div>
         <BlockKopf titel="Leitfäden" hinweis="gesendet gesamt · Antwort binnen 7 Tagen" />
         <DataTable<Zeile>
@@ -138,6 +138,8 @@ export function LeitfaedenTabelle({
           rowId={(r) => r.id}
           sticky={false}
           ariaLabel="Leitfäden-Tabelle"
+          // Fünf schmale Spalten brauchen die 1040 px der Lead-Tabellen nicht (1024 px: „Antworten (7“ abgeschnitten); mobil 600 px + Querscroll
+          className="max-xl:[&>table]:min-w-0 max-md:[&>table]:min-w-[600px]"
           leer={<p className="text-small text-ink-3">Noch keine Vorlage gesendet.</p>}
         />
       </div>

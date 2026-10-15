@@ -20,3 +20,9 @@ const STANDARD: AktionenKontext = {
 export function useHeuteKontext(): AktionenKontext {
   return useContext(HeuteKontext) ?? { ...STANDARD, heute: heuteBerlin() }
 }
+
+/**
+ * Karte eingebettet im Peek (NaechsterSchritt): Name und Firma stehen schon im Panelkopf, das Panel ist selbst die Fläche –
+ * ohne Namenszeile, ohne eigenen Rahmen (keine Box in der Box), Label ohne „seit n T“ (steht als Zeit-Chip daneben). Runde 2.
+ */
+export const KarteEingebettet = createContext(false)

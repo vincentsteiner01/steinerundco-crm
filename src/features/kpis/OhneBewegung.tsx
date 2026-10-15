@@ -84,6 +84,7 @@ export function OhneBewegung({ leads, settings, cursorId, onCursor, onOeffnen }:
         sticky={false}
         ariaLabel="Leads ohne Bewegung"
         leer={<p className="text-small text-ink-3">Alle Gespräche in Bewegung.</p>}
+        className="max-xl:[&>table]:min-w-0 max-md:[&>table]:min-w-[600px]"
       />
     </section>
   )

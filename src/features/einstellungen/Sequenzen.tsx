@@ -95,11 +95,7 @@ export function Sequenzen() {
           <Button variante="quiet" groesse="S" icon={ArrowLeft} onClick={zurueck} kbd="Esc">
             Alle Sequenzen
           </Button>
-          {s ? (
-            <span className="text-h3 text-ink-bright">
-              {s.name} <span className="text-ink-3 font-normal">· {KANAL_LABEL[s.channel]}</span>
-            </span>
-          ) : null}
+          {/* Kein eigener Titel: der Editor zeigt Name, Status und Kanal direkt darunter (sonst stand der Name doppelt) */}
         </div>
         {s ? (
           <SequenzEditor sequenceId={s.id} />
@@ -127,10 +123,11 @@ export function Sequenzen() {
             <th scope="col" className="label h-8 pr-3 font-semibold">
               Name
             </th>
-            <th scope="col" className="label h-8 pr-3 font-semibold">
+            {/* Mobil ohne Kanal + Schritte: der Name nennt den Kanal schon („LinkedIn …“), fünf Spalten liefen 43 px über */}
+            <th scope="col" className="label h-8 pr-3 font-semibold max-sm:hidden">
               Kanal
             </th>
-            <th scope="col" className="label h-8 pr-3 text-right font-semibold">
+            <th scope="col" className="label h-8 pr-3 text-right font-semibold max-sm:hidden">
               Schritte
             </th>
             <th scope="col" className="label h-8 pr-3 text-right font-semibold">
@@ -156,13 +153,13 @@ export function Sequenzen() {
                   ) : null}
                 </button>
               </td>
-              <td className="pr-3">
+              <td className="pr-3 max-sm:hidden">
                 <span className="inline-flex items-center gap-1.5">
                   <Glyph kanal={s.channel} />
                   <span className="text-small text-ink-2">{KANAL_LABEL[s.channel]}</span>
                 </span>
               </td>
-              <td className="mono pr-3 text-right">{s.steps.length}</td>
+              <td className="mono pr-3 text-right max-sm:hidden">{s.steps.length}</td>
               <td className="mono pr-3 text-right">{laufend(s)}</td>
               <td className="text-right">
                 <Switch

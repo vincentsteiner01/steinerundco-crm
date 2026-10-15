@@ -319,8 +319,9 @@ export function TelefonKarte({
             onChange={(e) => grundWaehlen(e.target.value)}
             optionen={ANRUFGRUENDE.map((g) => ({ value: g, label: ANRUFGRUND_LABEL[g] }))}
           />
+          {/* Amber heißt nur „überfällig“ (DESIGN-SYSTEM) – Pflichthinweis in ink-2 (Runde 2) */}
           {!lead.call_basis && !grundEntwurf ? (
-            <span className="text-small text-overdue">fehlt – Pflicht vor Anruf</span>
+            <span className="text-small text-ink-2">fehlt – Pflicht vor Anruf</span>
           ) : null}
           {lead.call_basis === 'linkedin_vernetzt' ? (
             <span className="text-small text-ink-3">‚nur vernetzt‘ ist die schwächere Grundlage</span>

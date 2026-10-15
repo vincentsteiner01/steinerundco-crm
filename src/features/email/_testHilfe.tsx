@@ -115,6 +115,8 @@ export const ANTWORTEN: {
   emailsFehler: { code: string; message: string } | null
   /** Insert/Update-Argumente auf `emails`, in Reihenfolge. */
   emailSchreibzugriffe: { art: 'insert' | 'update'; arg: Record<string, unknown> }[]
+  /** Mitglieder ohne hinterlegte Absenderadresse (echte Daten: `email_address` leer). */
+  ohnePostfach: boolean
 } = {
   lead: leadMitErlaubnis(),
   emails: [],
@@ -126,6 +128,7 @@ export const ANTWORTEN: {
   enrollments: [],
   emailsFehler: null,
   emailSchreibzugriffe: [],
+  ohnePostfach: false,
 }
 
 export function zuruecksetzen(): void {
@@ -139,6 +142,7 @@ export function zuruecksetzen(): void {
   ANTWORTEN.enrollments = []
   ANTWORTEN.emailsFehler = null
   ANTWORTEN.emailSchreibzugriffe = []
+  ANTWORTEN.ohnePostfach = false
 }
 
 function emailsKette() {
@@ -188,7 +192,7 @@ export function supabaseAntworten() {
               display_name: 'Vincent Steiner',
               short_name: 'Vincent',
               email: 'vincent@steinerundco.de',
-              email_address: 'vincent@steinerundco.de',
+              email_address: ANTWORTEN.ohnePostfach ? null : 'vincent@steinerundco.de',
               signature: 'Vincent Steiner\nSteiner & Co.\nMusterstraße 1, 20095 Hamburg',
               preferences: {},
             },

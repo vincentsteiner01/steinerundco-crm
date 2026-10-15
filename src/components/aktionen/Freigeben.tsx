@@ -21,6 +21,7 @@ import {
 } from './_gemeinsam'
 import { AktionButton, RadioListe, ScopeFormular, TriggerHuelle } from './_Teile'
 import { FREIGABE_GRUND, type FreigabeGrundKey } from './gruende'
+import { anzeigeName } from '@/lib/mitglied'
 
 const OPTIONEN: { key: FreigabeGrundKey; label: string; kbd: string }[] = [
   { key: 'kontakt_entfernt', label: FREIGABE_GRUND.kontakt_entfernt, kbd: '1' },
@@ -48,7 +49,7 @@ export function Freigeben({
   const { anbieten } = useUndo()
   const inval = useLeadInvalidierung()
 
-  const name = andere?.short_name ?? andere?.display_name ?? 'die andere Person'
+  const name = anzeigeName(andere, 'die andere Person')
   const note = getrimmt(notiz)
   const notizFehlt = grund === 'sonstiges' && !note
 

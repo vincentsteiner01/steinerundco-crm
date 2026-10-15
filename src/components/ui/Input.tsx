@@ -30,7 +30,7 @@ export function Input({
 }: InputProps) {
   const fehlerId = fehler && id ? `${id}-fehler` : undefined
   return (
-    <div className="grid gap-1.5">
+    <div className="grid min-w-0 grid-cols-1 gap-1.5">
       <div
         className={cn(
           'bg-surface-hover ease-brand focus-within:border-signal flex items-center gap-2 rounded-sm border px-3 transition-[border-color] duration-[var(--t-1)]',

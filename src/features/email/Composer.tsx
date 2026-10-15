@@ -81,7 +81,7 @@ export function Composer(props: ComposerProps) {
       ) : null}
 
       {/* Kopf: Empfänger · Von · Erlaubnis-Badge */}
-      <div className="grid gap-3.5">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5">
         <FormField
           label="An"
           htmlFor={`${id}-an`}
@@ -101,13 +101,14 @@ export function Composer(props: ComposerProps) {
             onChange={(e) => c.empfaengerSetzen(e.target.value)}
           />
         </FormField>
-        <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5">
-          <span className="label">Von</span>
-          <span className="text-ink-2 tnum font-mono text-[13px]" data-testid="von">
+        {/* Labels oben bündig mit der ersten Zeile – umbrechende Erlaubnis-Zeile zog sie sonst in die Mitte (Sichtprüfung) */}
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-1.5">
+          <span className="label flex min-h-8 items-center">Von</span>
+          <span className="text-ink-2 tnum flex min-h-8 items-center font-mono text-[13px]" data-testid="von">
             {c.me?.email_address ?? '–'}
           </span>
-          <span className="label">Erlaubnis</span>
-          <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <span className="label flex min-h-8 items-center">Erlaubnis</span>
+          <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
             <ErlaubnisBadge lead={lead} />
             <ErlaubnisErfassen
               leadId={lead.id}
@@ -131,8 +132,8 @@ export function Composer(props: ComposerProps) {
               }
             />
           </div>
-          <span className="label">Sequenz</span>
-          <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <span className="label flex min-h-8 items-center">Sequenz</span>
+          <div className="flex min-h-8 min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
             <SequenzStatus leadId={lead.id} kanal="email" />
             <SequenzStartenMenue leadId={lead.id} kanal="email" />
           </div>
@@ -170,7 +171,7 @@ export function Composer(props: ComposerProps) {
       ) : null}
 
       {/* Vorlage · Betreff */}
-      <div className="grid gap-3.5">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3.5">
         <FormField
           label="Vorlage"
           htmlFor={`${id}-vorlage`}
@@ -266,7 +267,7 @@ export function Composer(props: ComposerProps) {
       ) : null}
 
       {/* Text */}
-      <div className="grid gap-1.5">
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-1.5">
         <div className="flex items-center justify-between gap-3">
           <label className="label" htmlFor={`${id}-text`}>
             Text

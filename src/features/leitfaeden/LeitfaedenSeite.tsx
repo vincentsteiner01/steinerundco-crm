@@ -138,8 +138,9 @@ export function Component() {
           primaer={{ label: LEER.leitfaedenKanal(KANAL_LABEL[kanal]).aktion, onClick: neuAnlegen }}
         />
       ) : (
-        <div className={desktop ? 'grid grid-cols-[280px_1fr] gap-8' : 'grid gap-5'}>
-          <aside aria-label="Baum" className="grid content-start gap-3">
+        // minmax(0, …): sonst wächst die Spur auf die min-content-Breite langer Namen und der Baum läuft unter das Detail
+        <div className={desktop ? 'grid grid-cols-[280px_minmax(0,1fr)] items-start gap-8' : 'grid grid-cols-1 gap-5'}>
+          <aside aria-label="Baum" className="grid min-w-0 grid-cols-1 content-start gap-3">
             <Input
               aria-label="Leitfaden suchen"
               placeholder="Suchen …"
@@ -176,7 +177,7 @@ export function Component() {
             />
           </aside>
           {desktop ? (
-            <div className="min-w-0">
+            <div className="min-w-0" data-tour="leitfaden-detail">
               {cursorId ? (
                 <LeitfadenDetail
                   key={cursorId}

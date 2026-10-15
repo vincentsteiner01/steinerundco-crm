@@ -312,12 +312,13 @@
     overflow-x: hidden;
   }
   /* 3 % Rauschen auf der Fläche, damit Schwarz nicht nach Bildschirm aussieht.
-     Kein Blend-Mode (Repaint-Kosten), pointer-events none. */
+     Kein Blend-Mode (Repaint-Kosten), pointer-events none. Liegt ÜBER dem Inhalt: unter #root zeichneten deckende
+     canvas-Flächen (sticky Seitenkopf, Tab-Leiste) ein rauschfreies, sichtbar dunkleres Rechteck (Runde 2, Heute 1440/1024). */
   body::before {
     content: '';
     position: fixed;
     inset: 0;
-    z-index: 0;
+    z-index: 2147483000;
     pointer-events: none;
     opacity: 0.035;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");

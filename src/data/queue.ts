@@ -39,20 +39,35 @@ export type QueueZaehler = {
   /** fällig + überfällig + Antworten (Sidebar-Zähler „Heute“) */
   faellig: number
   ueberfaellig: number
+  /**
+   * Überfällig wie die Sektion auf Heute (ohne Rückrufe und Opener – die haben eigene Sektionen). Runde 2: Team zeigte „63
+   * überfällig“, Heute „60“. Ohne `istOpener` zählen Opener mit.
+   */
+  ueberfaelligSektion: number
   rueckrufe: number
   telefon: number
   email: number
   gesamt: number
 }
 
-export function zaehleQueue(items: readonly QueueItem[]): QueueZaehler {
+export function zaehleQueue(
+  items: readonly QueueItem[],
+  istOpener?: (stepId: string | null) => boolean,
+): QueueZaehler {
   const je = Object.fromEntries(QUEUE_SEKTIONEN.map((s) => [s, 0])) as Record<QueueSection, number>
   let rueckrufe = 0
   let telefon = 0
   let email = 0
+  let ueberfaelligSektion = 0
   for (const i of items) {
     const s = i.section as QueueSection | null
     if (s && s in je) je[s] += 1
+    if (
+      s === 'ueberfaellig' &&
+      i.item_kind !== 'rueckruf' &&
+      !(i.item_kind === 'sequenz_schritt' && istOpener?.(i.step_id ?? null))
+    )
+      ueberfaelligSektion += 1
     const faelligJetzt = s === 'ueberfaellig' || s === 'heute'
     if (faelligJetzt && i.item_kind === 'rueckruf') rueckrufe += 1
     if (faelligJetzt && i.item_kind === 'sequenz_schritt' && i.channel === 'telefon') telefon += 1
@@ -62,6 +77,7 @@ export function zaehleQueue(items: readonly QueueItem[]): QueueZaehler {
     je,
     faellig: je.antworten + je.ueberfaellig + je.heute,
     ueberfaellig: je.ueberfaellig,
+    ueberfaelligSektion,
     rueckrufe,
     telefon: telefon + rueckrufe,
     email,
@@ -69,12 +85,16 @@ export function zaehleQueue(items: readonly QueueItem[]): QueueZaehler {
   }
 }
 
-export function useQueueZaehler(memberId: string | null, tag: string = heuteBerlin()) {
+export function useQueueZaehler(
+  memberId: string | null,
+  tag: string = heuteBerlin(),
+  istOpener?: (stepId: string | null) => boolean,
+) {
   return useQuery({
     queryKey: qk.queue.member(memberId, tag),
     queryFn: () => ladeQueue(memberId),
     staleTime: 15_000,
-    select: zaehleQueue,
+    select: (items: QueueItem[]) => zaehleQueue(items, istOpener),
   })
 }
 

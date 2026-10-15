@@ -7,7 +7,7 @@ import type { ReactNode } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Chip } from '@/components/ui/Chip'
 import { cn } from '@/components/ui/cn'
-import { istFrei, naechsteAktionText, schrittText, type LeadZeile } from '@/features/leads/spalten'
+import { istFrei, naechsteAktionKurz, naechsteAktionText, schrittText, type LeadZeile } from '@/features/leads/spalten'
 import type { Member } from '@/types/domain'
 import { ohneBewegungTage } from './logik'
 
@@ -35,9 +35,13 @@ export function Karte({
     id: lead.id,
     data: { stage: lead.stage },
   })
-  const { text, ton } = naechsteAktionText(lead, heute)
+  // Genau ein Datum (Zeitfarbe); überfällig mit sichtbarem „−7 T“ (DESIGN-SYSTEM: Datum + −n T, Runde 2), Langform im title
+  const { text, ton } = naechsteAktionKurz(lead, heute)
+  const lang = naechsteAktionText(lead, heute).text
+  const minus = ton === 'overdue' && lang.startsWith(text) && lang !== text ? lang.slice(text.length).trim() : null
   const ohne = ohneBewegungTage(lead, heute, feiertage)
-  const schritt = schrittText(lead)
+  // Rückruf: Uhrzeit steht schon am Datum – der Chip sagt nur „Rückruf“ (sonst „Di 06.10. 09:00 · Rückruf 09:00“)
+  const schritt = lead.next_action_kind === 'rueckruf' && lead.stage !== 'beendet' ? 'Rückruf' : schrittText(lead)
   return (
     <article
       ref={setNodeRef}
@@ -54,29 +58,42 @@ export function Karte({
       {...listeners}
       {...attributes}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <span
           className={cn('min-w-0 flex-1 truncate text-[14px] font-medium', lead.stage === 'beendet' && 'text-ink-2')}
+          title={lead.full_name ?? undefined}
         >
           {lead.full_name ?? '–'}
         </span>
-        {lead.firmaGesperrt ? <Chip ton="danger">Firma gesperrt</Chip> : null}
+        {lead.firmaGesperrt ? (
+          <Chip ton="danger" className="shrink-0">
+            Firma gesperrt
+          </Chip>
+        ) : null}
       </div>
-      <div className="text-small text-ink-3 truncate">{lead.company_name ?? '–'}</div>
-      <div className="mt-2.5 flex items-center gap-2">
-        <Avatar member={istFrei(lead) ? null : member} zweiter={zweiter ?? null} />
+      <div className="text-small text-ink-3 truncate" title={lead.company_name ?? undefined}>
+        {lead.company_name ?? '–'}
+      </div>
+      {/* Meta-Zeile: bricht nie um – Avatar und Datum fest, Schritt-Chip kürzt mit Ellipse (data-meta für den Test) */}
+      <div className="mt-2.5 flex min-w-0 flex-nowrap items-center gap-2" data-meta>
+        <Avatar member={istFrei(lead) ? null : member} zweiter={zweiter ?? null} className="shrink-0" />
         <span
           className={cn(
-            'tnum font-mono text-[12.5px]',
+            'tnum shrink-0 font-mono text-[12.5px] whitespace-nowrap',
             ton === 'today' && 'text-signal',
             ton === 'overdue' && 'text-overdue',
             (ton === 'later' || !ton) && 'text-ink-3',
           )}
+          title={lead.next_action_label ? `${lang} · ${lead.next_action_label}` : lang}
         >
           {text}
+          {minus ? <span className="ml-1.5">{minus}</span> : null}
         </span>
-        <span className="flex-1" />
-        {schritt !== '–' ? <Chip ton="muted">{schritt}</Chip> : null}
+        {schritt !== '–' ? (
+          <Chip ton="muted" title={schritt} className="ml-auto min-w-0 shrink [&>span]:min-w-0 [&>span]:truncate">
+            {schritt}
+          </Chip>
+        ) : null}
       </div>
       {ohne !== null ? (
         <div className="mt-2">

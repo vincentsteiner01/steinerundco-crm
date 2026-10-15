@@ -43,3 +43,6 @@ e2e/.auth/
 # Playwright-Ausgaben
 test-results/
 playwright-report/
+
+# Python
+__pycache__/

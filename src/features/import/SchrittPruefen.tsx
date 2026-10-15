@@ -14,13 +14,14 @@ import { firmaGesperrt, StatusChipImport, Zaehler, type ImportStatus } from './c
 import type { CrmZeile, SheetDryRunZeile } from './presets/crmTabelle'
 import { tagesSumme } from './presets/kpiMonat'
 import type { Entscheidung, ImportApi } from './useImport'
+import { anzeigeName } from '@/lib/mitglied'
 
 const NAMEN = ['Vincent', 'Mike'] as const
 
 function memberName(members: Member[] | undefined, id: string | null | undefined): string {
   if (!id) return '–'
   const m = members?.find((x) => x.id === id)
-  return m?.short_name ?? m?.display_name ?? '–'
+  return anzeigeName(m, '–')
 }
 
 // ── CRM-Tabelle ──────────────────────────────────────────────────────────────

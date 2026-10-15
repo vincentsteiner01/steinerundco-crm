@@ -1,16 +1,17 @@
 // Bausteine der Queue-Karte (DESIGN-SYSTEM § 5.7): Rahmen mit Zeitbalken, Kopfzeile (Label + Zeit-Chip + Glyph), Name/Unternehmen,
 // Unterzeile, Letzte Reaktion, Aktionsleiste, Fußzeile „kopiert 09:41“, kollabierte Karte (52 px).
-import type { HTMLAttributes, ReactNode, Ref } from 'react'
+import { useContext, type HTMLAttributes, type ReactNode, type Ref } from 'react'
 import { Avatar, type AvatarMember } from '@/components/ui/Avatar'
 import { Chip, ZeitChip } from '@/components/ui/Chip'
 import { cn } from '@/components/ui/cn'
 import { Glyph } from '@/components/ui/Glyph'
-import { fmtDatumKurz, fmtDauer, fmtZeit } from '@/lib/format'
+import { fmtDatumKurz, fmtZeit } from '@/lib/format'
 import { werktageZwischen } from '@/lib/werktage'
 import { berlinTag, tageDifferenz } from '@/lib/zeit'
 import type { Channel, QueueItem } from '@/types/domain'
-import { faelligVon, jetzt as jetztZeit, kartenLabel, type Faellig } from './karten'
-import { useHeuteKontext } from './kontext'
+import { faelligVon, jetzt as jetztZeit, kartenLabel, ohneSeit, type Faellig } from './karten'
+import { KarteEingebettet, useHeuteKontext } from './kontext'
+import { verpasstSeit } from './heuteHelfer'
 import { itemKey } from './sektionen'
 
 export function KartenRahmen({
@@ -27,14 +28,24 @@ export function KartenRahmen({
   className?: string
   ref?: Ref<HTMLElement>
 } & Omit<HTMLAttributes<HTMLElement>, 'children'>) {
+  const eingebettet = useContext(KarteEingebettet)
+  if (eingebettet)
+    return (
+      <article ref={ref} data-eingebettet aria-current={aktiv || undefined} className={cn('relative', className)} {...rest}>
+        {children}
+      </article>
+    )
   return (
     <article
       ref={ref}
       role="listitem"
+      data-tour="queue-karte"
       aria-current={aktiv || undefined}
       data-aktiv={aktiv || undefined}
       className={cn(
         'ease-brand relative overflow-hidden rounded-md border transition-[background,border-color] duration-[var(--t-1)]',
+        // scrollIntoView (J/K) hält den Kartenkopf unter dem Sticky-Seitenkopf sichtbar (Runde 2)
+        'scroll-mt-[calc(var(--head-h,0px)+16px)]',
         "before:absolute before:top-3.5 before:bottom-3.5 before:-left-px before:w-0.5 before:rounded-[1px] before:content-['']",
         aktiv ? 'bg-surface-raised border-line-strong px-5 pt-[18px] pb-4' : 'bg-surface border-line px-5 py-3',
         faellig === 'today' && 'before:bg-signal',
@@ -57,7 +68,7 @@ export function ZeitAnzeige({ item, heute, jetzt }: { item: QueueItem; heute: st
     if (due.getTime() < now.getTime()) {
       return (
         <Chip ton="overdue" className="font-mono">
-          verpasst · {fmtDauer((now.getTime() - due.getTime()) / 1000)}
+          verpasst · {verpasstSeit(now.getTime() - due.getTime())}
         </Chip>
       )
     }
@@ -102,10 +113,15 @@ export function KartenKopf({
   heute: string
   rechts?: ReactNode
 }) {
+  const eingebettet = useContext(KarteEingebettet)
+  const text = eingebettet ? ohneSeit(label) : label
   return (
-    <div className="mb-2.5 flex items-center justify-between gap-3">
-      <span className="label truncate-1 min-w-0">{label}</span>
-      <span className="flex flex-none items-center gap-2.5">
+    // flex-wrap + Mindestbreite: bei 390 px und langen Chips (Erlaubnis-Badge) schrumpfte das Label auf 0 px (Runde 2)
+    <div className="mb-2.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
+      <span className="label min-w-24 flex-1 truncate" title={label}>
+        {text}
+      </span>
+      <span className="flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2.5">
         <NeuChip item={item} />
         {rechts}
         <ZeitAnzeige item={item} heute={heute} />
@@ -128,7 +144,9 @@ export function KartenWer({
   rechts?: ReactNode
   kollabiert?: boolean
 }) {
+  const eingebettet = useContext(KarteEingebettet)
   const zweiter = salesOwner && owner && salesOwner.id !== owner.id ? salesOwner : null
+  if (eingebettet && !kollabiert) return null
   return (
     <div className={cn('flex flex-wrap gap-x-2.5 gap-y-1', kollabiert ? 'items-center' : 'items-baseline')}>
       <span className={kollabiert ? 'text-h3 text-ink' : 'lead-name'}>{item.lead_name ?? '–'}</span>
@@ -222,7 +240,10 @@ export function KollabierteKarte({
       data-key={item.item_id ?? undefined}
     >
       <div className="mb-1 flex items-center justify-between gap-3">
-        <span className="label truncate-1 min-w-0">{kartenLabel(item)}</span>
+        {/* gekürzt am iPhone („Kurzfristig 2 · LinkedIn Standard (ohne …“) → voller Text im title (Integration Runde 2) */}
+        <span className="label truncate-1 min-w-0" title={kartenLabel(item)}>
+          {kartenLabel(item)}
+        </span>
         <span className="flex flex-none items-center gap-2.5">
           <NeuChip item={item} />
           <ZeitAnzeige item={item} heute={heute} />

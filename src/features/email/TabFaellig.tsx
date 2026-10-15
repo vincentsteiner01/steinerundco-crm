@@ -91,10 +91,11 @@ export function TabFaellig({ aktiv = true }: { aktiv?: boolean }) {
   if (schritte.length === 0 && aufgaben.length === 0)
     return <EmptyState titel={LEER.emailFaellig.titel} satz={LEER.emailFaellig.satz} />
 
+  // `minmax(0,1fr)`: lange Schritt-Titel der Karten dürfen die Spalte nicht aufweiten (390 px: Seite wurde 1009 px breit)
   return (
-    <div className="grid gap-6">
+    <div className="grid grid-cols-[minmax(0,1fr)] gap-6">
       {schritte.length ? (
-        <section aria-label="Fällige E-Mail-Schritte" className="grid gap-2.5">
+        <section aria-label="Fällige E-Mail-Schritte" className="grid grid-cols-[minmax(0,1fr)] gap-2.5">
           {schritte.map((item) => {
             const id = item.item_id ?? ''
             return (
@@ -106,7 +107,7 @@ export function TabFaellig({ aktiv = true }: { aktiv?: boolean }) {
         </section>
       ) : null}
       {aufgaben.length ? (
-        <section aria-label="Manuelle E-Mail-Aufgaben" className="grid gap-1.5">
+        <section aria-label="Manuelle E-Mail-Aufgaben" className="grid grid-cols-[minmax(0,1fr)] gap-1.5">
           <span className="label">Manuelle E-Mail-Aufgaben</span>
           <ul role="listbox" aria-label="Aufgaben" className="border-line border-t">
             {aufgaben.map((t) => {

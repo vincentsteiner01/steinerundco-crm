@@ -26,6 +26,7 @@ import type { LeadInsert, LeadRole, LeadStage, PhoneSource, Salutation } from '@
 import { rolleAusFreitext } from './detailLogik'
 import { jetztIso } from './hilfen'
 import { ANREDE_OPTIONEN, ROLLE_OPTIONEN } from './spalten'
+import { anzeigeName } from '@/lib/mitglied'
 
 export type LeadFormProps = {
   vorbelegung?: Partial<LeadInsert>
@@ -184,13 +185,13 @@ export function LeadForm({ vorbelegung, onGespeichert, onAbbrechen }: LeadFormPr
   const dublettenText = (d: LeadTreffer) => {
     const phase = PHASE_LABEL[phaseVon(d.stage).key]
     const m = members?.find((x) => x.id === d.owner_id)
-    const wer = m?.short_name ?? m?.display_name ?? 'Frei'
+    const wer = anzeigeName(m, 'Frei')
     return `${d.full_name ?? '–'} · ${phase} · ${wer}`
   }
 
   return (
     <form
-      className="grid gap-4"
+      className="grid grid-cols-[minmax(0,1fr)] gap-4"
       onKeyDown={tasten}
       onSubmit={(e) => {
         e.preventDefault()
@@ -198,7 +199,7 @@ export function LeadForm({ vorbelegung, onGespeichert, onAbbrechen }: LeadFormPr
       }}
       aria-label="Lead anlegen"
     >
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 max-md:grid-cols-1">
         <FormField label="Vorname" pflicht htmlFor="lf-vorname" fehler={fehler.vorname}>
           <Input
             id="lf-vorname"
@@ -212,7 +213,7 @@ export function LeadForm({ vorbelegung, onGespeichert, onAbbrechen }: LeadFormPr
           <Input id="lf-nachname" value={nachname} onChange={(e) => setNachname(e.target.value)} autoComplete="off" />
         </FormField>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 max-md:grid-cols-1">
         <FormField label="Anrede" htmlFor="lf-anrede">
           <Select
             id="lf-anrede"
@@ -231,7 +232,7 @@ export function LeadForm({ vorbelegung, onGespeichert, onAbbrechen }: LeadFormPr
           ) : null}
         </FormField>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 max-md:grid-cols-1">
         <FormField
           label="Rolle (Freitext)"
           htmlFor="lf-rolle-text"
@@ -294,7 +295,7 @@ export function LeadForm({ vorbelegung, onGespeichert, onAbbrechen }: LeadFormPr
           </p>
         ) : null}
       </FormField>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 max-md:grid-cols-1">
         <FormField
           label="Telefon"
           htmlFor="lf-telefon"
@@ -326,7 +327,7 @@ export function LeadForm({ vorbelegung, onGespeichert, onAbbrechen }: LeadFormPr
           Möglicherweise bereits vorhanden: {dublettenText(sonstigeDublette)} – Anlegen ist möglich.
         </p>
       ) : null}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-[repeat(2,minmax(0,1fr))] gap-3 max-md:grid-cols-1">
         <FormField label="Zuständig" htmlFor="lf-zustaendig">
           <Select
             id="lf-zustaendig"
@@ -336,7 +337,7 @@ export function LeadForm({ vorbelegung, onGespeichert, onAbbrechen }: LeadFormPr
               .filter((m) => !!m.id)
               .map((m) => ({
                 value: m.id as string,
-                label: m.id === me ? `${m.short_name ?? m.display_name} (ich)` : (m.short_name ?? m.display_name ?? ''),
+                label: m.id === me ? `${anzeigeName(m)} (ich)` : (anzeigeName(m, '')),
               }))}
           />
         </FormField>

@@ -8,6 +8,7 @@ import { useUndo } from '@/data/undo'
 import { nachleseAktivitaet, useAktionTaste, useLeadInvalidierung, type AktionProps } from './_gemeinsam'
 import { AktionButton, TriggerHuelle } from './_Teile'
 import { willKeineNachrichten } from './gruende'
+import { anzeigeName } from '@/lib/mitglied'
 
 export function Uebernehmen({ leadId, trigger, onFertig, aktiv, className }: AktionProps) {
   const { data: lead } = useLead(leadId)
@@ -19,7 +20,7 @@ export function Uebernehmen({ leadId, trigger, onFertig, aktiv, className }: Akt
 
   const hinweis = willKeineNachrichten(lead?.released_reason)
   const moeglich = !!lead && !!me && (lead.released || lead.owner_id !== me)
-  const wer = andere?.short_name ?? andere?.display_name ?? 'die andere Person'
+  const wer = anzeigeName(andere, 'die andere Person')
 
   const uebernehmen = async () => {
     if (!lead || !me || !moeglich || update.isPending) return

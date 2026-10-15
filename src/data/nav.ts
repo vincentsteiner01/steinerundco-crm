@@ -1,7 +1,7 @@
 // BAUPLAN § 3.1.5/§ 3.1.6 nav.ts: useNavZaehler() – heute = fällig + überfällig der angemeldeten Person; leads = aktive Leads;
 // telefon = fällige Rückrufe + fällige Telefon-Schritte; email = fällige E-Mail-Schritte. Quelle: v_today_queue + v_pipeline_counts.
 import { useAuth } from '@/features/auth/authStore'
-import { usePipelineCounts } from './leads'
+import { usePipelineCounts } from './pipelineCounts'
 import { useQueueZaehler } from './queue'
 
 export type NavZaehler = { heute: number; heuteUeberfaellig: number; leads: number; telefon: number; email: number }

@@ -64,7 +64,9 @@ describe('KpisSeite', () => {
     expect(within(angenommen).getByText('93')).toBeInTheDocument()
     expect(within(angenommen).getByText('30 %')).toBeInTheDocument()
     expect(within(angenommen).getByRole('img', { name: /Ziel ≥ 25.% erreicht/ })).toBeInTheDocument()
-    expect(angenommen).toHaveTextContent('+38 · +11 pp vs. Sept. 19 % · Ziel ≥ 25 %')
+    expect(angenommen).toHaveTextContent('+38 · +11 pp vs. Sept. 19 %')
+    // Ziel steht in eigener Zeile (echte Daten: „· Ziel ≥ 28 %“ brach sonst mitten im Satz um)
+    expect(within(angenommen).getByText('Ziel ≥ 25 %')).toHaveClass('block')
     expect(kachel('gespraeche_eroeffnet')).toHaveTextContent('82')
     expect(kachel('antwortzeit')).toHaveTextContent('1,5')
     // Telefon-Zeile unter „Alle“ nur, wenn Dials > 0 – Vincent hat keine

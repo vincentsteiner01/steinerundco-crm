@@ -14,10 +14,11 @@ import { useLeadEndgueltigLoeschen, useLeadsUnendlich, useLeadWiederherstellen }
 import { useMembers } from '@/data/members'
 import { useSettings } from '@/data/settings'
 import { heuteBerlin } from '@/lib/format'
+import { useMediaQuery } from '@/lib/useMediaQuery'
 import { DIALOG, LEER } from '@/texte/de'
 import { ansichtNachKey } from './ansichten'
 import { useStabileListe } from './hilfen'
-import { leadSpalten, mitFirmensperre, type LeadZeile } from './spalten'
+import { leadSpalten, mitFirmensperre, mobilZeile, ohneVerdeckte, type LeadZeile } from './spalten'
 
 export function Component() {
   const navigate = useNavigate()
@@ -33,18 +34,25 @@ export function Component() {
   const [loeschen, setLoeschen] = useState<LeadZeile | null>(null)
   const heute = heuteBerlin()
   const rows = useMemo<LeadZeile[]>(() => leads.map((l) => mitFirmensperre(l, false, false)), [leads])
+  // Wie LeadsSeite: unter 1280 px verdeckte Spalten weglassen und Kopf nicht sticky (overflow-x-Wrapper), Telefon als Liste
+  const unterXl = useMediaQuery('(max-width: 1279px)')
+  const unterLg = useMediaQuery('(max-width: 1023px)')
   const spalten = useMemo(
     () =>
-      leadSpalten(ansicht.spalten, {
-        heute,
-        settings,
-        members: members ?? [],
-        bearbeitung: null,
-        onSave: () => undefined,
-        onCancel: () => undefined,
-        onTab: () => undefined,
-      }),
-    [ansicht.spalten, heute, settings, members],
+      ohneVerdeckte(
+        leadSpalten(ansicht.spalten, {
+          heute,
+          settings,
+          members: members ?? [],
+          bearbeitung: null,
+          onSave: () => undefined,
+          onCancel: () => undefined,
+          onTab: () => undefined,
+        }),
+        unterXl,
+        unterLg,
+      ),
+    [ansicht.spalten, heute, settings, members, unterXl, unterLg],
   )
   const cursor = rows.find((r) => r.id === cursorId) ?? null
 
@@ -90,6 +98,8 @@ export function Component() {
           onCursor={setCursorId}
           onEnter={(r) => setCursorId(r.id)}
           leer={<EmptyState titel={LEER.papierkorb.titel} satz={LEER.papierkorb.satz} />}
+          sticky={!unterXl}
+          mobilZeile={(r, z) => mobilZeile(r, { heute, settings, members: members ?? [] }, z)}
         />
       )}
       {cursor ? (

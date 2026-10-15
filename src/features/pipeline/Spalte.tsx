@@ -1,6 +1,8 @@
 // BAUPLAN § 3.3 / DESIGN-SYSTEM § 5.12 – Kanban-Spalte 272 px, Kopf 36 px: label + Zähler Mono + Konversion mono-sm ink-3 + Ø Tage;
 // eingeklappt 44 px breit mit vertikalem Label (Angefragt · Wiedervorlage · Beendet, localStorage). Drop-Ziel: 2-px-Lime-Linie.
 // Leer: gestrichelte Fläche „Keine Leads“ (ux § 4.1).
+// Runde 2 (echte Daten, 184 Karten in „Eröffnet“): Kopf steht fest, die Kartenliste scrollt in der Spalte (`data-karten`), das Board
+// hat die Fensterhöhe (useBoardHoehe) – so bleiben Köpfe und die horizontale Scrollleiste immer sichtbar.
 import { useDroppable } from '@dnd-kit/core'
 import type { ReactNode } from 'react'
 import { cn } from '@/components/ui/cn'
@@ -42,7 +44,7 @@ export function Spalte({
         data-spalte={phase.key}
         data-eingeklappt
         className={cn(
-          'border-line bg-surface flex w-11 shrink-0 snap-start flex-col items-center rounded-md border pt-2',
+          'border-line bg-surface flex min-h-0 w-11 shrink-0 snap-start flex-col items-center rounded-md border pt-2',
           isOver && 'border-signal',
         )}
       >
@@ -63,34 +65,39 @@ export function Spalte({
     <div
       ref={setNodeRef}
       data-spalte={phase.key}
-      className={cn('flex w-[272px] shrink-0 snap-start flex-col', isOver && 'border-signal rounded-md border-t-2')}
+      className={cn(
+        'flex min-h-0 w-[272px] shrink-0 snap-start flex-col',
+        isOver && 'border-signal rounded-md border-t-2',
+      )}
     >
       <button
         type="button"
         onClick={onToggle}
         aria-expanded
-        className="hover:text-ink flex h-9 items-center gap-2 text-left"
+        className="hover:text-ink flex h-9 min-w-0 shrink-0 items-center gap-2 text-left whitespace-nowrap"
         title={pflicht ? 'Drop verlangt eine Angabe (Datum oder Grund)' : undefined}
       >
-        <span className="label">{phase.label}</span>
-        <span className="text-ink tnum font-mono text-[13px]">{kopf.zaehler}</span>
+        <span className="label min-w-0 truncate" title={phase.label}>
+          {phase.label}
+        </span>
+        <span className="text-ink tnum shrink-0 font-mono text-[13px]">{kopf.zaehler}</span>
         {kopf.konversion !== null ? (
-          <span className="mono-sm text-ink-3" title="Konversion zur Vorstufe (Bestand)">
+          <span className="mono-sm text-ink-3 shrink-0" title="Konversion zur Vorstufe (Bestand)">
             {fmtProzent(kopf.konversion)}
           </span>
         ) : null}
         {kopf.tage !== null ? (
-          <span className="mono-sm text-ink-3 ml-auto" title="Ø Tage in Phase">
+          <span className="mono-sm text-ink-3 ml-auto shrink-0" title="Ø Tage in Phase">
             Ø {Math.round(kopf.tage)} T
           </span>
         ) : null}
         {pflicht ? (
-          <span className="text-ink-3 text-[11px]" aria-hidden>
+          <span className="text-ink-3 shrink-0 text-[11px]" aria-hidden>
             {phase.key === 'beendet' ? '☰' : '▦'}
           </span>
         ) : null}
       </button>
-      <div className="min-h-24 flex-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain" data-karten>
         {leer ? (
           <div className="border-line text-ink-3 rounded-md border border-dashed px-3 py-6 text-center text-[12.5px]">
             {LEER.pipelineSpalte.titel}

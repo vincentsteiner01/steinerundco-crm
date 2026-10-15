@@ -51,6 +51,7 @@ import { NaechsterSchritt } from './NaechsterSchritt'
 import { noShowVorschlag } from './noShow'
 import { ROLLE_LABEL } from './spalten'
 import { Timeline } from './Timeline'
+import { anzeigeName } from '@/lib/mitglied'
 
 type TabKey = 'timeline' | 'notizen' | 'gespraeche' | 'rechtliches'
 const TABS: { key: TabKey; label: string }[] = [
@@ -158,13 +159,13 @@ function Vollseite({ lead }: { lead: LeadMitBezug }) {
         onPhase={phaseWechsel}
         className="mb-5"
       />
-      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-6 max-lg:grid-cols-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-6 max-lg:grid-cols-1">
         <NaechsterSchritt lead={lead} item={item} kontext="peek" aktiv={false} sperrliste={treffer} />
         <div data-felder>
           <FelderRaster lead={lead} members={members ?? []} settings={settings} breit />
         </div>
       </div>
-      <div className="mb-6 grid grid-cols-3 gap-4 max-lg:grid-cols-1" data-kanal-karten>
+      <div className="mb-6 grid grid-cols-[repeat(3,minmax(0,1fr))] gap-4 max-xl:grid-cols-1" data-kanal-karten>
         <LinkedInKarte
           lead={lead}
           members={members ?? []}
@@ -233,7 +234,7 @@ function Gespraeche({ lead }: { lead: LeadMitBezug }) {
   const { data: members } = useMembers()
   const name = (id: string | null) => {
     const m = id ? members?.find((x) => x.id === id) : null
-    return m?.short_name ?? m?.display_name ?? '–'
+    return anzeigeName(m, '–')
   }
   const setze = async (m: Meeting, s: MeetingStatus) => {
     try {
@@ -348,7 +349,7 @@ function Rechtliches({ lead, gesperrt }: { lead: LeadMitBezug; gesperrt: boolean
   )
   const name = (id: string | null) => {
     const m = id ? members?.find((x) => x.id === id) : null
-    return m?.short_name ?? m?.display_name ?? 'System'
+    return anzeigeName(m, 'System')
   }
   useEffect(() => {
     if (q.hasNextPage && !q.isFetchingNextPage) void q.fetchNextPage()

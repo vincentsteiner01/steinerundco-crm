@@ -79,6 +79,21 @@ describe('Timeline', () => {
     expect(n[1]).toHaveTextContent('Nächster Schritt')
   })
 
+  it('Runde 2: überfälliges „Nächstes“ steht in Amber mit „überfällig“ statt „geplant“', async () => {
+    DB.details = [
+      {
+        ...LEAD,
+        tasks: [{ ...(LEAD.tasks?.[0] as object), due_at: '2026-10-05T09:00:00+02:00', title: 'Follow-up geplant' }],
+      } as never,
+    ]
+    rendern(<Timeline leadId={LEAD.id} />)
+    const naechstes = await screen.findByRole('list', { name: 'Nächstes' })
+    const erster = within(naechstes).getAllByRole('listitem')[0] as HTMLElement
+    expect(erster).toHaveAttribute('data-ueberfaellig', 'true')
+    expect(erster).toHaveTextContent('überfällig')
+    expect(within(erster).getByText('Mo 05.10.')).toHaveClass('text-overdue')
+  })
+
   it('Filter „Anrufe“ zeigt nur Anruf-Ereignisse (LD-06)', async () => {
     rendern(<Timeline leadId={LEAD.id} />)
     await screen.findByRole('list', { name: 'Verlauf' })

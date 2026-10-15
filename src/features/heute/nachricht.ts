@@ -2,7 +2,7 @@
 // lib/platzhalter.ts (`fuellen`, `tokens`); hier steht nur, welche Vorlage eine Karte bekommt und was daraus wird.
 import { fuellen, tokens, type FuellErgebnis, type PlatzhalterKontext, type PlatzhalterLead } from '@/lib/platzhalter'
 import { OPENER_NACH_ROLLE, phase2Vorlage, VORLAGE, type VorlageKey } from '@/lib/vorlagenKeys'
-import type { LeadMitBezug, Member, QueueItem, ReplyLabel, Template } from '@/types/domain'
+import type { LeadMitBezug, LeadStage, Member, QueueItem, ReplyLabel, Template } from '@/types/domain'
 import type { KartenZustand } from './kartenStore'
 
 export type KartenArt = 'linkedin' | 'telefon' | 'email' | 'antworten' | 'meeting' | 'wiedervorlage' | 'aufgabe'
@@ -38,10 +38,31 @@ export type AntwortInfo = { label: ReplyLabel | null; note: string | null; occur
  * Vorlage einer Karte: gewechselte Vorlage (⌘⇧E) → Antworten-Karte nach `PHASE2_VORLAGE_NACH_LABEL` → Opener nach Rolle
  * (`OPENER_NACH_ROLLE`) → Vorlage des Schritts/der Aufgabe aus der View.
  */
+/**
+ * Runde 2 (echte Daten): Wiedervorlagen aus dem Sheet-Import („Follow-up (aus Sheet)“) haben keine Vorlage – die Karte zeigte
+ * „Keine Vorlage hinterlegt“ und sperrte Kopieren. Standard nach Phase: im LinkedIn-Gespräch Kurzfristig 1, langfristig
+ * Langfristig 1 (wie „Langfristig nachfassen“). Ab Erstgespräch gibt es keine passende DM-Vorlage – dann bleibt die Wahl offen.
+ */
+export function wiedervorlageStandard(stage: LeadStage | null | undefined): VorlageKey | null {
+  switch (stage) {
+    case 'vernetzt':
+    case 'gespraech_eroeffnet':
+    case 'dm_follow_up':
+    case 'dm_beantwortet':
+    case 'bedarfsermittlung':
+    case 'pitch':
+      return 'li_fu_kurz_1'
+    case 'langfristig':
+      return 'li_fu_lang_1'
+    default:
+      return null
+  }
+}
+
 export function vorlageFuerKarte(
   item: QueueItem,
   art: KartenArt,
-  lead: Pick<LeadMitBezug, 'role'> | null | undefined,
+  lead: (Pick<LeadMitBezug, 'role'> & { stage?: LeadStage | null }) | null | undefined,
   templates: readonly Template[] | undefined,
   zustand: Pick<KartenZustand, 'vorlageId'>,
   antwort: AntwortInfo | null,
@@ -54,6 +75,7 @@ export function vorlageFuerKarte(
     const rolle = OPENER_NACH_ROLLE(lead.role)
     if (rolle) return nachKey(templates, rolle)
   }
+  if (art === 'wiedervorlage' && !item.template_id) return nachKey(templates, wiedervorlageStandard(lead?.stage))
   return nachId(templates, item.template_id)
 }
 

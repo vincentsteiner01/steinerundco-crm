@@ -56,7 +56,7 @@ export function Sektion({
         <>
           {unterzeile ? <div className="text-small text-ink-2 tnum mb-2.5">{unterzeile}</div> : null}
           {art === 'karten' ? (
-            <div className="grid gap-2.5" role="list">
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-2.5" role="list">
               {children}
             </div>
           ) : (

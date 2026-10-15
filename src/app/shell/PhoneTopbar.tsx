@@ -1,10 +1,11 @@
-import { Search } from 'lucide-react'
+import { MessageSquareWarning, Search } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 import { PFADE } from '@/app/pfade'
 import { useUiStore } from '@/app/uiStore'
 import { Avatar } from '@/components/ui/Avatar'
 import { DropdownMenu } from '@/components/ui/DropdownMenu'
 import { useAuth } from '@/features/auth/authStore'
+import { FEEDBACK_EVENT } from '@/features/feedback/texte'
 import { ALLGEMEIN } from '@/texte/de'
 
 /** Phone-Topbar 56 px: Marke links, rechts Lupe (Palette, ux § 7.1) und Avatar → Menü (DESIGN-SYSTEM § 4.2). */
@@ -20,6 +21,17 @@ export function PhoneTopbar() {
         <span className="label">CRM</span>
       </NavLink>
       <span className="flex items-center gap-1">
+        {/* Feedback mit Screenshot – oben statt schwebend über Kartentext und Tab-Leiste (Runde 2, 390 px) */}
+        <button
+          type="button"
+          data-tour="feedback"
+          aria-label="Feedback geben"
+          title="Feedback geben"
+          onClick={() => window.dispatchEvent(new Event(FEEDBACK_EVENT))}
+          className="text-ink-2 hover:bg-surface-hover hover:text-ink grid h-10 w-10 place-items-center rounded-sm"
+        >
+          <MessageSquareWarning size={18} strokeWidth={1.75} aria-hidden />
+        </button>
         <button
           type="button"
           aria-label={ALLGEMEIN.suchenOderBefehl}

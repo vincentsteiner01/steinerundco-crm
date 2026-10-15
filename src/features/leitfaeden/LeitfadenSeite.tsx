@@ -43,6 +43,7 @@ export function Component() {
           kanalNeu={kanalNeu}
           vorschauLeadId={vorschau}
           nurLesen={!desktop}
+          nameAlsFeld
           onVorschauLead={(lid) => {
             const p = new URLSearchParams(params)
             if (lid) p.set('vorschau', lid)

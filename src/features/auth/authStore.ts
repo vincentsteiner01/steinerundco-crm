@@ -42,7 +42,7 @@ export const useAuth = create<AuthState>((set) => ({
   },
 }))
 
-async function uebernehmen(session: Session | null): Promise<void> {
+async function uebernehmen(session: Session | null, nachRefresh = false): Promise<void> {
   if (!session) {
     useAuth.setState({ status: 'anonym', session: null, member: null })
     return
@@ -58,7 +58,17 @@ async function uebernehmen(session: Session | null): Promise<void> {
     .select('user_id,email,display_name')
     .eq('user_id', session.user.id)
     .maybeSingle()
-  if (error || !member) {
+  if (error) {
+    // 401/Netz/abgelaufenes Token sind KEIN „kein Mitglied“: nicht abmelden – signOut beendet die Sitzung serverseitig, auch in
+    // anderen Tabs mit derselben Sitzung (Runde 2, feedback.md Nr. 4). Einmal auffrischen und erneut prüfen, sonst nur lokal anonym.
+    if (!nachRefresh) {
+      const { data } = await supabase.auth.refreshSession().catch(() => ({ data: { session: null } }))
+      if (data.session) return uebernehmen(data.session, true)
+    }
+    useAuth.setState({ status: 'anonym', session: null, member: null })
+    return
+  }
+  if (!member) {
     // angemeldet, aber nicht in public.members → raus
     await supabase.auth.signOut({ scope: 'local' })
     useAuth.setState({ status: 'anonym', session: null, member: null })

@@ -112,6 +112,12 @@ export function dateline(d: Date | string = new Date()): string {
   return `${WOCHENTAG_LANG[berlinWochentag(date)]}, ${t.tag}. ${MONAT_LANG[t.monat - 1]} ${t.jahr} · KW ${kw}`
 }
 
+/** Kurze Dateline fürs Telefon (< 768 px): `Do 15.10. · KW 42` – die lange passt nicht in 358 px (Runde 2). */
+export function datelineKurz(d: Date | string = new Date()): string {
+  const date = alsDate(d)
+  return `${fmtDatumKurz(date)} · KW ${kalenderwoche(berlinTag(date))}`
+}
+
 /** Heutiger Berliner Kalendertag `YYYY-MM-DD`. */
 export function heuteBerlin(jetzt: Date = new Date()): Tag {
   return berlinTag(jetzt)

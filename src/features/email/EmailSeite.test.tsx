@@ -79,6 +79,13 @@ describe('EmailSeite', () => {
     vi.mocked(toast).mockClear()
   })
 
+  it('Hinweiszeile ohne hinterlegte Adresse: kein doppeltes „(dein Gmail-Postfach)“', async () => {
+    ANTWORTEN.ohnePostfach = true
+    seite()
+    await screen.findByText('Versand läuft über dein Gmail-Postfach. Antworten kommen dort an.')
+    expect(screen.queryByText(/\(dein Gmail-Postfach\)/)).toBeNull()
+  })
+
   it('Hinweiszeile mit Postfach, Tabs mit Zählern, Leerzustand Fällig', async () => {
     seite()
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('E-Mail')

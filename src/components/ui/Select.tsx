@@ -12,7 +12,7 @@ export type SelectProps = {
 /** Natives Select (BAUPLAN § 1.5 Nr. 21): Trigger wie Input (36 px, surface-hover, line-strong, Chevron 16 px), Liste = Browser-Popup. */
 export function Select({ optionen, fehler, platzhalter, className, children, ref, ...rest }: SelectProps) {
   return (
-    <div className="grid gap-1.5">
+    <div className="grid min-w-0 grid-cols-1 gap-1.5">
       <select
         ref={ref}
         aria-invalid={fehler ? true : undefined}

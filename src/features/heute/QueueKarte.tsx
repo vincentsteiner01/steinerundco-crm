@@ -29,13 +29,16 @@ import {
   KartenWer,
   KollabierteKarte,
 } from './KartenTeile'
-import { useHeuteKontext } from './kontext'
+import { KarteEingebettet, useHeuteKontext } from './kontext'
 import { MeetingKarte } from './MeetingKarte'
 import { NachrichtBlock } from './NachrichtBlock'
 import { kartenArt } from './nachricht'
 import { TelefonKarte } from './TelefonKarte'
 import { useKarteDaten } from './useKarteDaten'
 import { useQueueAktionen } from './useQueueAktionen'
+
+/** Button in einer Zelle des 4er-Aktionsrasters (Telefon) */
+const ZELLE = 'w-full min-w-0 overflow-hidden px-1.5!'
 
 export type QueueAktion =
   | 'kopieren'
@@ -62,16 +65,20 @@ export type VariantenProps = { item: QueueItem; onAktion: (a: QueueAktion) => vo
 export function QueueKarte({ item, aktiv, onAktion, kontext = 'heute' }: QueueKarteProps) {
   const h = useHeuteKontext()
   if (!aktiv) return <KollabierteKarte item={item} heute={h.heute} vorbereitet={vorbereitetText(item)} />
-  switch (kartenArt(item)) {
-    case 'telefon':
-      return <TelefonKarte item={item} onAktion={onAktion} kontext={kontext} />
-    case 'antworten':
-      return <AntwortenKarte item={item} onAktion={onAktion} kontext={kontext} />
-    case 'meeting':
-      return <MeetingKarte item={item} onAktion={onAktion} kontext={kontext} />
-    default:
-      return <NachrichtKarte item={item} onAktion={onAktion} kontext={kontext} />
-  }
+  const karte = (() => {
+    switch (kartenArt(item)) {
+      case 'telefon':
+        return <TelefonKarte item={item} onAktion={onAktion} kontext={kontext} />
+      case 'antworten':
+        return <AntwortenKarte item={item} onAktion={onAktion} kontext={kontext} />
+      case 'meeting':
+        return <MeetingKarte item={item} onAktion={onAktion} kontext={kontext} />
+      default:
+        return <NachrichtKarte item={item} onAktion={onAktion} kontext={kontext} />
+    }
+  })()
+  // Im Peek eingebettet: ohne Namenszeile und ohne eigenen Rahmen (Runde 2: Name/Firma doppelt, Box in Box)
+  return kontext === 'peek' ? <KarteEingebettet.Provider value>{karte}</KarteEingebettet.Provider> : karte
 }
 
 /** LinkedIn / E-Mail / Wiedervorlage / Aufgabe (DESIGN-SYSTEM § 5.7, Varianten). */
@@ -172,7 +179,9 @@ function NachrichtKarte({ item, onAktion, kontext }: VariantenProps) {
     d.lead?.role_title,
     d.lead?.city ?? undefined,
     grund ? `Grund: ${grund}` : undefined,
-    item.follow_up_count ? `${item.follow_up_count} Follow-ups` : undefined,
+    item.follow_up_count
+      ? `${item.follow_up_count} ${item.follow_up_count === 1 ? 'Follow-up' : 'Follow-ups'}`
+      : undefined,
     item.snooze_count ? `${item.snooze_count}× verschoben` : undefined,
   ].filter((s): s is string => !!s)
 
@@ -213,17 +222,20 @@ function NachrichtKarte({ item, onAktion, kontext }: VariantenProps) {
         onAnrede={d.setzeAnrede}
       />
       {telefon ? (
-        <div className="mt-3.5 grid grid-cols-4 gap-1.5" role="group" aria-label="Aktionen">
+        // Telefon: vier gleich breite Zellen; Buttons füllen ihre Zelle und schrumpfen (min-w-0, px-1.5) statt in die Nachbarzelle
+        // zu ragen (Runde 2: gesperrtes „Kopieren“ 87 px in 71-px-Zelle)
+        <div className="mt-3.5 grid grid-cols-4 gap-1.5 [&>*]:min-w-0" role="group" aria-label="Aktionen">
           <Button
             variante="primary"
             copied={kopiert}
             disabled={email ? gesperrt : kopierenAus}
             disabledGrund={email ? gateGrund : kopierenGrund}
             onClick={email ? oeffnen : kopieren}
+            className={ZELLE}
           >
             {email ? 'Öffnen' : 'Kopieren'}
           </Button>
-          <Button onClick={gesendet} disabled={gesperrt} disabledGrund={gateGrund}>
+          <Button onClick={gesendet} disabled={gesperrt} disabledGrund={gateGrund} className={ZELLE}>
             Gesendet
           </Button>
           <Spaeter
@@ -233,9 +245,9 @@ function NachrichtKarte({ item, onAktion, kontext }: VariantenProps) {
             snoozeCount={item.snooze_count ?? undefined}
             faelligAm={item.due_at}
             onFertig={() => onAktion('spaeter')}
-            trigger={<Button>Später</Button>}
+            trigger={<Button className={ZELLE}>Später</Button>}
           />
-          <DropdownMenu trigger={<Button>Mehr</Button>} eintraege={mehrEintraege} />
+          <DropdownMenu trigger={<Button className={ZELLE}>Mehr</Button>} eintraege={mehrEintraege} />
           {mehr === 'notiz' ? (
             <NotizFeld
               leadId={leadId}

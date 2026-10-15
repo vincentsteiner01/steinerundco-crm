@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { emailGate, nachfassZaehler as nachfassZahl } from '@/lib/gates'
 import { emailGateText as text } from '@/texte/de'
 import type { Email, Member, QueueItem } from '@/types/domain'
-import { leadMitBezug, T_JA, T_KF2, T_NEIN_MIT, T_OPENER, T_OPENER_KB, VORLAGEN, zeile } from './_testHilfe'
+import { leadMitBezug, T_JA, T_KF2, T_LF1, T_NEIN_MIT, T_OPENER, T_OPENER_KB, VORLAGEN, zeile } from './_testHilfe'
 import { MEMBER_M, MEMBER_V } from '@/test/fixtures/leads'
 
 const emailGateText = (g: ReturnType<typeof emailGate>, vorname: string | null) =>
@@ -16,6 +16,16 @@ import { blockKopf, kartenArt, nachrichtErgebnis, skriptPunkte, vorlageFuerKarte
 const LEER = { vorlageId: null }
 
 describe('vorlageFuerKarte', () => {
+  it('Runde 2: Wiedervorlage ohne Vorlage („Follow-up (aus Sheet)“) bekommt einen Standard nach Phase', () => {
+    const wv = zeile('heute', 9, { item_kind: 'wiedervorlage', template_id: null, title: 'Follow-up (aus Sheet)' })
+    const mitKf1 = [...VORLAGEN, { ...T_KF2, id: 'kf1', key: 'li_fu_kurz_1', name: 'Kurzfristig 1' }]
+    expect(vorlageFuerKarte(wv, 'wiedervorlage', { role: 'unbekannt', stage: 'dm_beantwortet' }, mitKf1, LEER, null, false)?.id).toBe('kf1')
+    expect(vorlageFuerKarte(wv, 'wiedervorlage', { role: 'unbekannt', stage: 'langfristig' }, mitKf1, LEER, null, false)?.id).toBe(
+      T_LF1.id,
+    )
+    // ab Erstgespräch keine passende DM-Vorlage → Wahl bleibt offen
+    expect(vorlageFuerKarte(wv, 'wiedervorlage', { role: 'unbekannt', stage: 'erstgespraech' }, mitKf1, LEER, null, false)).toBeNull()
+  })
   const opener = zeile('heute', 1, { template_id: T_OPENER.id })
   it('H-13: Opener nach Rolle – Kundenbetreuer/Innendienst bekommen „ZG – Kundenbetreuer“, sonst die Schritt-Vorlage V1', () => {
     expect(vorlageFuerKarte(opener, 'linkedin', { role: 'kundenbetreuer' }, VORLAGEN, LEER, null, true)?.id).toBe(
@@ -202,5 +212,14 @@ describe('E-Mail-Gate der Karte (ux § 3.6.3)', () => {
     expect(emailGateText(emailGate({ email: null, email_consent_basis: 'requested_linkedin' }, 0), null)).toBe(
       'Adresse fehlt – trag die E-Mail-Adresse ein, die die Person genannt hat.',
     )
+  })
+})
+
+describe('Runde 2: verpasstSeit', () => {
+  it('zeigt Stunden:Minuten statt h:mm:ss', async () => {
+    const { verpasstSeit } = await import('./heuteHelfer')
+    expect(verpasstSeit(35 * 60_000)).toBe('00:35')
+    expect(verpasstSeit((2 * 60 + 48) * 60_000 + 50_000)).toBe('02:48')
+    expect(verpasstSeit(-5)).toBe('00:00')
   })
 })

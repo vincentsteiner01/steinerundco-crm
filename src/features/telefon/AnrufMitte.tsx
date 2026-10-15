@@ -235,7 +235,7 @@ export function AnrufMitte({
         <span className="label">Qualifizierung · schreibt in den Lead</span>
         {QUALIFIZIERUNG.map((q) => (
           <div key={q.key} className="flex flex-wrap items-center gap-3">
-            <span className="label w-[132px]">{q.label}</span>
+            <span className="label w-[148px] flex-none whitespace-nowrap">{q.label}</span>
             <Segment
               klein
               ariaLabel={q.label}

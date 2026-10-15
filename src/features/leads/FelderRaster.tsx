@@ -19,7 +19,8 @@ import type { LeadMitBezug, LeadUpdate, Member, Settings } from '@/types/domain'
 import { ALLGEMEIN } from '@/texte/de'
 import { jetztIso } from './hilfen'
 import { firmaPatch, useNaechsteAktionSetzen } from './leadFelder'
-import { ANREDE_LABEL, ANREDE_OPTIONEN, ROLLE_LABEL, ROLLE_OPTIONEN } from './spalten'
+import { ANREDE_LABEL, ANREDE_OPTIONEN, ROLLE_OPTIONEN, rolleAnzeige } from './spalten'
+import { anzeigeName } from '@/lib/mitglied'
 
 export type FelderRasterProps = {
   lead: LeadMitBezug
@@ -71,7 +72,7 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
 
   const name = (id: string | null | undefined) => {
     const m = id ? members.find((x) => x.id === id) : null
-    return m?.short_name ?? m?.display_name ?? null
+    return (anzeigeName(m) || null)
   }
   const angenommen = (lead.linkedin_connections ?? []).find((c) => c.status === 'angenommen' && c.accepted_at)
   const enrollment = (lead.enrollments ?? []).find((e) => e.status === 'aktiv' && e.channel === 'linkedin')
@@ -128,10 +129,7 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
     {
       key: 'rolle',
       label: 'Rolle',
-      wert:
-        lead.role === 'unbekannt'
-          ? (lead.role_title ?? null)
-          : `${ROLLE_LABEL[lead.role]}${lead.role_title ? ` · ${lead.role_title}` : ''}`,
+      wert: rolleAnzeige(lead.role, lead.role_title),
       edit: {
         art: 'select',
         wert: lead.role,
@@ -241,7 +239,12 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
 
   return (
     <div
-      className={cn('mb-5 grid gap-x-5 gap-y-3.5', breit ? 'grid-cols-4 max-lg:grid-cols-2' : 'grid-cols-2', className)}
+      // breit (Vollseite): so viele Spalten wie 140 px passen – fest 4 Spalten ergaben bei 1024 px nur 72 px je Feld (Werte liefen über)
+      className={cn(
+        'mb-5 grid gap-x-5 gap-y-3.5',
+        breit ? 'grid-cols-[repeat(auto-fill,minmax(180px,1fr))]' : 'grid-cols-[repeat(2,minmax(0,1fr))]',
+        className,
+      )}
     >
       {felder.map((f) => (
         <div key={f.key} className="grid min-w-0 gap-[3px]">
@@ -268,6 +271,7 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
               )}
               onClick={() => setAktiv(f.key)}
               aria-label={`${f.label} bearbeiten`}
+              title={typeof f.wert === 'string' ? f.wert : undefined}
             >
               {f.wert ?? f.leer ?? 'hinzufügen'}
             </button>
@@ -278,6 +282,7 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
                 f.mono && 'tnum font-mono text-[13px]',
                 f.wert ? (f.mono ? 'text-ink-2' : 'text-ink') : 'text-ink-4',
               )}
+              title={typeof f.wert === 'string' ? f.wert : undefined}
             >
               {f.wert ?? f.leer ?? 'hinzufügen'}
             </span>

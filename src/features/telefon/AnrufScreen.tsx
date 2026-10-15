@@ -26,7 +26,7 @@ import { istEingabe, useHotkeyScope, useHotkeys } from '@/lib/keyboard'
 import { fuellen, type PlatzhalterKontext } from '@/lib/platzhalter'
 import { SEQUENZ } from '@/lib/vorlagenKeys'
 import { berlinTag, tagPlus, tagZuDate } from '@/lib/zeit'
-import { ANRUFGRUND_LABEL, DIALOG, GATE_GRUND_LABEL } from '@/texte/de'
+import { ANRUFGRUND_LABEL, DIALOG, telefonGrundLabel } from '@/texte/de'
 import { useIstTelefon } from '@/lib/useMediaQuery'
 import type { CallOutcome } from '@/types/domain'
 import { AnrufgrundSetzen } from './AnrufgrundSetzen'
@@ -90,7 +90,7 @@ export function Component() {
     () => (lead ? telefonGate(lead, sperrlistenEintraege(sperrliste, lead)) : { erlaubt: false }),
     [lead, sperrliste],
   )
-  const gateGrund = gate.erlaubt ? null : gate.grund ? GATE_GRUND_LABEL[gate.grund] : 'Nicht anrufbar'
+  const gateGrund = gate.erlaubt ? null : gate.grund ? telefonGrundLabel(gate.grund) : 'Nicht anrufbar'
   const anrufenLink = useRef<HTMLAnchorElement | null>(null)
   const maxVersuche = settings?.telefon.max_attempts ?? 5
   const enrollment = useMemo(
@@ -498,9 +498,16 @@ export function Component() {
       ) : (
         <>
           <div
-            className={cn('grid items-start gap-8', 'grid-cols-[300px_minmax(0,1fr)_320px] max-[1180px]:grid-cols-1')}
+            className={cn(
+              'grid items-start gap-8',
+              // 768–1180 px: Kontext oben über volle Breite, darunter Mitte | Skript – sonst verdeckt die klebende
+              // Ergebnisleiste den Anrufen-Button (Sichtprüfung 1024 × 768)
+              'max-wide:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] max-wide:gap-6 grid-cols-[300px_minmax(0,1fr)_320px] max-md:grid-cols-1',
+            )}
           >
-            <Kontext lead={lead} versuch={versuch} maxVersuche={maxVersuche} />
+            <div className="max-wide:col-span-2 min-w-0 max-md:col-span-1">
+              <Kontext lead={lead} versuch={versuch} maxVersuche={maxVersuche} />
+            </div>
             <AnrufMitte
               lead={lead}
               anruf={anruf}
@@ -524,7 +531,8 @@ export function Component() {
               onToggle={mobil ? () => setSkriptZu((z) => !z) : undefined}
             />
           </div>
-          <div className="bg-canvas border-line sticky bottom-0 z-10 mt-7 grid gap-2.5 border-t pt-3 pb-2">
+          {/* Mobil nicht klebend: 15 Tasten würden den halben Bildschirm über Nummer und Anrufen legen (Sichtprüfung 390 px) */}
+          <div className="bg-canvas border-line sticky bottom-0 z-10 mt-7 grid gap-2.5 border-t pt-3 pb-2 max-md:static">
             {ergebnisBereich}
           </div>
         </>

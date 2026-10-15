@@ -21,7 +21,9 @@ export function HinweisKarte({ text, aktion, onAusblenden, warnung, className }:
         className,
       )}
     >
-      <span className="flex-1">{text}</span>
+      <span className="line-clamp-2 min-w-0 flex-1" title={text}>
+        {text}
+      </span>
       {aktion ? (
         <Button variante="quiet" groesse="S" onClick={aktion.onClick}>
           {aktion.label}

@@ -152,7 +152,7 @@ export function NachrichtBlock({
       data-nachricht-block
     >
       <div className="border-line text-ink-3 tnum flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1.5 border-b px-3 py-1 font-mono text-[11.5px] tracking-[0.02em]">
-        <span className="whitespace-nowrap">
+        <span className="min-w-0 truncate" title={kopf}>
           {offenZahl > 0 && ergebnis.alle.length ? (
             <>
               {kopf.replace(/Platzhalter \d+\/\d+ gefüllt$/, 'Platzhalter ')}
@@ -220,6 +220,11 @@ export function NachrichtBlock({
               Noch offen: {ergebnis.offen.map((o) => `[${o}]`).join(' · ')}
             </p>
           ) : null}
+        </div>
+      ) : skript && !skriptPunkte(ergebnis.text).length ? (
+        // Ohne Skript stand hier ein leerer Kasten (Runde 2, Mikes Rückruf ohne Leitfaden)
+        <div className="px-4 py-3.5">
+          <p className="text-small text-ink-3 m-0">Kein Skript hinterlegt – über „ändern“ wählen.</p>
         </div>
       ) : skript ? (
         <ul className="m-0 grid list-none gap-1.5 p-3.5 pl-4 text-[14px] leading-[1.5]">

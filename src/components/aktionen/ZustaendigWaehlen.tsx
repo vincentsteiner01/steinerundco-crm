@@ -11,6 +11,7 @@ import { useUndo } from '@/data/undo'
 import type { Lead } from '@/types/domain'
 import { nachleseAktivitaet, useLeadInvalidierung, type AktionProps } from './_gemeinsam'
 import { FREIGABE_PER_TABELLE } from './gruende'
+import { anzeigeName } from '@/lib/mitglied'
 
 export const FREI = 'frei'
 
@@ -55,7 +56,7 @@ export function ZustaendigWaehlen({
     inval(leadId)
     const m = members?.find((x) => x.id === wert)
     const text =
-      wert === FREI ? 'Freigegeben.' : `Übergeben an ${m?.short_name ?? m?.display_name ?? 'die andere Person'}.`
+      wert === FREI ? 'Freigegeben.' : `Übergeben an ${anzeigeName(m, 'die andere Person')}.`
     const a = await nachleseAktivitaet(leadId, wert === FREI ? ['freigabe'] : ['uebergabe'])
     if (a) anbieten(a.id, text, leadId)
     else toast(text)
@@ -76,7 +77,7 @@ export function ZustaendigWaehlen({
       optionen={[
         ...(members ?? [])
           .filter((m) => !!m.id)
-          .map((m) => ({ value: m.id as string, label: m.short_name ?? m.display_name ?? '' })),
+          .map((m) => ({ value: m.id as string, label: anzeigeName(m, '') })),
         { value: FREI, label: 'Frei' },
       ]}
     />

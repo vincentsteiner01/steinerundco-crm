@@ -80,6 +80,26 @@ describe('LeadSeite', () => {
     expect(screen.getByRole('group', { name: 'Verlauf filtern' })).toBeInTheDocument()
   })
 
+  it('Drittel-Spalte: Profil-URL mit Icon-Aktionen (kopieren/öffnen), Nächster Schritt oben bündig', async () => {
+    DB.details = [
+      leadMitBezug(1, {
+        full_name: 'Anna Amsel',
+        owner_id: MEMBER_V,
+        role: 'geschaeftsfuehrer',
+        role_title: 'Geschäftsführer',
+      }),
+    ]
+    seite()
+    await screen.findByRole('heading', { name: 'Anna Amsel' })
+    const linkedin = document.querySelector('[data-kanal="linkedin"]') as HTMLElement
+    expect(within(linkedin).getByRole('button', { name: 'Profil-URL kopieren' })).toBeInTheDocument()
+    expect(within(linkedin).getByRole('link', { name: 'Profil öffnen' })).toHaveAttribute('target', '_blank')
+    expect(within(linkedin).queryByText('kopieren')).toBeNull()
+    expect(document.querySelector('[data-felder]')?.parentElement?.className).toContain('items-start')
+    // Rolle nicht doppelt („Geschäftsführer · Geschäftsführer“)
+    expect(screen.queryByText('Geschäftsführer · Geschäftsführer')).toBeNull()
+  })
+
   it('Tab Notizen zeigt das Notizfeld und nur Notizen', async () => {
     DB.activities = [
       aktivitaet({ lead_id: ID, type: 'notiz', note: 'Vertragsentwurf geschickt' }),
@@ -149,6 +169,8 @@ describe('LeadSeite', () => {
     expect(await screen.findByText('Anrufgrund-Historie')).toBeInTheDocument()
     expect(screen.getByText('Firma gesperrt – nicht anschreiben')).toBeInTheDocument()
     expect(screen.getByText('Nicht auf der Sperrliste')).toBeInTheDocument()
+    // Leere Sperrliste → kein roter Chip „Sperrliste“ im Kopf (Runde 2, echte Daten)
+    expect(screen.queryByText('Sperrliste', { exact: true })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Auskunft exportieren (JSON)' }))
     await waitFor(() => expect(downloadJson).toHaveBeenCalledTimes(1))
     const [auskunft, name] = vi.mocked(downloadJson).mock.calls[0] as [Record<string, unknown>, string]

@@ -15,7 +15,7 @@ export function Mono({
     <span
       title={title}
       className={cn(
-        'tnum font-mono text-[13px]',
+        'tnum font-mono text-[13px] whitespace-nowrap',
         ton === 'today' && 'text-signal',
         ton === 'overdue' && 'text-overdue',
         ton === 'later' && 'text-ink-3',

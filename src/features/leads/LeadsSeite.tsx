@@ -31,6 +31,7 @@ import { heuteBerlin } from '@/lib/format'
 import { emailGate, telefonGate } from '@/lib/gates'
 import { phaseNachKey, phaseVon } from '@/lib/stufen'
 import { linkedinHref } from '@/lib/url'
+import { useIstTelefon, useMediaQuery } from '@/lib/useMediaQuery'
 import { GATE_GRUND_LABEL, LEER } from '@/texte/de'
 import type { Lead, LeadRole, LeadStage, PhaseKey, Salutation } from '@/types/domain'
 import { nachleseAktivitaet } from '@/data/activities'
@@ -52,6 +53,9 @@ import {
   leadSpalten,
   mitFirmensperre,
   mobilZeile,
+  MIN_BREITE_SCHMAL,
+  ohneLeereRolle,
+  ohneVerdeckte,
   sortFeld,
   zeitBalken,
   type Bearbeitung,
@@ -60,6 +64,7 @@ import {
 import { SPALTEN_LABEL, spalteNachFeld, type SpaltenKey } from './spaltenKeys'
 import { useLeadsHotkeys } from './useLeadsHotkeys'
 import { ZeilenAktion, type ZeilenAktionArt } from './ZeilenAktion'
+import { anzeigeName } from '@/lib/mitglied'
 
 export function Component() {
   return <LeadsSeite />
@@ -246,7 +251,7 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
           return
         }
         const m = members?.find((x) => x.id === wert)
-        const text = wert ? `Übergeben an ${m?.short_name ?? m?.display_name ?? 'die andere Person'}.` : 'Freigegeben.'
+        const text = wert ? `Übergeben an ${anzeigeName(m, 'die andere Person')}.` : 'Freigegeben.'
         const a = await nachleseAktivitaet(lead.id, wert ? ['uebergabe'] : ['freigabe'])
         if (a) anbieten(a.id, text, lead.id)
         else toast(text)
@@ -262,31 +267,42 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
     () => ({ heute, settings, members: members ?? [], batches: batches ?? [] }),
     [heute, settings, members, batches],
   )
+  // Unter 1280 px: verdeckte Spalten weglassen (sonst verrutschen die <col>-Breiten) und Kopf nicht sticky – im
+  // overflow-x-Wrapper der Tabelle rechnet `top: var(--head-h)` sonst ab Tabellenoberkante und legt den Kopf über Zeile 3–4.
+  const unterXl = useMediaQuery('(max-width: 1279px)')
+  const telefon = useIstTelefon()
+  const unterLg = useMediaQuery('(max-width: 1023px)')
   const spalten = useMemo(
     () =>
-      leadSpalten(spaltenKeys, {
-        ...spaltenOpts,
-        bearbeitung,
-        onSave: (l, s, w) => void onSave(l, s, w),
-        onCancel: () => setBearbeitung(null),
-        onTab: () => undefined,
-        anker: aktion
-          ? {
-              rowId: aktion.leadId,
-              node: (
-                <ZeilenAktion
-                  lead={{ id: aktion.leadId }}
-                  art={aktion.art}
-                  terminTyp={aktion.terminTyp}
-                  onFertig={() => setAktion(null)}
-                />
-              ),
-            }
-          : undefined,
-      }),
+      ohneVerdeckte(
+        leadSpalten(spaltenKeys, {
+          ...spaltenOpts,
+          bearbeitung,
+          onSave: (l, s, w) => void onSave(l, s, w),
+          onCancel: () => setBearbeitung(null),
+          onTab: () => undefined,
+          anker: aktion
+            ? {
+                rowId: aktion.leadId,
+                node: (
+                  <ZeilenAktion
+                    lead={{ id: aktion.leadId }}
+                    art={aktion.art}
+                    terminTyp={aktion.terminTyp}
+                    onFertig={() => setAktion(null)}
+                  />
+                ),
+              }
+            : undefined,
+        }),
+        unterXl,
+        unterLg,
+      ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [spaltenKeys, spaltenOpts, bearbeitung, aktion],
+    [spaltenKeys, spaltenOpts, bearbeitung, aktion, unterXl, unterLg],
   )
+  // Runde 2 (echte Daten): Rolle war überall „–“ – ohne Werte keine Spalte
+  const spaltenSichtbar = useMemo(() => ohneLeereRolle(spalten, rows), [spalten, rows])
   const sortierung = useMemo<SortingState>(
     () =>
       (filter.sort ?? [])
@@ -329,7 +345,7 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
               : gruppe === 'zustaendig'
                 ? k === 'frei'
                   ? 'Frei'
-                  : (members?.find((m) => m.id === k)?.short_name ?? k)
+                  : anzeigeName(members?.find((m) => m.id === k), k)
                 : k,
       }
     : undefined
@@ -441,13 +457,22 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
         kontext={`${filter.kanal?.length === 1 ? (filter.kanal[0] === 'linkedin' ? 'LinkedIn' : filter.kanal[0] === 'telefon' ? 'Telefon' : 'E-Mail') : 'alle Kanäle'} · Ansicht „${ansicht.name}“`}
         rechts={
           <KopfStats
-            eintraege={[
-              { wert: stats.gesamt, label: 'gesamt' },
-              { wert: stats.aktiv, label: 'aktiv' },
-              { wert: stats.heute, label: 'heute', ton: 'signal' },
-              { wert: stats.ueber, label: 'überfällig', ton: 'overdue' },
-              { wert: stats.beendet, label: 'beendet' },
-            ]}
+            eintraege={
+              // Telefon: fünf Zahlen waren 448 px breit und schoben die Seite auf 464 px (Sichtprüfung 390 px) – drei reichen
+              telefon
+                ? [
+                    { wert: stats.gesamt, label: 'gesamt' },
+                    { wert: stats.heute, label: 'heute', ton: 'signal' },
+                    { wert: stats.ueber, label: 'überfällig', ton: 'overdue' },
+                  ]
+                : [
+                    { wert: stats.gesamt, label: 'gesamt' },
+                    { wert: stats.aktiv, label: 'aktiv' },
+                    { wert: stats.heute, label: 'heute', ton: 'signal' },
+                    { wert: stats.ueber, label: 'überfällig', ton: 'overdue' },
+                    { wert: stats.beendet, label: 'beendet' },
+                  ]
+            }
           />
         }
       />
@@ -524,7 +549,8 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
         <DataTable<LeadZeile>
           ariaLabel="Leads"
           daten={rows}
-          spalten={spalten}
+          spalten={spaltenSichtbar}
+          minBreite={spaltenSichtbar.length <= 8 ? MIN_BREITE_SCHMAL : undefined}
           rowId={(r) => r.id}
           cursorId={cursorId}
           onCursor={onCursor}
@@ -542,6 +568,7 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
           hatMehr={hatMehr}
           leer={leer}
           mobilZeile={(r, z) => mobilZeile(r, spaltenOpts, z)}
+          sticky={!unterXl}
         />
       )}
 

@@ -4,12 +4,12 @@ import { cn } from '@/components/ui/cn'
 
 export function BlockKopf({ titel, hinweis, rechts }: { titel: string; hinweis?: ReactNode; rechts?: ReactNode }) {
   return (
-    <div className="mb-3.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+    <div className="mb-3.5 flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="text-h3 text-ink">{titel}</h2>
         {hinweis ? <span className="text-small text-ink-3">{hinweis}</span> : null}
       </div>
-      {rechts ? <div className="flex items-center gap-2">{rechts}</div> : null}
+      {rechts ? <div className="flex max-w-full min-w-0 items-center gap-2">{rechts}</div> : null}
     </div>
   )
 }
@@ -48,7 +48,7 @@ export function Ziffer({
 export function SheetBadge() {
   return (
     <span
-      className="border-line-strong text-ink-3 rounded-xs border px-1.5 py-px text-[10.5px] font-medium tracking-[0.04em] normal-case"
+      className="border-line-strong text-ink-3 shrink-0 rounded-xs border px-1.5 py-px text-[10.5px] font-medium tracking-[0.04em] whitespace-nowrap normal-case"
       title="Wert stammt aus dem KPI-Sheet (Monatszähler), nicht aus Ereignissen"
       data-badge="sheet"
     >

@@ -54,10 +54,10 @@ export function TabLeiste() {
   return (
     <nav
       aria-label="Navigation"
-      className="border-line bg-canvas/96 fixed inset-x-0 bottom-0 z-50 grid h-[calc(var(--spacing-tabbar)+env(safe-area-inset-bottom))] grid-cols-5 border-t pb-[env(safe-area-inset-bottom)]"
+      className="border-line bg-canvas fixed inset-x-0 bottom-0 z-50 grid h-[calc(var(--spacing-tabbar)+env(safe-area-inset-bottom))] grid-cols-5 border-t pb-[env(safe-area-inset-bottom)]"
     >
       {TAB_LEISTE.map((t) => (
-        <NavLink key={t.pfad} to={t.pfad} className={({ isActive }) => tabKlasse(isActive)}>
+        <NavLink key={t.pfad} to={t.pfad} data-tour={`nav:${t.pfad}`} className={({ isActive }) => tabKlasse(isActive)}>
           <t.icon size={18} strokeWidth={1.75} aria-hidden />
           {t.label}
           {t.zaehler && zaehler[t.zaehler] > 0 ? (
@@ -95,6 +95,7 @@ export function TabLeiste() {
               <NavLink
                 key={e.pfad}
                 to={e.pfad}
+                data-tour={`nav:${e.pfad}`}
                 role="menuitem"
                 onClick={() => setOffen(false)}
                 className={() =>

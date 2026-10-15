@@ -31,10 +31,10 @@ export function FunnelTabelle({ zeilen, vorLabel, kontext, className }: FunnelTa
         const vor = [
           `${vorLabel} ${fmtZahl(z.vorWert)}`,
           z.vorQuote !== undefined && z.vorQuote !== null ? fmtProzent(z.vorQuote) : null,
-          z.ziel !== null ? `Ziel ${fmtProzent(z.ziel)}` : null,
         ]
           .filter(Boolean)
           .join(' · ')
+        const ziel = z.ziel !== null ? `Ziel ${fmtProzent(z.ziel)}` : null
         return (
           <li
             key={z.metric}
@@ -64,7 +64,7 @@ export function FunnelTabelle({ zeilen, vorLabel, kontext, className }: FunnelTa
               </span>
               {z.quote !== undefined ? (
                 <span className="tnum text-ink-2 flex items-center gap-2.5 font-mono text-[12.5px]" data-konversion>
-                  <FunnelBalken anteil={z.quote} className="flex-1" />
+                  <FunnelBalken anteil={z.quote} className="min-w-0 flex-1" />
                   <span>{z.quote === null ? '–' : fmtProzent(z.quote)}</span>
                   {z.erreicht ? <ZielPunkt text={`Ziel ${fmtProzent(z.ziel ?? 0)} erreicht`} /> : null}
                 </span>
@@ -77,7 +77,9 @@ export function FunnelTabelle({ zeilen, vorLabel, kontext, className }: FunnelTa
                 {fmtDelta(z.delta)}
                 {z.deltaPp !== null ? ` · ${fmtPp(z.deltaPp)}` : ''}
               </b>
-              {vor}
+              {/* Vorperiode und Ziel je eine Zeile: in 120 px bräche „· Ziel 28 %“ sonst mitten im Satz um */}
+              <span className="block">{vor}</span>
+              {ziel ? <span className="block">{ziel}</span> : null}
             </div>
           </li>
         )

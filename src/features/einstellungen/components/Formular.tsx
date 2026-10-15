@@ -96,5 +96,5 @@ export function SwitchZeile({ label, hinweis, checked, onCheckedChange, disabled
 
 /** Zwei Felder nebeneinander (ab 640 px), darunter untereinander. */
 export function Zeile({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('grid gap-4 sm:grid-cols-2', className)}>{children}</div>
+  return <div className={cn('grid items-start gap-4 sm:grid-cols-2', className)}>{children}</div>
 }
