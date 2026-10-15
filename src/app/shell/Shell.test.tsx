@@ -72,7 +72,7 @@ describe('Shell', () => {
     expect(screen.getByTestId('ort')).toHaveTextContent(/^\/leads$/)
   })
 
-  it('Tab-Leiste: „Mehr“ öffnet ein Menü mit Pipeline · E-Mail · Leitfäden · Schnellimport · Einstellungen', () => {
+  it('Tab-Leiste: „Mehr“ öffnet ein Menü mit Pipeline · E-Mail · Leitfäden · Schnellimport · Team · Einstellungen · Hilfe · Feedback', () => {
     const router = mitRouter(
       <>
         <TabLeiste />
@@ -88,7 +88,7 @@ describe('Shell', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map((m) => m.textContent),
-    ).toEqual(['Pipeline', 'E-Mail', 'Leitfäden', 'Schnellimport', 'Einstellungen'])
+    ).toEqual(['Pipeline', 'E-Mail', 'Leitfäden', 'Schnellimport', 'Team', 'Einstellungen', 'Hilfe', 'Feedback'])
     fireEvent.click(within(menu).getByRole('menuitem', { name: 'Leitfäden' }))
     expect(screen.getByTestId('ort')).toHaveTextContent('/leitfaeden')
     expect(screen.queryByRole('menu')).toBeNull()

@@ -17,6 +17,9 @@ const CommandPalette = lazy(() => import('./CommandPalette').then((m) => ({ defa
 const ShortcutHilfe = lazy(() => import('./ShortcutHilfe').then((m) => ({ default: m.ShortcutHilfe })))
 // Phone-Topbar (Radix-Dropdown ≈ 10 kB gzip) nur unter 768 px laden – auf dem Desktop bleibt sie aus dem initialen Bundle.
 const PhoneTopbar = lazy(() => import('./PhoneTopbar').then((m) => ({ default: m.PhoneTopbar })))
+// Feedback-Knopf (⌥F) und Onboarding-Tour: nachgeladen, nicht im Start-Bundle (E22)
+const FeedbackKnopf = lazy(() => import('@/features/feedback/public').then((m) => ({ default: m.FeedbackKnopf })))
+const OnboardingTour = lazy(() => import('@/features/hilfe/public').then((m) => ({ default: m.OnboardingTour })))
 
 /**
  * BAUPLAN § 3.1.5: Grid 232px 1fr (≥ 1024), 64px 1fr (768–1023), 1fr (< 768); ≥ 1600 mit offenem Peek 232px 1fr 440px.
@@ -88,6 +91,8 @@ export function AppShell() {
       <Suspense fallback={null}>
         {paletteOffen ? <CommandPalette /> : null}
         {hilfeOffen ? <ShortcutHilfe /> : null}
+        <FeedbackKnopf />
+        <OnboardingTour />
       </Suspense>
       <GlobaleTasten />
     </div>

@@ -20,6 +20,9 @@ export const PFADE = {
   schnellimport: (zurueck?: string) =>
     zurueck ? `/import/schnell?zurueck=${encodeURIComponent(zurueck)}` : '/import/schnell',
   importErgebnis: (batchId: string) => `/import/${batchId}`,
+  team: '/team',
+  hilfe: (thema?: string) => (thema ? `/hilfe/${thema}` : '/hilfe'),
+  feedback: '/feedback',
   einstellungen: (bereich: 'profil' | 'passcode' | 'ziele' | 'sequenzen' | 'sperrliste' | 'export' = 'profil') =>
     `/einstellungen/${bereich}`,
 } as const
