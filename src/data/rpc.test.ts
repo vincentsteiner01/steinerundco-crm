@@ -143,15 +143,12 @@ describe('rpc.ts – Parameternamen', () => {
 describe('Bindung an den Client', () => {
   it('ruft supabase.rpc mit this = Client auf (live brach ein abgetrenntes rpc mit „reading rest“)', async () => {
     const original = supabase.rpc
-    let gesehenesThis: unknown = null
-    // supabase-js liest this.rest – ein Aufruf ohne Bindung hätte hier this = undefined
-    ;(supabase as unknown as { rpc: unknown }).rpc = function (this: unknown) {
-      gesehenesThis = this
-      return Promise.resolve({ data: 1, error: null })
-    }
+    // supabase-js liest this.rest – ein Aufruf ohne Bindung hätte this = undefined; vi.fn merkt sich this in mock.contexts
+    const attrappe = vi.fn(() => Promise.resolve({ data: 1, error: null }))
+    ;(supabase as unknown as { rpc: unknown }).rpc = attrappe
     try {
       await rpc.setCounter({ metric: 'vernetzungen_versendet', value: 1 })
-      expect(gesehenesThis).toBe(supabase)
+      expect(attrappe.mock.contexts[0]).toBe(supabase)
     } finally {
       ;(supabase as unknown as { rpc: unknown }).rpc = original
     }
