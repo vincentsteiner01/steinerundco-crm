@@ -5,8 +5,25 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // architektur § 2 (gilt wörtlich, BAUPLAN § 1.5 Nr. 44)
+// CSP zusätzlich als <meta> im gebauten index.html: nginx auf dem Plesk-Server liefert „/“ und /index.html direkt aus,
+// ohne die Header aus public/.htaccess (geprüft 15.10.2026). Nur im Build – der Dev-Server braucht Inline-HMR.
+// frame-ancestors gilt nur als Header (bleibt in .htaccess), deshalb fehlt es hier.
+const CSP_META =
+  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; " +
+  "img-src 'self' data: blob: https://ekaqkfgvisdngsskzbai.supabase.co; " +
+  "connect-src 'self' https://ekaqkfgvisdngsskzbai.supabase.co wss://ekaqkfgvisdngsskzbai.supabase.co; " +
+  "worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests"
+const cspMeta = {
+  name: 'csp-meta',
+  apply: 'build' as const,
+  transformIndexHtml(html: string) {
+    return html.replace('<head>', `<head>\n    <meta http-equiv="Content-Security-Policy" content="${CSP_META}" />`)
+  },
+}
+
 export default defineConfig({
   plugins: [
+    cspMeta,
     react(),
     tailwindcss(),
     VitePWA({
