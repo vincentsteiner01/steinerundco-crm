@@ -31,22 +31,25 @@ AddType font/woff2 .woff2
     Header set Cache-Control "no-cache"
   </FilesMatch>
 
+  # Hinweis: Auf dem IONOS-Plesk-Server kommen „Header always set“-Zeilen nicht beim Browser an (geprüft 15.10.2026,
+  # auch bei steinerundco.de und app.steinerundco.de); „Header set“ wirkt. Für eine statische App reicht „set“.
+
   # ---------- Privates Werkzeug
-  Header always set X-Robots-Tag "noindex, nofollow, noarchive"
+  Header set X-Robots-Tag "noindex, nofollow, noarchive"
 
   # ---------- Sicherheits-Header
-  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
-  Header always set X-Content-Type-Options "nosniff"
-  Header always set Referrer-Policy "no-referrer"
-  Header always set X-Frame-Options "DENY"
-  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
-  Header always set Cross-Origin-Opener-Policy "same-origin"
-  Header always set Cross-Origin-Resource-Policy "same-origin"
+  Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "no-referrer"
+  Header set X-Frame-Options "DENY"
+  Header set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+  Header set Cross-Origin-Opener-Policy "same-origin"
+  Header set Cross-Origin-Resource-Policy "same-origin"
 
   # Content-Security-Policy – kein CDN, Fonts self-hosted, nur das Supabase-Projekt.
   # style-src 'unsafe-inline': Radix-Popper und Sonner setzen Styles zur Laufzeit; script-src bleibt strikt.
   # blob:/data: in img-src für Vorschau beim Import und SVG-Icons in CSS; worker-src für den Service Worker.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://ekaqkfgvisdngsskzbai.supabase.co wss://ekaqkfgvisdngsskzbai.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+  Header set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://ekaqkfgvisdngsskzbai.supabase.co wss://ekaqkfgvisdngsskzbai.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 </IfModule>
 
 <IfModule mod_deflate.c>
