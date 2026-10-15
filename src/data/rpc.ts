@@ -83,7 +83,8 @@ type RpcRoh = (
   opts?: { get?: boolean },
 ) => PromiseLike<{ data: unknown; error: unknown }>
 async function aufruf<R>(name: RpcName, args: Record<string, unknown> = {}, opts?: { get?: boolean }): Promise<R> {
-  const rpc = supabase.rpc as unknown as RpcRoh
+  // bind: supabase.rpc nutzt this.rest – abgetrennt warf es live „Cannot read properties of undefined (reading rest)“
+  const rpc = supabase.rpc.bind(supabase) as unknown as RpcRoh
   const r = await rpc(name, ohneUndefined(args), opts)
   return pruefe(r as { data: R; error: null } | { data: null; error: Error })
 }

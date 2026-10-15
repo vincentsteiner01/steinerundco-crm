@@ -139,3 +139,21 @@ describe('rpc.ts – Parameternamen', () => {
     await expect(rpc.ping()).rejects.toMatchObject({ code: 'P0001' })
   })
 })
+
+describe('Bindung an den Client', () => {
+  it('ruft supabase.rpc mit this = Client auf (live brach ein abgetrenntes rpc mit „reading rest“)', async () => {
+    const original = supabase.rpc
+    let gesehenesThis: unknown = null
+    // supabase-js liest this.rest – ein Aufruf ohne Bindung hätte hier this = undefined
+    ;(supabase as unknown as { rpc: unknown }).rpc = function (this: unknown) {
+      gesehenesThis = this
+      return Promise.resolve({ data: 1, error: null })
+    }
+    try {
+      await rpc.setCounter({ metric: 'vernetzungen_versendet', value: 1 })
+      expect(gesehenesThis).toBe(supabase)
+    } finally {
+      ;(supabase as unknown as { rpc: unknown }).rpc = original
+    }
+  })
+})
