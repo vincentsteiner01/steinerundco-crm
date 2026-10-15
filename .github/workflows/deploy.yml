@@ -1,0 +1,45 @@
+name: Build und live stellen
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: deploy-live
+  cancel-in-progress: true
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      VITE_SUPABASE_URL: https://ekaqkfgvisdngsskzbai.supabase.co
+      VITE_SUPABASE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+      VITE_APP_VERSION: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test:ci
+      - run: npm run build
+      - name: Build prüfen
+        run: |
+          test -f dist/index.html
+          test -f dist/.htaccess
+          test -f dist/manifest.webmanifest
+          test -f dist/sw.js
+          node tools/pruefe-bundle.mjs dist
+      - name: Branch live ersetzen (Orphan-Commit, keine History)
+        run: |
+          cd dist
+          git init -q -b live
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "build ${GITHUB_SHA::7} · $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push --force "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git" HEAD:live

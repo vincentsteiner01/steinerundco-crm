@@ -1,0 +1,54 @@
+name: Backup crm-Schema
+on:
+  schedule:
+    - cron: '17 3 * * 1'          # montags 03:17 UTC
+  workflow_dispatch:
+permissions: {}
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Secrets vorhanden?
+        id: pruefen
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$PASSPHRASE" ]; then
+            echo "::notice::Backup übersprungen – Secrets SUPABASE_DB_URL und BACKUP_PASSPHRASE sind noch nicht gesetzt (README → Betrieb)."
+            echo "aktiv=nein" >> "$GITHUB_OUTPUT"
+          else
+            echo "aktiv=ja" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: supabase/setup-cli@v3
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        with:
+          version: 2.120.0
+      - name: Schema und Daten dumpen (pg_dump läuft im Docker-Image der CLI)
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          supabase db dump --db-url "$SUPABASE_DB_URL" --schema crm -f schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" --schema crm --data-only --use-copy -f data.sql
+          ls -la schema.sql data.sql
+          grep -q 'create table' -i schema.sql
+      - name: Verschlüsseln (AES-256, symmetrisch)
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        env:
+          PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          stamp=$(date -u +%Y-%m-%d)
+          tar czf "crm-$stamp.tar.gz" schema.sql data.sql
+          gpg --batch --yes --symmetric --cipher-algo AES256 --pinentry-mode loopback \
+              --passphrase "$PASSPHRASE" -o "crm-$stamp.tar.gz.gpg" "crm-$stamp.tar.gz"
+          shred -u schema.sql data.sql "crm-$stamp.tar.gz"
+          echo "STAMP=$stamp" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v7
+        if: steps.pruefen.outputs.aktiv == 'ja'
+        with:
+          name: crm-backup-${{ env.STAMP }}
+          path: crm-${{ env.STAMP }}.tar.gz.gpg
+          retention-days: 90
+          if-no-files-found: error

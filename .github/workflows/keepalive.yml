@@ -1,0 +1,21 @@
+name: Supabase wach halten
+on:
+  schedule:
+    - cron: '23 5 * * *'          # täglich 05:23 UTC
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: REST-Aufruf (zählt als API-Aktivität)
+        env:
+          KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+            "https://ekaqkfgvisdngsskzbai.supabase.co/rest/v1/rpc/ping" \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+            -H "Content-Profile: crm" -H "Content-Type: application/json" -d '{}')
+          echo "HTTP $code"
+          test "$code" = "200"

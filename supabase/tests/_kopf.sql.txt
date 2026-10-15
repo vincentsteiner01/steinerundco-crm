@@ -1,0 +1,9 @@
+Gemeinsames Muster der SQL-Tests (BAUPLAN § 3.1.2, § 3.1.12; architektur § 8.3 – ohne pgTAP):
+
+  bash tools/db-query.sh -f supabase/tests/<name>.sql
+
+- Alles läuft in EINER Transaktion und endet mit rollback – die Datenbank bleibt unverändert.
+- Jeder Fall ist ein DO-Block, der bei Abweichung `raise exception 'FAIL …'` wirft (→ HTTP-Fehler, Exit-Code 1, Meldung nennt den Fall).
+- Bestandene Fälle landen in der Temp-Tabelle `pruef`; das letzte select gibt alle Zeilen plus ('alle Fälle', 'ok') zurück.
+- Ausführung als Vincent (set_config request.jwt.claim.sub + set local role authenticated), damit RLS und auth.uid() wie im Client greifen.
+- Nach jedem undo_activity wird crm.undo_mode zurückgesetzt (in der App ist jeder RPC eine eigene Transaktion).

@@ -1,0 +1,85 @@
+{
+  "quelle": "crm.normalize_linkedin_url (Live-DB)",
+  "faelle": [
+    {
+      "eingabe": "https://www.linkedin.com/in/max-mustermann/",
+      "norm": "linkedin.com/in/max-mustermann"
+    },
+    {
+      "eingabe": "http://linkedin.com/in/max-mustermann",
+      "norm": "linkedin.com/in/max-mustermann"
+    },
+    {
+      "eingabe": "https://de.linkedin.com/in/Max-Mustermann",
+      "norm": "linkedin.com/in/max-mustermann"
+    },
+    {
+      "eingabe": "www.linkedin.com/in/max-mustermann?utm_source=share&trk=public_profile",
+      "norm": "linkedin.com/in/max-mustermann"
+    },
+    {
+      "eingabe": "https://www.linkedin.com/in/max-mustermann-123abc/",
+      "norm": "linkedin.com/in/max-mustermann-123abc"
+    },
+    {
+      "eingabe": "https://www.linkedin.com/in/max-mustermann-123abc?originalSubdomain=de",
+      "norm": "linkedin.com/in/max-mustermann-123abc"
+    },
+    {
+      "eingabe": "  https://www.linkedin.com/in/max-mustermann/  ",
+      "norm": "linkedin.com/in/max-mustermann"
+    },
+    {
+      "eingabe": "https://www.linkedin.com/in/MAX-MUSTERMANN/",
+      "norm": "linkedin.com/in/max-mustermann"
+    },
+    {
+      "eingabe": "linkedin.com/in/max-mustermann/",
+      "norm": "linkedin.com/in/max-mustermann"
+    },
+    {
+      "eingabe": "https://www.linkedin.com/in/max-m%C3%BCller/",
+      "norm": "linkedin.com/in/max-müller"
+    },
+    {
+      "eingabe": "https://www.linkedin.com/in/max-müller/",
+      "norm": "linkedin.com/in/max-müller"
+    },
+    {
+      "eingabe": "https://www.linkedin.com/in/max-mustermann/details/experience/",
+      "norm": null
+    },
+    {
+      "eingabe": "https://www.linkedin.com/in/max-mustermann/#top",
+      "norm": "linkedin.com/in/max-mustermann"
+    },
+    {
+      "eingabe": "https://www.linkedin.com/company/steiner-co/",
+      "norm": null
+    },
+    {
+      "eingabe": "https://www.linkedin.com/sales/lead/ACwAAABCDEF,NAME_SEARCH,abc",
+      "norm": null
+    },
+    {
+      "eingabe": "https://www.linkedin.com/in/",
+      "norm": null
+    },
+    {
+      "eingabe": "https://example.com/in/max-mustermann",
+      "norm": null
+    },
+    {
+      "eingabe": "",
+      "norm": null
+    },
+    {
+      "eingabe": "https://www.linkedin.com/pub/max-mustermann/1/2/3",
+      "norm": null
+    },
+    {
+      "eingabe": "https://www.linkedin.com/in/max-mustermann/?locale=de_DE",
+      "norm": "linkedin.com/in/max-mustermann"
+    }
+  ]
+}

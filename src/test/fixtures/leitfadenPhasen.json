@@ -1,0 +1,24 @@
+{
+  "phases": [
+    {
+      "phase": 1,
+      "name": "Gesprächseröffnung",
+      "ziel": "Problem erkennen & Antwort auslösen"
+    },
+    {
+      "phase": 2,
+      "name": "Bedarfsermittlung",
+      "ziel": "Bedarf, Priorität & Einwände qualifizieren"
+    },
+    {
+      "phase": 3,
+      "name": "Pitch",
+      "ziel": "Unverbindliches 15-Min.-Gespräch vereinbaren"
+    },
+    {
+      "phase": 4,
+      "name": "Follow-ups",
+      "ziel": "Nicht-Antworter erneut aktivieren"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Verhindert, dass echte Lead-Daten aus den Alt-Sheets in das öffentliche Repository gepusht werden.
+# Installation (einmalig): git config core.hooksPath tools/hooks
+exec python3 -I "$(git rev-parse --show-toplevel)/tools/pruefe-personendaten.py"
