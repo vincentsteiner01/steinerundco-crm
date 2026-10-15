@@ -618,10 +618,13 @@ export function DataTable<T extends RowData>({
                         type="button"
                         onClick={header.column.getToggleSortingHandler()}
                         // max-w-full + truncate: „Letzte Bewegung“ lief bei 1440 px unter die Nachbarspalte und war ohne „…“ abgeschnitten
-                        className="label hover:text-ink inline-flex max-w-full min-w-0 items-center gap-1 whitespace-nowrap"
+                        className={cn(
+                          'label hover:text-ink inline-flex max-w-full min-w-0 items-center gap-1',
+                          meta.kopfUmbruch ? cn('whitespace-normal', meta.rechts && 'text-right') : 'whitespace-nowrap',
+                        )}
                         title={kopfText ? `${kopfText} – sortieren · ⇧Klick: sekundär` : 'Sortieren · ⇧Klick: sekundär'}
                       >
-                        <span className="min-w-0 truncate">{inhalt}</span>
+                        <span className={meta.kopfUmbruch ? 'min-w-0' : 'min-w-0 truncate'}>{inhalt}</span>
                         {richtung ? (
                           <span className="text-ink font-mono tracking-normal" aria-hidden>
                             {richtung === 'asc' ? '↑' : '↓'}

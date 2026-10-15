@@ -147,6 +147,38 @@ describe('EingangListe', () => {
     expect(await screen.findByText('Dora Neu')).toBeInTheDocument()
   })
 
+  it('Runde 3: aktiver Status-Filter neutral wie das Segment (kein Lime), inaktive gedämpft', async () => {
+    rendern(<EingangListe />)
+    await screen.findByRole('list', { name: 'Eingang' })
+    const offen = within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: /Offen/ })
+    expect(offen).toHaveAttribute('aria-pressed', 'true')
+    expect(offen).toHaveClass('bg-surface-hover', 'border-line-strong', 'text-ink')
+    expect(offen).not.toHaveClass('bg-signal-tint')
+    expect(offen).not.toHaveClass('text-signal')
+    const alle = within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: /Alle/ })
+    expect(alle).toHaveClass('text-ink-2')
+  })
+
+  it('Runde 3: beim Laden „–“ statt einer falschen 0 und nach 300 ms „Lade …“ statt einer leeren Fläche', async () => {
+    const orig = vi.mocked(supabase.from).getMockImplementation()
+    const haengt: Record<string, unknown> = {}
+    for (const m of ['select', 'eq', 'in', 'is', 'or', 'order', 'limit', 'not', 'neq', 'gte', 'lte', 'range'])
+      haengt[m] = () => haengt
+    haengt['maybeSingle'] = () => haengt
+    haengt['single'] = () => haengt
+    haengt['then'] = () => new Promise(() => {})
+    vi.mocked(supabase.from).mockImplementation(() => haengt as never)
+    try {
+      rendern(<EingangListe />)
+      expect(await screen.findByTestId('eingang-laedt')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Offen –' })).toBeInTheDocument()
+      expect(await screen.findByText('Lade …')).toBeInTheDocument()
+      expect(screen.queryByText('Nichts zuzuordnen.')).toBeNull()
+    } finally {
+      if (orig) vi.mocked(supabase.from).mockImplementation(orig)
+    }
+  })
+
   it('leerer Eingang: ruhiger Leerzustand', async () => {
     zustand.zeilen = []
     rendern(<EingangListe />)

@@ -50,4 +50,24 @@ describe('Ergebnisleiste', () => {
     expect(liste.find((e) => e.outcome === 'busy')?.zaehltVersuch).toBe(false)
     expect(ergebnisseMit([])).toBe(ERGEBNISSE)
   })
+
+  it('Runde 3: unter 1180 px bleiben die Gruppenlabels sichtbar – vor der ersten Taste ihrer Gruppe, nie allein am Zeilenende', () => {
+    render(<Ergebnisleiste ergebnisse={ERGEBNISSE} gewaehlt={null} onWaehlen={() => {}} />)
+    // Label-Spalte nur ab 1180 px, darunter das Inline-Label (vorher sr-only → 1 px, unsichtbar)
+    for (const l of screen.getAllByTestId('ergebnis-gruppe')) {
+      expect(l).toHaveClass('max-wide:hidden')
+      expect(l).not.toHaveClass('max-wide:sr-only')
+    }
+    const inline = screen.getAllByTestId('ergebnis-gruppe-inline')
+    expect(inline.map((l) => l.textContent)).toEqual(['A · Nicht erreicht', 'B · Zentrale', 'C · Entscheider'])
+    for (const l of inline) {
+      expect(l).toHaveClass('wide:hidden')
+      // Label und erste Taste stecken in einem gemeinsamen Element
+      expect(l.parentElement?.querySelector('button')).not.toBeNull()
+    }
+    expect(inline[0]?.parentElement?.querySelector('button')).toHaveAttribute('data-taste', '1')
+    expect(inline[2]?.parentElement?.querySelector('button')).toHaveAttribute('data-taste', '8')
+    // weiterhin genau 15 Tasten
+    expect(screen.getAllByRole('button')).toHaveLength(15)
+  })
 })

@@ -1,8 +1,8 @@
 // CommandPalette: öffnet (⌘K / Store), filtert, navigiert (BAUPLAN § 3.1.12)
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUiStore } from '@/app/uiStore'
 import { supabaseMock } from '@/test/supabaseMock'
 
@@ -14,7 +14,7 @@ vi.mock('@/features/auth/authStore', () => ({
 }))
 
 import { supabase } from '@/data/supabase'
-import { CommandPalette } from './CommandPalette'
+import { CommandPalette, PALETTE_VERLAUF } from './CommandPalette'
 import { GlobaleTasten } from './GlobaleTasten'
 
 function rendern() {
@@ -111,5 +111,61 @@ describe('CommandPalette', () => {
     } finally {
       if (orig) vi.mocked(supabase.from).mockImplementation(orig)
     }
+  })
+
+  describe('Runde 3: Telefon (Vollbild, kein Esc)', () => {
+    const vorher = window.matchMedia
+    beforeEach(() => {
+      window.matchMedia = ((q: string) => ({
+        matches: q.includes('767'),
+        media: q,
+        onchange: null,
+        addListener: () => {},
+        removeListener: () => {},
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        dispatchEvent: () => false,
+      })) as typeof window.matchMedia
+      window.history.replaceState(null, '')
+    })
+    afterEach(() => {
+      window.matchMedia = vorher
+    })
+
+    it('zeigt „Abbrechen“ statt der Esc-Taste; Klick schließt und räumt den Verlaufseintrag wieder ab', async () => {
+      rendern()
+      useUiStore.getState().setPaletteOffen(true)
+      await screen.findByPlaceholderText(/Lead, Aktion/)
+      expect(screen.queryByText('Esc')).toBeNull()
+      expect((window.history.state as Record<string, unknown> | null)?.[PALETTE_VERLAUF]).toBe(true)
+      fireEvent.click(screen.getByRole('button', { name: 'Abbrechen' }))
+      expect(useUiStore.getState().paletteOffen).toBe(false)
+      await waitFor(() =>
+        expect((window.history.state as Record<string, unknown> | null)?.[PALETTE_VERLAUF]).toBeUndefined(),
+      )
+    })
+
+    it('„Zurück“ des Browsers schließt die Palette, die Seite bleibt', async () => {
+      const router = rendern()
+      useUiStore.getState().setPaletteOffen(true)
+      await screen.findByPlaceholderText(/Lead, Aktion/)
+      act(() => {
+        window.dispatchEvent(new PopStateEvent('popstate', { state: null }))
+      })
+      expect(useUiStore.getState().paletteOffen).toBe(false)
+      expect(router.state.location.pathname).toBe('/')
+    })
+
+    it('ein Befehl mit Navigation läuft erst nach dem Entfernen des Verlaufseintrags', async () => {
+      const router = rendern()
+      useUiStore.getState().setPaletteOffen(true)
+      const eingabe = await screen.findByPlaceholderText(/Lead, Aktion/)
+      fireEvent.change(eingabe, { target: { value: 'Pipeline' } })
+      await waitFor(() => expect(screen.getByText('Pipeline')).toBeInTheDocument())
+      fireEvent.click(screen.getByText('Pipeline'))
+      expect(useUiStore.getState().paletteOffen).toBe(false)
+      await waitFor(() => expect(router.state.location.pathname).toBe('/pipeline'))
+      expect((window.history.state as Record<string, unknown> | null)?.[PALETTE_VERLAUF]).toBeUndefined()
+    })
   })
 })

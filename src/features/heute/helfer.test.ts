@@ -11,7 +11,7 @@ import { MEMBER_M, MEMBER_V } from '@/test/fixtures/leads'
 const emailGateText = (g: ReturnType<typeof emailGate>, vorname: string | null) =>
   g.erlaubt || !g.grund ? null : text(g.grund, vorname)
 import { listeAbgearbeitet, naechsterSchritt, personAusParam, spaeterHeute, spaeterText } from './heuteHelfer'
-import { faelligVon, kartenLabel, vorbereitetText } from './karten'
+import { faelligVon, kartenKanal, kartenLabel, vorbereitetText } from './karten'
 import { blockKopf, kartenArt, nachrichtErgebnis, skriptPunkte, vorlageFuerKarte } from './nachricht'
 
 const LEER = { vorlageId: null }
@@ -241,5 +241,17 @@ describe('Runde 2: verpasstSeit', () => {
     expect(verpasstSeit(35 * 60_000)).toBe('00:35')
     expect(verpasstSeit((2 * 60 + 48) * 60_000 + 50_000)).toBe('02:48')
     expect(verpasstSeit(-5)).toBe('00:00')
+  })
+})
+
+describe('kartenKanal (Runde 3: „Follow-up (aus Sheet) · Wiedervorlage“ zeigte „·“ = Sonstiges)', () => {
+  it('Import-Schritt mit Kanal sonstiges: mit LinkedIn-Profil → LinkedIn, ohne → kein Glyph', () => {
+    expect(kartenKanal({ channel: 'sonstiges', linkedin_url: 'https://www.linkedin.com/in/beispiel' })).toBe('linkedin')
+    expect(kartenKanal({ channel: 'sonstiges', linkedin_url: null })).toBeNull()
+  })
+  it('echte Kanäle bleiben, ohne Kanal wie bisher LinkedIn', () => {
+    expect(kartenKanal({ channel: 'telefon', linkedin_url: 'https://www.linkedin.com/in/beispiel' })).toBe('telefon')
+    expect(kartenKanal({ channel: 'email', linkedin_url: null })).toBe('email')
+    expect(kartenKanal({ channel: null, linkedin_url: null })).toBe('linkedin')
   })
 })

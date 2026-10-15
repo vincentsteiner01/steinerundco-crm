@@ -271,16 +271,22 @@ export function Sperrliste() {
           </span>
         ),
       }),
-      h.accessor('company', { header: 'Unternehmen', meta: { breite: '13%' }, cell: (c) => c.getValue() ?? '–' }),
+      // Runde 3: „Unternehmen“ (95/98 px) und „Erfasst von“ (86/89 px) waren selbst bei leerer Liste gekürzt – 1 % mehr je Spalte,
+      // dafür Kanal-Umfang und Grund je 1 % weniger; Köpfe dürfen zweizeilig umbrechen
+      h.accessor('company', {
+        header: 'Unternehmen',
+        meta: { breite: '14%', kopfUmbruch: true },
+        cell: (c) => c.getValue() ?? '–',
+      }),
       h.accessor('channels', {
         header: 'Kanal-Umfang',
-        meta: { breite: '16%' },
+        meta: { breite: '15%', kopfUmbruch: true },
         enableSorting: false,
         cell: (c) => kanalUmfang(c.getValue()),
       }),
       h.accessor('reason', {
         header: 'Grund',
-        meta: { breite: '15%' },
+        meta: { breite: '14%' },
         cell: (c) => {
           const text = sperrGrundText(c.getValue(), c.row.original.note)
           return (
@@ -295,7 +301,11 @@ export function Sperrliste() {
         meta: { mono: true, rechts: true, breite: '9%' },
         cell: (c) => fmtDatum(c.getValue()),
       }),
-      h.accessor('created_by', { header: 'Erfasst von', meta: { breite: '12%' }, cell: (c) => name(c.getValue()) }),
+      h.accessor('created_by', {
+        header: 'Erfasst von',
+        meta: { breite: '13%', kopfUmbruch: true },
+        cell: (c) => name(c.getValue()),
+      }),
       h.accessor('lead_id', {
         header: 'Quelle',
         meta: { breite: '7.5%' },

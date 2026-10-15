@@ -51,6 +51,8 @@ export type SpaltenMeta = {
   ausblenden?: 'lg' | 'xl'
   klasse?: string
   kopfTitel?: string
+  /** Sortierbarer Kopf darf zweizeilig umbrechen statt mit „…“ zu kürzen (schmale Zahlenspalten, Runde 3: „OHNE BE…“) */
+  kopfUmbruch?: boolean
 }
 
 export function spaltenMeta(def: { meta?: unknown }): SpaltenMeta {

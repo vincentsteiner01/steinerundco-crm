@@ -3,7 +3,7 @@
 // der URL (?person=, ?status=). Offene Einträge: „Lead zuordnen“ (Lead-Suche → eingang_zuordnen verbucht sofort im Namen des
 // Postfach-Inhabers) oder „Ignorieren“. Neue Einträge erscheinen live (Kanal crm:eingang).
 import { ExternalLink, Search } from 'lucide-react'
-import { useId, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { PFADE } from '@/app/pfade'
 import { Avatar, Button, Chip, EmptyState, Input, LadeFehler, Segment, Skeleton, StatusChip, cn } from '@/components/ui'
@@ -279,14 +279,16 @@ export function EingangListe() {
             const n = zaehler[f]
             if (!aktiv && n === 0 && f !== 'offen' && f !== 'alle') return null
             return (
+              // Aktiv neutral wie das Segment daneben (surface-hover + line-strong) – Lime heißt nur heute/Primär/Fokus
+              // (DESIGN-SYSTEM § 2, Runde 3). Solange geladen wird „–“ statt einer falschen 0.
               <Chip
                 key={f}
-                ton={aktiv ? 'today' : 'neutral'}
+                ton={aktiv ? 'neutral' : 'muted'}
                 aria-pressed={aktiv}
                 onClick={() => setze('status', f === 'offen' ? null : f)}
-                className="h-7 px-2.5"
+                className={cn('h-7 px-2.5', aktiv ? 'bg-surface-hover' : 'border-line')}
               >
-                {filterLabel(f)} <span className="font-mono">{n}</span>
+                {filterLabel(f)} <span className="font-mono">{isLoading ? '–' : n}</span>
               </Chip>
             )
           })}
@@ -294,7 +296,10 @@ export function EingangListe() {
       </div>
 
       {isLoading ? (
-        <Skeleton zeilen={5} />
+        <div className="grid gap-3" data-testid="eingang-laedt">
+          <LadeHinweis />
+          <Skeleton zeilen={5} />
+        </div>
       ) : sichtbar.length === 0 ? (
         <EmptyState
           titel={status === 'offen' ? 'Nichts zuzuordnen.' : 'Keine Einträge.'}
@@ -324,4 +329,14 @@ export function EingangListe() {
       ) : null}
     </div>
   )
+}
+
+/** „Lade …“ in Mono, wie die Platzhalterlinien erst nach 300 ms (Runde 3: 1,5 s lang standen nur die Filter-Chips da). */
+function LadeHinweis() {
+  const [sichtbar, setSichtbar] = useState(false)
+  useEffect(() => {
+    const t = window.setTimeout(() => setSichtbar(true), 300)
+    return () => window.clearTimeout(t)
+  }, [])
+  return sichtbar ? <p className="text-ink-3 font-mono text-[12.5px]">Lade …</p> : null
 }

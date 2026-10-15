@@ -34,6 +34,7 @@ import { useSettings } from '@/data/settings'
 import { useSperrliste } from '@/data/sperrliste'
 import { useTags } from '@/data/tags'
 import { fmtDatum, fmtDatumZeit, fmtDauer } from '@/lib/format'
+import { TastenBereich } from '@/lib/keyboard'
 import { ERSTE_STAGE_DER_PHASE } from '@/lib/stufen'
 import { SEQUENZ } from '@/lib/vorlagenKeys'
 import { ANRUFGRUND_LABEL, ERGEBNIS_LABEL, ERLAUBNIS_LABEL } from '@/texte/de'
@@ -160,7 +161,13 @@ function Vollseite({ lead }: { lead: LeadMitBezug }) {
         className="mb-5"
       />
       <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] items-start gap-6 max-lg:grid-cols-1">
-        <NaechsterSchritt lead={lead} item={item} kontext="peek" aktiv={false} sperrliste={treffer} />
+        {/* Runde 3: offen wie im Peek (Text + Aktionen statt zugeklappter Zeile über 300 px Leerraum). Die Karten-Tasten
+            schweigen – B/W/T gehören hier der Fußleiste, sonst feuerten sie doppelt – und die Karte zeigt deshalb keine kbd-Hinweise */}
+        <div className="min-w-0 [&_kbd]:hidden" data-karte-ohne-tasten>
+          <TastenBereich.Provider value="stumm">
+            <NaechsterSchritt lead={lead} item={item} kontext="peek" aktiv sperrliste={treffer} />
+          </TastenBereich.Provider>
+        </div>
         <div data-felder>
           <FelderRaster lead={lead} members={members ?? []} settings={settings} breit />
         </div>

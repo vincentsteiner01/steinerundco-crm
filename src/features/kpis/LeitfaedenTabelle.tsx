@@ -81,8 +81,9 @@ export function LeitfaedenTabelle({
         cell: ({ getValue }) => fmtZahl(getValue() ?? 0),
       }),
       h.accessor('beantwortet', {
-        header: 'Antworten (7 T)',
-        meta: { rechts: true, mono: true, breite: '16%' },
+        // geschütztes Leerzeichen: zweizeilig „Antworten / (7 T)“ statt „(7 / T)“ (Runde 3, 1024 px)
+        header: 'Antworten (7\u00a0T)',
+        meta: { rechts: true, mono: true, breite: '16%', kopfUmbruch: true },
         cell: ({ getValue }) => fmtZahl(getValue() ?? 0),
       }),
       h.accessor('antwort_quote', {

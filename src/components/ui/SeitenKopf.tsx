@@ -102,7 +102,9 @@ export function SeitenKopf({
           className,
         )}
       >
-        <div className="max-w-full min-w-0">
+        {/* Eingerastet: Titel schrumpft nicht und bricht nicht um – sonst stand bei /kpis 1440 „Oktober / 2026“ zweizeilig
+            zwischen ← und → (Runde 3); zu breite Werkzeuge rechts scrollen dann quer statt den Titel zu quetschen */}
+        <div className={cn('max-w-full min-w-0', stuck && 'md:shrink-0')}>
           <span
             className={cn(
               'text-ink-3 tnum mb-2.5 block truncate font-mono text-[12.5px] tracking-[0.02em]',
@@ -115,11 +117,13 @@ export function SeitenKopf({
           {titelLinks || titelRechts ? (
             <div className="flex items-center gap-3">
               {titelLinks}
-              <h1 className={cn('headline', stuck && 'md:text-[24px] md:leading-[1.2]')}>{titel}</h1>
+              <h1 className={cn('headline', stuck && 'md:text-[24px] md:leading-[1.2] md:whitespace-nowrap')}>
+                {titel}
+              </h1>
               {titelRechts}
             </div>
           ) : (
-            <h1 className={cn('headline', stuck && 'md:text-[24px] md:leading-[1.2]')}>{titel}</h1>
+            <h1 className={cn('headline', stuck && 'md:text-[24px] md:leading-[1.2] md:whitespace-nowrap')}>{titel}</h1>
           )}
           {voice ? <p className={cn('voice mt-2', stuck && 'md:hidden')}>{voice}</p> : null}
         </div>
@@ -128,7 +132,7 @@ export function SeitenKopf({
           <div
             className={cn(
               'flex max-w-full min-w-0 flex-wrap items-center gap-2.5',
-              stuck && 'max-xl:md:hidden xl:flex-nowrap',
+              stuck && 'max-xl:md:hidden xl:[scrollbar-width:none] xl:flex-nowrap xl:overflow-x-auto',
             )}
           >
             {rechts}

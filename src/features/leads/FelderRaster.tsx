@@ -18,7 +18,7 @@ import { berlinTag } from '@/lib/zeit'
 import type { LeadMitBezug, LeadUpdate, Member, Settings } from '@/types/domain'
 import { ALLGEMEIN } from '@/texte/de'
 import { jetztIso } from './hilfen'
-import { firmaPatch, useNaechsteAktionSetzen } from './leadFelder'
+import { firmaPatch, naechsterFollowUp, useNaechsteAktionSetzen } from './leadFelder'
 import { ANREDE_LABEL, ANREDE_OPTIONEN, ROLLE_OPTIONEN, rolleAnzeige } from './spalten'
 import { anzeigeName } from '@/lib/mitglied'
 
@@ -48,6 +48,8 @@ type Feld = {
     eigen?: (v: string | null) => Promise<unknown>
   }
   hinweis?: string
+  /** Überfällig: Wert in Amber (DESIGN-SYSTEM § 3: Amber = überfällig) */
+  ueberfaellig?: boolean
 }
 
 const QUELLE: Record<string, string> = {
@@ -179,9 +181,7 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
     {
       key: 'naechster',
       label: 'Nächster Follow-up',
-      wert: lead.next_action_at
-        ? `${fmtDatum(lead.next_action_at)}${lead.next_action_label ? ` · ${lead.next_action_label}` : ''}`
-        : null,
+      ...naechsterFollowUp(lead.next_action_at, lead.next_action_label),
       leer: 'keiner',
       mono: true,
       edit: {
@@ -267,8 +267,9 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
               className={cn(
                 'hover:border-line-strong truncate border-b border-dashed border-transparent py-0.5 text-left text-[14px]',
                 f.mono && 'tnum font-mono text-[13px]',
-                f.wert ? (f.mono ? 'text-ink-2' : 'text-ink') : 'text-ink-4',
+                f.wert ? (f.ueberfaellig ? 'text-overdue' : f.mono ? 'text-ink-2' : 'text-ink') : 'text-ink-4',
               )}
+              data-ueberfaellig={f.ueberfaellig || undefined}
               onClick={() => setAktiv(f.key)}
               aria-label={`${f.label} bearbeiten`}
               title={typeof f.wert === 'string' ? f.wert : undefined}
@@ -280,7 +281,7 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
               className={cn(
                 'truncate py-0.5 text-[14px]',
                 f.mono && 'tnum font-mono text-[13px]',
-                f.wert ? (f.mono ? 'text-ink-2' : 'text-ink') : 'text-ink-4',
+                f.wert ? (f.ueberfaellig ? 'text-overdue' : f.mono ? 'text-ink-2' : 'text-ink') : 'text-ink-4',
               )}
               title={typeof f.wert === 'string' ? f.wert : undefined}
             >

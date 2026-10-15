@@ -129,6 +129,23 @@ describe('KpisSeite', () => {
     expect(within(ob).getByRole('button', { name: /Beenden/ })).toBeInTheDocument()
     // Runde 3: Aktionen überlappen nicht – Knöpfe schrumpfen nie, bei Platzmangel Umbruch statt Überlauf
     expect(ob.querySelector('[data-aktionen]')).toHaveClass('flex-wrap', '[&>*]:shrink-0')
+    // Runde 3 (1024 px): unter 1280 „9 WT“ (title mit Volltext), Kopf zweizeilig statt „OHNE BE…“, Firma · Phase unter dem
+    // Namen, Knöpfe ohne Tastenhinweise
+    const kurz = within(ob).getByText('9 WT')
+    expect(kurz).toHaveClass('xl:hidden')
+    expect(kurz.parentElement).toHaveAttribute('title', '9 Werktage ohne Bewegung')
+    expect(within(ob).getByText('9 Werktage')).toHaveClass('max-xl:hidden')
+    const kopf = within(ob).getByRole('button', { name: /Ohne Bewegung/ })
+    expect(kopf).toHaveClass('whitespace-normal')
+    expect(kopf.querySelector('span')).not.toHaveClass('truncate')
+    expect(ob.querySelector('[data-aktionen]')).toHaveClass('max-xl:[&_kbd]:hidden')
+    const unterName = within(ob).getByText(/· (Beantwortet|Gepitcht)$/)
+    expect(unterName).toHaveClass('xl:hidden', 'truncate')
+    // Leitfäden: „Antworten (7 T)“ bricht zweizeilig um, „7 T“ bleibt zusammen
+    const antworten = within(lt).getByRole('button', { name: /Antworten \(7\u00a0T\)/ })
+    expect(antworten).toHaveClass('whitespace-normal')
+    // eingerastet ohne Export: Person · Zeitraum · Kanal passen mit dem Titel in eine Zeile
+    expect(screen.getByRole('button', { name: 'Export CSV' })).toHaveClass('in-[.is-stuck]:hidden')
   })
 
   it('Tasten: ← Vormonat, → Folgemonat (gesperrt im laufenden Monat), 3 → Team, 1 → Vincent; Segmente schreiben die URL', async () => {

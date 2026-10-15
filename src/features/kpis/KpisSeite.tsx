@@ -292,7 +292,14 @@ function KpisInhalt({ wahl, personen }: { wahl: PersonWahl; personen: Person[] }
               </span>
             ) : null}
             <Segment<KanalWahl> ariaLabel="Kanal" optionen={KANAELE} wert={kanal} onChange={setzeKanal} />
-            <Button variante="quiet" onClick={exportieren} disabled={d.laden} disabledGrund="Daten laden noch">
+            {/* Eingerastet ohne Export: Person · Zeitraum · Kanal passen dann mit dem Titel in eine Zeile (Runde 3, 1440) */}
+            <Button
+              variante="quiet"
+              onClick={exportieren}
+              disabled={d.laden}
+              disabledGrund="Daten laden noch"
+              className="in-[.is-stuck]:hidden"
+            >
               Export CSV
             </Button>
           </>

@@ -9,7 +9,7 @@ import { fmtDatumKurz, fmtZeit } from '@/lib/format'
 import { werktageZwischen } from '@/lib/werktage'
 import { berlinTag, tageDifferenz } from '@/lib/zeit'
 import type { Channel, QueueItem } from '@/types/domain'
-import { faelligVon, jetzt as jetztZeit, kartenLabel, ohneSeit, type Faellig } from './karten'
+import { faelligVon, jetzt as jetztZeit, kartenKanal, kartenLabel, ohneSeit, type Faellig } from './karten'
 import { KarteEingebettet, useHeuteKontext } from './kontext'
 import { verpasstSeit } from './heuteHelfer'
 import { itemKey } from './sektionen'
@@ -131,7 +131,7 @@ export function KartenKopf({
         <NeuChip item={item} />
         {rechts}
         <ZeitAnzeige item={item} heute={heute} />
-        <Glyph kanal={(item.channel ?? 'linkedin') as Channel} />
+        <KartenGlyph item={item} />
       </span>
     </div>
   )
@@ -258,7 +258,7 @@ export function KollabierteKarte({
         <span className="flex flex-none items-center gap-2.5">
           <NeuChip item={item} />
           <ZeitAnzeige item={item} heute={heute} />
-          <Glyph kanal={(item.channel ?? 'linkedin') as Channel} />
+          <KartenGlyph item={item} />
         </span>
       </div>
       <KartenWer
@@ -278,4 +278,9 @@ export function KollabierteKarte({
       />
     </KartenRahmen>
   )
+}
+
+function KartenGlyph({ item }: { item: Pick<QueueItem, 'channel' | 'linkedin_url'> }) {
+  const kanal = kartenKanal(item)
+  return kanal ? <Glyph kanal={kanal} /> : null
 }

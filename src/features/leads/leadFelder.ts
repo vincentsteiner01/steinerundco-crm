@@ -8,7 +8,8 @@ import { useSnoozeStep } from '@/data/enrollments'
 import { useMeId } from '@/data/members'
 import { useSettings } from '@/data/settings'
 import { useSnoozeTask, useTaskErstellen } from '@/data/tasks'
-import { fmtDatumKurz } from '@/lib/format'
+import { fmtDatum, fmtDatumKurz, MINUS } from '@/lib/format'
+import { berlinTag, tageDifferenz } from '@/lib/zeit'
 import type { Lead, LeadUpdate } from '@/types/domain'
 import { naechsteAktionIso } from './hilfen'
 
@@ -77,4 +78,18 @@ export function useNaechsteAktionSetzen(): (lead: NaechsteAktionLead, tag: strin
     },
     [snoozeStep, snoozeTask, aufgabe, me, settings],
   )
+}
+
+/** Nächster Follow-up: Datum, bei Überfälligkeit mit „−n T“ (Runde 3: 07.10.2026 stand bei −8 T in ink, nur die Timeline war Amber). */
+export function naechsterFollowUp(
+  nextActionAt: string | null,
+  label: string | null,
+  jetzt: Date | string = new Date(),
+): { wert: string | null; ueberfaellig: boolean } {
+  if (!nextActionAt) return { wert: null, ueberfaellig: false }
+  const diff = tageDifferenz(berlinTag(jetzt), berlinTag(nextActionAt))
+  const ueberfaellig = diff < 0
+  const teile = [`${fmtDatum(nextActionAt)}${ueberfaellig ? ` ${MINUS}${Math.abs(diff)}\u00a0T` : ''}`]
+  if (label) teile.push(label)
+  return { wert: teile.join(' · '), ueberfaellig }
 }

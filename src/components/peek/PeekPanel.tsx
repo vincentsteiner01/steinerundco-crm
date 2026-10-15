@@ -218,7 +218,7 @@ export function PeekPanel({ leadId, children, kopfRechts, onSchliessen, onWechse
           </div>
         ) : null}
         {/* Sheet (390 px): px-4, kleinere Abstände und nur das ×-Symbol – „Schließen“ wurde rechts abgeschnitten (397 px, Runde 2) */}
-        <div className="flex min-w-0 shrink-0 items-center gap-1.5 px-6 pt-5 pb-3.5 max-md:gap-0.5 max-md:px-4">
+        <div className="flex min-w-0 shrink-0 items-center gap-1 px-6 pt-5 pb-3.5 max-md:gap-0.5 max-md:px-4">
           {pos >= 0 ? (
             <>
               <span className="text-ink-3 tnum mr-1.5 font-mono text-[12px] whitespace-nowrap">
@@ -230,7 +230,7 @@ export function PeekPanel({ leadId, children, kopfRechts, onSchliessen, onWechse
                 title="Voriger Lead · ←"
                 disabled={liste.length < 2}
                 onClick={() => wechsel(-1)}
-                className="text-ink-2 hover:bg-surface-hover hover:text-ink grid h-7 w-7 place-items-center rounded-sm disabled:opacity-45"
+                className="text-ink-2 hover:bg-surface-hover hover:text-ink grid h-7 w-7 flex-none place-items-center rounded-sm disabled:opacity-45"
               >
                 <ChevronLeft size={14} strokeWidth={1.75} aria-hidden />
               </button>
@@ -240,7 +240,7 @@ export function PeekPanel({ leadId, children, kopfRechts, onSchliessen, onWechse
                 title="Nächster Lead · →"
                 disabled={liste.length < 2}
                 onClick={() => wechsel(1)}
-                className="text-ink-2 hover:bg-surface-hover hover:text-ink grid h-7 w-7 place-items-center rounded-sm disabled:opacity-45"
+                className="text-ink-2 hover:bg-surface-hover hover:text-ink grid h-7 w-7 flex-none place-items-center rounded-sm disabled:opacity-45"
               >
                 <ChevronRight size={14} strokeWidth={1.75} aria-hidden />
               </button>
@@ -251,9 +251,18 @@ export function PeekPanel({ leadId, children, kopfRechts, onSchliessen, onWechse
           {modus === 'sheet' ? (
             <Button variante="icon" icon={X} aria-label="Schließen" title="Schließen · Esc" onClick={schliesse} />
           ) : (
-            <Button variante="quiet" groesse="S" kbd="Esc" icon={X} onClick={schliesse}>
-              Schließen
-            </Button>
+            // 440-px-Panel: ohne das Wort „Schließen“ – mit Kanal-Aktionen ragte die Zeile 10 px über den Rand (Runde 3)
+            <Button
+              variante="quiet"
+              groesse="S"
+              kbd="Esc"
+              icon={X}
+              aria-label="Schließen"
+              title="Schließen · Esc"
+              onClick={schliesse}
+              className="flex-none px-1.5"
+              data-testid="peek-schliessen"
+            />
           )}
         </div>
         <div className="min-h-0 flex-1 overflow-auto">

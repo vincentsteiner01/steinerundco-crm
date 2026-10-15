@@ -388,4 +388,49 @@ describe('AnrufScreen', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     expect(JSON.parse(localStorage.getItem(BLOCK_KEY) ?? '{}')).toMatchObject({ hinweisGezeigt: true })
   })
+
+  it('Runde 3 (1024 × 768): Ergebnisleiste klebt unter 1180 px erst mit laufendem Anruf; Nummer/Anrufen rechts oben im Raster', async () => {
+    rendern(<AnrufScreen />, PFAD, ROUTE)
+    await waitFor(() => expect(screen.getByTestId('anrufen')).toBeInTheDocument())
+    const leiste = screen.getByTestId('ergebnis-leiste')
+    expect(leiste).toHaveAttribute('data-klebt', 'breit')
+    expect(leiste).toHaveClass('wide:sticky')
+    expect(leiste).not.toHaveClass('sticky')
+    // zwei Spalten unter 1180 px: Mitte (Nummer, Anrufen, Timer) rechts über zwei Zeilen, Skript unter dem Kontext
+    const raster = screen.getByTestId('anruf-raster')
+    expect(raster).toHaveClass('max-wide:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]')
+    const mitte = screen.getByTestId('nummer').closest('.grid') as HTMLElement
+    expect(mitte).toHaveClass('max-wide:col-start-2', 'max-wide:row-span-2')
+    fireEvent.click(screen.getByTestId('anrufen'))
+    await waitFor(() => expect(screen.getByTestId('ergebnis-leiste')).toHaveAttribute('data-klebt', 'immer'))
+    expect(screen.getByTestId('ergebnis-leiste')).toHaveClass('sticky', 'bottom-0', 'max-md:static')
+  })
+
+  it('Runde 3 (390 × 844): mobil stehen Nummer und Anrufen direkt unter dem Namen, Verlauf und Skript danach', async () => {
+    const mm = window.matchMedia
+    window.matchMedia = ((q: string) => ({
+      matches: q.includes('767'),
+      media: q,
+      onchange: null,
+      addListener: () => {},
+      removeListener: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      dispatchEvent: () => false,
+    })) as typeof window.matchMedia
+    try {
+      rendern(<AnrufScreen />, PFAD, ROUTE)
+      await waitFor(() => expect(screen.getByTestId('anrufen')).toBeInTheDocument())
+      const name = screen.getByRole('heading', { name: 'Lukas Feldhaus' })
+      const anrufen = screen.getByTestId('anrufen')
+      const verlauf = screen.getByText(/Telefon-Verlauf · Versuch/)
+      const vor = (a: Node, b: Node) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING)
+      expect(vor(name, anrufen)).toBe(true)
+      expect(vor(anrufen, verlauf)).toBe(true)
+      expect(anrufen).toHaveClass('h-14')
+      expect(screen.getAllByRole('heading', { name: 'Lukas Feldhaus' })).toHaveLength(1)
+    } finally {
+      window.matchMedia = mm
+    }
+  })
 })

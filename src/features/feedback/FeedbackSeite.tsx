@@ -119,9 +119,13 @@ export function Component() {
                 ]}
               />
             ) : null}
-            <Button variante="primary" kbd="⌥F" onClick={feedbackGeben}>
-              Feedback geben
-            </Button>
+            {/* Leer (oder beim Laden): kein Kopf-Knopf – der leere Zustand trägt die eine Primäraktion (Runde 3: vier Einstiege
+                gleichzeitig, zwei identische Lime-Knöpfe) */}
+            {liste.length ? (
+              <Button variante="primary" kbd="⌥F" onClick={feedbackGeben}>
+                Feedback geben
+              </Button>
+            ) : null}
           </>
         }
       />

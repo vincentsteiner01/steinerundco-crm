@@ -78,6 +78,19 @@ describe('PeekPanel', () => {
     expect(document.body.style.overflow).toBe('')
   })
 
+  it('Runde 3: Schließen im 440-px-Panel nur als × mit Esc (aria-label „Schließen“), das Wort ragte über den Rand', () => {
+    rendern()
+    const knopf = screen.getByTestId('peek-schliessen')
+    expect(knopf).toHaveAccessibleName('Schließen')
+    expect(knopf).toHaveAttribute('title', 'Schließen · Esc')
+    expect(knopf.textContent).toBe('Esc')
+    expect(knopf).toHaveClass('flex-none')
+    for (const n of ['Voriger Lead', 'Nächster Lead']) {
+      const b = screen.queryByRole('button', { name: n })
+      if (b) expect(b).toHaveClass('flex-none')
+    }
+  })
+
   it('Schließen-Button und Scrim-Klick schließen', () => {
     const router = rendern()
     fireEvent.click(screen.getByRole('button', { name: /Schließen/ }))

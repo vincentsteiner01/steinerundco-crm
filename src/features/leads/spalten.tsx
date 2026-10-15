@@ -304,15 +304,18 @@ const FEHLT_AB: Record<SpaltenStufe, readonly SpaltenKey[]> = {
 
 /**
  * Breiten je Stufe: feste px für Inhalte fester Breite (Glyphe, Chip, Avatar + Vorname, Mono-Datum „Mo 05.10. −10 T“), Prozent für
- * Text, `auto` = Rest (Notiz breit, sonst Name). Summe ohne Rest bei 1136 px ≈ 970 px → Notiz ≈ 165 px.
+ * Text, `auto` = Rest (Notiz breit, sonst Name). Summe ohne Rest bei 1136 px ≈ 985 px → Notiz ≈ 150 px.
  */
+/** 118 px: „Erstgespräch“/„Beantwortet“ stehen ganz im Chip (Runde 3: bei 104 px „Erstgespr…“, Text 66 von 75 px). */
+export const PHASE_BREITE = '118px'
+
 export const BREITEN: Record<SpaltenStufe, Partial<Record<SpaltenKey, string>>> = {
   breit: {
     name: '14%',
     unternehmen: '15%',
     rolle: '64px',
     kanal: '64px',
-    phase: '104px',
+    phase: PHASE_BREITE,
     schritt: '10%',
     zustaendig: '100px',
     letzteBewegung: '92px',
@@ -324,7 +327,7 @@ export const BREITEN: Record<SpaltenStufe, Partial<Record<SpaltenKey, string>>> 
     unternehmen: '16%',
     rolle: '64px',
     kanal: '64px',
-    phase: '104px',
+    phase: PHASE_BREITE,
     schritt: '12%',
     zustaendig: '100px',
     letzteBewegung: '92px',
@@ -332,7 +335,7 @@ export const BREITEN: Record<SpaltenStufe, Partial<Record<SpaltenKey, string>>> 
   },
   schmal: {
     name: 'auto',
-    phase: '104px',
+    phase: PHASE_BREITE,
     schritt: '21%',
     zustaendig: '100px',
     naechsteAktion: '140px',
@@ -388,7 +391,7 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
               return (
                 <span className="relative flex min-w-0 items-center gap-2">
                   {o.anker?.rowId === l.id ? o.anker.node : null}
-                  <span className="min-w-0">
+                  <span className="min-w-0 flex-1">
                     <span
                       className={cn('block truncate font-medium', l.stage === 'beendet' ? 'text-ink-2' : 'text-ink')}
                       title={l.full_name ?? undefined}
@@ -404,10 +407,16 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
                     >
                       {l.company_name ?? ''}
                     </span>
+                    {/* Runde 3: Chips in eigener Zeile unter dem Namen (wie in der mobilen Liste) – neben dem Namen ließ
+                        „Firma gesperrt“ ihm nur 31 px („Ja…“) */}
+                    {l.firmaGesperrt || l.sperrliste || l.released ? (
+                      <span className="mt-0.5 flex min-w-0 flex-wrap gap-1" data-testid="name-chips">
+                        {l.firmaGesperrt ? <Chip ton="danger">Firma gesperrt</Chip> : null}
+                        {l.sperrliste ? <Chip ton="danger">Sperrliste</Chip> : null}
+                        {l.released ? <Chip ton="muted">Frei</Chip> : null}
+                      </span>
+                    ) : null}
                   </span>
-                  {l.firmaGesperrt ? <Chip ton="danger">Firma gesperrt</Chip> : null}
-                  {l.sperrliste ? <Chip ton="danger">Sperrliste</Chip> : null}
-                  {l.released ? <Chip ton="muted">Frei</Chip> : null}
                 </span>
               )
             },

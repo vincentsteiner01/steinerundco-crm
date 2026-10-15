@@ -28,6 +28,7 @@ import { SEQUENZ } from '@/lib/vorlagenKeys'
 import { berlinTag, tagPlus, tagZuDate } from '@/lib/zeit'
 import { ANRUFGRUND_LABEL, DIALOG, telefonGrundLabel } from '@/texte/de'
 import { useIstTelefon } from '@/lib/useMediaQuery'
+import { useScrollPaddingUnten } from '@/lib/useScrollPaddingUnten'
 import type { CallOutcome } from '@/types/domain'
 import { AnrufgrundSetzen } from './AnrufgrundSetzen'
 import { AnrufMitte } from './AnrufMitte'
@@ -197,6 +198,9 @@ export function Component() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ergebnisParam, lead?.id, gate.erlaubt])
   const ergebnisModus = mobil && (!!ergebnisParam || !!anruf.ergebnis)
+  // Ergebnisleiste: unter 1180 px erst klebend, sobald gewählt wird (Anruf läuft, Ergebnis gewählt, Folgeschritt offen)
+  const leisteKlebt = anruf.laeuft || !!anruf.ergebnis || !!nach
+  const leisteRef = useScrollPaddingUnten(!ergebnisModus, leisteKlebt)
   useEffect(() => {
     if (!mobil) return
     const h = () => {
@@ -497,42 +501,83 @@ export function Component() {
         </div>
       ) : (
         <>
+          {mobil ? (
+            // Mobil: Nummer + Anrufen direkt unter dem Namen, Verlauf und Notizen danach (Runde 3, 390 × 844 – vorher lag
+            // „Anrufen“ unter der Tab-Leiste)
+            <div className="grid gap-6">
+              <Kontext lead={lead} versuch={versuch} maxVersuche={maxVersuche} teil="kopf" />
+              <AnrufMitte
+                lead={lead}
+                anruf={anruf}
+                notizRef={notizRef}
+                datenschutzText={datenschutzText}
+                privacyVersion={settings?.email.privacy_notice_version ?? 'v1.0'}
+                gross
+                gesperrtGrund={gateGrund}
+                anrufenRef={anrufenLink}
+              />
+              <Kontext lead={lead} versuch={versuch} maxVersuche={maxVersuche} teil="rest" />
+              <Skript
+                templates={templates ?? []}
+                lead={lead}
+                ctx={ctx}
+                versuch={versuch}
+                tab={tab}
+                onTab={setTab}
+                vorlageId={aktiveVorlage?.id ?? null}
+                onVorlage={setVorlageId}
+                eingeklappt={skriptZu}
+                onToggle={() => setSkriptZu((z) => !z)}
+              />
+            </div>
+          ) : (
+            <div
+              data-testid="anruf-raster"
+              className={cn(
+                'grid grid-cols-[300px_minmax(0,1fr)_320px] items-start gap-8',
+                // 768–1180 px: zwei Spalten – links Kontext + Skript, rechts Nummer/Anrufen/Timer ganz oben (Runde 3,
+                // 1024 × 768: vorher Kontext über volle Breite, „Anrufen“ lag erst bei y = 692 unter der Ergebnisleiste)
+                'max-wide:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] max-wide:gap-x-6',
+              )}
+            >
+              <div className="max-wide:col-start-1 max-wide:row-start-1 min-w-0">
+                <Kontext lead={lead} versuch={versuch} maxVersuche={maxVersuche} />
+              </div>
+              <AnrufMitte
+                lead={lead}
+                anruf={anruf}
+                notizRef={notizRef}
+                datenschutzText={datenschutzText}
+                privacyVersion={settings?.email.privacy_notice_version ?? 'v1.0'}
+                gesperrtGrund={gateGrund}
+                anrufenRef={anrufenLink}
+                className="max-wide:col-start-2 max-wide:row-span-2 max-wide:row-start-1"
+              />
+              <Skript
+                templates={templates ?? []}
+                lead={lead}
+                ctx={ctx}
+                versuch={versuch}
+                tab={tab}
+                onTab={setTab}
+                vorlageId={aktiveVorlage?.id ?? null}
+                onVorlage={setVorlageId}
+                eingeklappt={false}
+                className="max-wide:col-start-1 max-wide:row-start-2"
+              />
+            </div>
+          )}
+          {/* Mobil nicht klebend: 15 Tasten würden den halben Bildschirm über Nummer und Anrufen legen (Sichtprüfung 390 px).
+              Unter 1180 px klebt die Leiste erst, wenn der Anruf läuft – vorher deckte sie Anrufen und Timer zu (Runde 3) */}
           <div
+            ref={leisteRef}
+            data-testid="ergebnis-leiste"
+            data-klebt={leisteKlebt ? 'immer' : 'breit'}
             className={cn(
-              'grid items-start gap-8',
-              // 768–1180 px: Kontext oben über volle Breite, darunter Mitte | Skript – sonst verdeckt die klebende
-              // Ergebnisleiste den Anrufen-Button (Sichtprüfung 1024 × 768)
-              'max-wide:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] max-wide:gap-6 grid-cols-[300px_minmax(0,1fr)_320px] max-md:grid-cols-1',
+              'bg-canvas border-line z-10 mt-7 grid gap-2.5 border-t pt-3 pb-2 max-md:static',
+              leisteKlebt ? 'sticky bottom-0' : 'wide:sticky wide:bottom-0',
             )}
           >
-            <div className="max-wide:col-span-2 min-w-0 max-md:col-span-1">
-              <Kontext lead={lead} versuch={versuch} maxVersuche={maxVersuche} />
-            </div>
-            <AnrufMitte
-              lead={lead}
-              anruf={anruf}
-              notizRef={notizRef}
-              datenschutzText={datenschutzText}
-              privacyVersion={settings?.email.privacy_notice_version ?? 'v1.0'}
-              gross={mobil}
-              gesperrtGrund={gateGrund}
-              anrufenRef={anrufenLink}
-            />
-            <Skript
-              templates={templates ?? []}
-              lead={lead}
-              ctx={ctx}
-              versuch={versuch}
-              tab={tab}
-              onTab={setTab}
-              vorlageId={aktiveVorlage?.id ?? null}
-              onVorlage={setVorlageId}
-              eingeklappt={mobil ? skriptZu : false}
-              onToggle={mobil ? () => setSkriptZu((z) => !z) : undefined}
-            />
-          </div>
-          {/* Mobil nicht klebend: 15 Tasten würden den halben Bildschirm über Nummer und Anrufen legen (Sichtprüfung 390 px) */}
-          <div className="bg-canvas border-line sticky bottom-0 z-10 mt-7 grid gap-2.5 border-t pt-3 pb-2 max-md:static">
             {ergebnisBereich}
           </div>
         </>

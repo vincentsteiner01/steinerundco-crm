@@ -7,6 +7,7 @@ import { sonnerToast } from '@/components/toast'
 import { supabase } from '@/data/supabase'
 import { downloadJson } from '@/lib/csv'
 import { SEQUENZ } from '@/lib/vorlagenKeys'
+import { queueItem } from '@/test/fixtures/queue'
 import {
   DB,
   FIRMA_GESPERRT,
@@ -195,5 +196,35 @@ describe('LeadSeite', () => {
       metadata: { kind: 'auskunft_export' },
     })
     expect(await screen.findByText(name)).toBeInTheDocument()
+  })
+
+  it('Runde 3: Nächster Schritt offen wie im Peek (Text + Aktionen), ohne Tastenhinweise; B öffnet nur EIN Beenden', async () => {
+    DB.queue = [queueItem('heute', 0, { lead_id: ID, member_id: MEMBER_V })]
+    seite()
+    await screen.findByRole('heading', { name: 'Anna Amsel' })
+    const huelle = document.querySelector('[data-karte-ohne-tasten]') as HTMLElement
+    await waitFor(() => expect(huelle.querySelector('[data-naechster-schritt="karte"]')).not.toBeNull())
+    // offen statt zugeklappt: die eingebettete Karte ist die aktive (aria-current), nicht die zugeklappte Zeile
+    expect(huelle.querySelector('article[data-eingebettet][aria-current="true"]')).not.toBeNull()
+    expect(huelle).toHaveClass('[&_kbd]:hidden')
+    // Karten-Tasten schweigen (TastenBereich „stumm“): B öffnet nur das Beenden der Fußleiste
+    fireEvent.keyDown(document.body, { key: 'b' })
+    await waitFor(() => expect(screen.getAllByRole('dialog')).toHaveLength(1))
+  })
+
+  it('Runde 3: überfälliger „Nächster Follow-up“ im Feldraster in Amber mit „−n T“', async () => {
+    DB.details = [
+      leadMitBezug(1, {
+        full_name: 'Anna Amsel',
+        owner_id: MEMBER_V,
+        next_action_at: '2026-10-07T09:00:00+02:00',
+        next_action_label: 'Kurzfristig 1',
+      }),
+    ]
+    seite()
+    await screen.findByRole('heading', { name: 'Anna Amsel' })
+    const feld = await screen.findByRole('button', { name: 'Nächster Follow-up bearbeiten' })
+    expect(feld).toHaveTextContent('07.10.2026 −7 T · Kurzfristig 1')
+    expect(feld).toHaveClass('text-overdue')
   })
 })

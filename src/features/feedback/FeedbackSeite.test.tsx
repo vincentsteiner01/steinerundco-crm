@@ -149,8 +149,19 @@ describe('FeedbackSeite', () => {
     expect(await screen.findByRole('heading', { name: 'Noch keine Meldungen.' })).toBeInTheDocument()
     const h = vi.fn()
     window.addEventListener('crm:feedback', h)
-    fireEvent.click(screen.getAllByRole('button', { name: /Feedback geben/ })[0]!)
+    // Runde 3: leer nur EIN Knopf – der Kopf-Knopf fällt weg, der leere Zustand trägt die Primäraktion
+    expect(screen.getAllByRole('button', { name: /Feedback geben/ })).toHaveLength(1)
+    expect(within(screen.getByRole('banner')).queryByRole('button', { name: /Feedback geben/ })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Feedback geben/ }))
     expect(h).toHaveBeenCalled()
     window.removeEventListener('crm:feedback', h)
+  })
+
+  it('Runde 3: mit Meldungen steht „Feedback geben“ wieder im Kopf', async () => {
+    rendere(<FeedbackSeite />, '/feedback')
+    await screen.findByRole('heading', { name: 'Feedback' })
+    await waitFor(() =>
+      expect(within(screen.getByRole('banner')).getByRole('button', { name: /Feedback geben/ })).toBeInTheDocument(),
+    )
   })
 })

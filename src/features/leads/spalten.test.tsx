@@ -10,6 +10,7 @@ import { SETTINGS } from '@/test/fixtures/settings'
 import type { Member } from '@/types/domain'
 import { STANDARD_SPALTEN } from './ansichten'
 import {
+  BREITEN,
   csvSpalten,
   faelligkeitsGruppe,
   fuerStufe,
@@ -25,6 +26,7 @@ import {
   naechsteAktionText,
   ohneLeereRolle,
   ohneVerdeckte,
+  PHASE_BREITE,
   rolleAnzeige,
   schrittText,
   zeitBalken,
@@ -355,6 +357,21 @@ describe('Spalten der Tabelle', () => {
     expect(within(zeilen[0] as HTMLElement).getByText('Firma gesperrt')).toBeInTheDocument()
     expect(within(zeilen[0] as HTMLElement).getByText('fehlt')).toBeInTheDocument()
     expect(within(zeilen[1] as HTMLElement).queryByText('Firma gesperrt')).toBeNull()
+  })
+
+  it('Runde 3: „Firma gesperrt“ steht in eigener Zeile unter dem Namen – der Name behält die volle Zellbreite', () => {
+    tabelle([zeile(1, { full_name: 'Jana Oberlin' }, true)], ['name'])
+    const name = screen.getByText('Jana Oberlin')
+    const chips = screen.getByTestId('name-chips')
+    expect(within(chips).getByText('Firma gesperrt')).toBeInTheDocument()
+    // Chip-Zeile liegt im selben Namensblock wie der Name, nicht als Geschwister daneben
+    expect(name.parentElement).toBe(chips.parentElement)
+    expect(name.parentElement).toHaveClass('flex-1', 'min-w-0')
+  })
+
+  it('Runde 3: Phase-Spalte 118 px in allen Stufen – „Erstgespräch“/„Beantwortet“ passen in den Chip', () => {
+    expect(PHASE_BREITE).toBe('118px')
+    for (const stufe of ['breit', 'mittel', 'schmal'] as const) expect(BREITEN[stufe].phase).toBe(PHASE_BREITE)
   })
 
   it('Anrufgrund „fehlt“ in ink-3, nicht Amber (Amber = überfällig, Runde 3)', () => {

@@ -1,5 +1,5 @@
 // Kleine reine Helfer der Karten (getrennt von den Komponenten – oxlint react/only-export-components).
-import type { QueueItem } from '@/types/domain'
+import type { Channel, QueueItem } from '@/types/domain'
 
 /** Aktueller Zeitpunkt (eine Funktion wie `heuteBerlin()`, damit der Render keinen `new Date()`-Aufruf enthält). */
 export const jetzt = (): Date => new Date()
@@ -31,4 +31,15 @@ export function vorbereitetText(item: Pick<QueueItem, 'item_kind' | 'title'>, vo
   if (item.item_kind === 'meeting') return 'Status setzen'
   if (item.item_kind === 'rueckruf') return 'Rückruf vorbereitet'
   return `${item.title ?? 'Schritt'} vorbereitet`
+}
+
+/**
+ * Kanal-Glyph der Karte. Import-Schritte („Follow-up (aus Sheet) · Wiedervorlage“) kommen mit `channel = 'sonstiges'` – die Karte
+ * zeigte dann „·“ (title „Sonstiges“), obwohl die Nachricht eine LinkedIn-Vorlage ist (Runde 3, Karten aus dem Sheet-Import). Mit
+ * LinkedIn-Profil → LinkedIn, sonst gar kein Glyph. Ohne Kanal bleibt es wie bisher bei LinkedIn.
+ */
+export function kartenKanal(item: Pick<QueueItem, 'channel' | 'linkedin_url'>): Exclude<Channel, 'sonstiges'> | null {
+  if (!item.channel) return 'linkedin'
+  if (item.channel !== 'sonstiges') return item.channel
+  return item.linkedin_url ? 'linkedin' : null
 }

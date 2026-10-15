@@ -50,6 +50,23 @@ describe('Sperrliste', () => {
     expect(screen.getByText('2 von 2')).toBeInTheDocument()
   })
 
+  it('Runde 3: Köpfe „Unternehmen“, „Kanal-Umfang“, „Erfasst von“ breiter bzw. zweizeilig statt mit „…“ gekürzt', async () => {
+    rendern(<Sperrliste />, '/einstellungen/sperrliste')
+    const tabelle = await screen.findByRole('table', { name: 'Sperrliste' })
+    for (const kopf of ['Unternehmen', 'Kanal-Umfang', 'Erfasst von']) {
+      const th = within(tabelle)
+        .getAllByRole('columnheader')
+        .find((t) => t.textContent?.startsWith(kopf)) as HTMLElement
+      const knopf = th.querySelector('button')
+      if (knopf) {
+        expect(knopf).toHaveClass('whitespace-normal')
+        expect(knopf.querySelector('span')).not.toHaveClass('truncate')
+      }
+    }
+    const breiten = [...tabelle.querySelectorAll('col')].map((c) => (c as HTMLElement).style.width)
+    expect(breiten).toEqual(expect.arrayContaining(['14%', '15%', '13%']))
+  })
+
   it('Suche filtert clientseitig', async () => {
     rendern(<Sperrliste />, '/einstellungen/sperrliste')
     const suche = await screen.findByLabelText('Sperrliste durchsuchen')
