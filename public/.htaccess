@@ -48,8 +48,8 @@ AddType font/woff2 .woff2
 
   # Content-Security-Policy – kein CDN, Fonts self-hosted, nur das Supabase-Projekt.
   # style-src 'unsafe-inline': Radix-Popper und Sonner setzen Styles zur Laufzeit; script-src bleibt strikt.
-  # blob:/data: in img-src für Vorschau beim Import und SVG-Icons in CSS; worker-src für den Service Worker.
-  Header set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' https://ekaqkfgvisdngsskzbai.supabase.co wss://ekaqkfgvisdngsskzbai.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+  # blob:/data: in img-src für Vorschau beim Import, SVG-Icons und Feedback-Screenshot; Supabase für signierte Bild-Links (Feedback); worker-src für den Service Worker.
+  Header set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://ekaqkfgvisdngsskzbai.supabase.co; connect-src 'self' https://ekaqkfgvisdngsskzbai.supabase.co wss://ekaqkfgvisdngsskzbai.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
 </IfModule>
 
 <IfModule mod_deflate.c>
