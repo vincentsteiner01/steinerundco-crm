@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/data/supabase', async () => (await import('./_testHilfe')).supabaseAntworten())
 
+import { zaehleQueue } from '@/data/queue'
 import { useAuth } from '@/features/auth/authStore'
 import type { QueueItem } from '@/types/domain'
 import { ANTWORTEN, ICH, SEQ_A, SEQ_C, zeile, zuruecksetzen } from './_testHilfe'
@@ -215,6 +216,20 @@ describe('Batch-Chips und Filter (H-10, DESIGN-SYSTEM § 5.6)', () => {
 
   it('Fällig = Rückrufe + Antworten + Überfällig + Heute + Opener (ohne Abhakzeilen)', () => {
     expect(zaehleFaellig(s)).toEqual({ faellig: 8, ueberfaellig: 1 })
+  })
+
+  it('Runde 3: eine Quelle – zaehleQueue (Sidebar, Team, Heute-Kopf) zählt wie die Heute-Sektionen', () => {
+    const mehr = [
+      ...items,
+      ...alleFaelle(),
+      zeile('ueberfaellig', 20, { item_id: 'r-alt', item_kind: 'rueckruf', channel: 'telefon' }),
+      zeile('ueberfaellig', 21, { item_id: 'o-alt', step_id: OPENER }),
+      zeile('ueberfaellig', 22, { item_id: 'wv', item_kind: 'wiedervorlage', step_id: null }),
+    ]
+    const z = zaehleQueue(mehr, MITTWOCH.istOpener)
+    const sek = zaehleFaellig(sektionenAbleiten(mehr, MITTWOCH))
+    expect({ faellig: z.faellig, ueberfaellig: z.ueberfaelligSektion }).toEqual(sek)
+    expect(sek.ueberfaellig).toBe(3) // k2b · ueber · wv – Rückruf und Opener haben eigene Sektionen
   })
 })
 

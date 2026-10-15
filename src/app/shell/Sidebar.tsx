@@ -1,4 +1,5 @@
 import { MessageSquareWarning, Search } from 'lucide-react'
+import { lazy, Suspense } from 'react'
 import { NavLink, useNavigate } from 'react-router'
 import { NAV } from '@/app/nav'
 import { PFADE } from '@/app/pfade'
@@ -11,6 +12,9 @@ import { useAuth } from '@/features/auth/authStore'
 import { FEEDBACK_EVENT } from '@/features/feedback/texte'
 import { ALLGEMEIN } from '@/texte/de'
 import { RealtimePunkt } from './RealtimePunkt'
+
+// Eingang-Zähler (LinkedIn-Mails) am Eintrag „Einstellungen“ – nachgeladen, nicht im Start-Bundle (E22)
+const EingangZahl = lazy(() => import('./EingangZahl').then((m) => ({ default: m.EingangZahl })))
 
 /** DESIGN-SYSTEM § 4.1: Sidebar 232 px, canvas, Haarlinie rechts, padding 22 12 16; Marke · ⌘K-Trigger · Navigation + Zähler · Fuß (Ich, Abmelden, ?). */
 export function Sidebar() {
@@ -67,6 +71,11 @@ export function Sidebar() {
                   <>
                     <n.icon size={18} strokeWidth={1.75} aria-hidden className="opacity-85" />
                     <span>{n.label}</span>
+                    {n.pfad === '/einstellungen' ? (
+                      <Suspense fallback={null}>
+                        <EingangZahl aktiv={isActive} />
+                      </Suspense>
+                    ) : null}
                     {text !== undefined && text !== 0 ? (
                       <span
                         className={cn(

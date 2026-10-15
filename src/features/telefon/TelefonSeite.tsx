@@ -1,6 +1,7 @@
 // M3 – `/telefon` (BAUPLAN § 3.4 TelefonSeite.tsx, ux § 3.5.1, DESIGN-SYSTEM § 5.13): Kopf mit Zählern, Segment Heute · Alle,
 // Dropdown Liste, „Call-Block starten“ (Enter); Sektion Rückrufe (48 px) → Anrufliste (44 px) → eingeklappt „Noch nicht anrufbar“
 // mit Grund und „Anrufgrund setzen“ (Bulk „Alle mit LinkedIn-Antwort → ‚LinkedIn vernetzt + Antwort‘“). Hotkeys J K ↵ R S N.
+// Runde 3: Leerzustand und „Noch nicht anrufbar“ nach Grund (keine Nummer · ohne Anrufgrund · gesperrt), nächster Schritt passend.
 import { ChevronDown, Phone } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
@@ -25,7 +26,7 @@ import { useSettings } from '@/data/settings'
 import { useSavedViews } from '@/data/views'
 import { fmtDatumKurz, fmtZeit, heuteBerlin } from '@/lib/format'
 import { useHotkeyScope, useHotkeys } from '@/lib/keyboard'
-import { ANRUFGRUND_LABEL, LEER, nichtAnrufbarAktion, nichtAnrufbarSatz, telefonGrundLabel } from '@/texte/de'
+import { ANRUFGRUND_LABEL, LEER, telefonGrundLabel } from '@/texte/de'
 import { anrufgrundVorbelegung, useAnrufgrundSetzen } from './anrufgrund'
 import { AnrufgrundSetzen } from './AnrufgrundSetzen'
 import { listeIds, type AnrufZeile, type GesperrtZeile, type RueckrufZeile } from './anrufliste'
@@ -35,6 +36,18 @@ import { useCallOutcomeDefs, type LetzterAnruf } from '@/data/calls'
 import { ERGEBNISSE } from './ergebnisse'
 import { SLOTS_STANDARD } from './kadenz'
 import { ListeEntfernen } from './ListeEntfernen'
+import {
+  hauptGruppe,
+  leadsOhneNummerPfad,
+  NICHT_AKTION,
+  NICHT_ERKLAERUNG,
+  NICHT_FILTER_LABEL,
+  nichtFiltern,
+  nichtSatz,
+  nichtZaehlen,
+  type NichtFilter,
+  type NichtGruppe,
+} from './nichtAnrufbar'
 import { verpasstDauer } from './anzeige'
 import { RueckrufPlanen } from './RueckrufPlanen'
 import { useAnrufliste } from './useAnrufliste'
@@ -90,6 +103,7 @@ export function Component() {
   const [segment, setSegment] = useState<Segmentwert>('heute')
   const [cursor, setCursor] = useState<string | null>(null)
   const [nichtOffen, setNichtOffen] = useState(false)
+  const [nichtFilter, setNichtFilter] = useState<NichtFilter>('alle')
   const [kommendOffen, setKommendOffen] = useState(true)
   const [notizOffen, setNotizOffen] = useState<string | null>(null)
   const [entfernenOffen, setEntfernenOffen] = useState<string | null>(null)
@@ -117,15 +131,24 @@ export function Component() {
     [liste.nichtAnrufbar],
   )
 
-  // Leerzustand nach Grund (Runde 2: 119 „Keine Nummer“ + 2 „Firma gesperrt“ hießen „121 warten auf einen Anrufgrund“)
-  const nichtZaehlung = useMemo(
-    () => ({
-      keineNummer: liste.nichtAnrufbar.filter((z) => z.grund === 'keine_nummer').length,
-      keinAnrufgrund: liste.nichtAnrufbar.filter((z) => z.grund === 'kein_anrufgrund').length,
-      gesperrt: liste.nichtAnrufbar.filter((z) => z.grund !== 'keine_nummer' && z.grund !== 'kein_anrufgrund').length,
-    }),
-    [liste.nichtAnrufbar],
+  // Leerzustand nach Grund (Runde 2/3: 119 „Keine Nummer“ + 2 „Firma gesperrt“ hießen „121 warten auf einen Anrufgrund“)
+  const nichtZaehlung = useMemo(() => nichtZaehlen(liste.nichtAnrufbar), [liste.nichtAnrufbar])
+  const nichtHaupt = hauptGruppe(nichtZaehlung)
+  // Filter mit 0 Treffern (Daten haben sich geändert) fällt auf „Alle“ zurück
+  const nichtFilterWirksam: NichtFilter =
+    nichtFilter !== 'alle' && nichtZaehlung[nichtFilter] === 0 ? 'alle' : nichtFilter
+  const nichtSichtbar = useMemo(
+    () => nichtFiltern(liste.nichtAnrufbar, nichtFilterWirksam),
+    [liste.nichtAnrufbar, nichtFilterWirksam],
   )
+  const nichtZeigen = (g: NichtGruppe) => {
+    setNichtFilter(g)
+    setNichtOffen(true)
+    window.requestAnimationFrame?.(() =>
+      document.getElementById('nicht-anrufbar')?.scrollIntoView?.({ block: 'start' }),
+    )
+  }
+  const leadsOhneNummer = leadsOhneNummerPfad(zustaendig)
 
   // Block-Timer in der Hinweiszeile
   useEffect(() => {
@@ -229,7 +252,7 @@ export function Component() {
     <>
       <SeitenKopf
         titel="Telefon"
-        kontext={(anzeigeName(me) || undefined)}
+        kontext={anzeigeName(me) || undefined}
         rechts={
           <>
             <KopfStats
@@ -323,10 +346,17 @@ export function Component() {
       ) : zeilen.length === 0 ? (
         <EmptyState
           titel={LEER.telefonListe.titel}
-          satz={liste.zaehler.nichtAnrufbar > 0 ? nichtAnrufbarSatz(nichtZaehlung) : undefined}
-          primaer={
-            liste.zaehler.nichtAnrufbar > 0
-              ? { label: nichtAnrufbarAktion(nichtZaehlung), onClick: () => setNichtOffen(true) }
+          satz={
+            nichtHaupt ? (
+              <>
+                <span className="text-ink tnum">{nichtSatz(nichtZaehlung)}</span> {NICHT_ERKLAERUNG}
+              </>
+            ) : undefined
+          }
+          primaer={nichtHaupt ? { label: NICHT_AKTION[nichtHaupt], onClick: () => nichtZeigen(nichtHaupt) } : undefined}
+          sekundaer={
+            nichtHaupt === 'keine_nummer' && leadsOhneNummer
+              ? { label: 'In Leads öffnen', onClick: () => navigate(leadsOhneNummer) }
               : undefined
           }
         />
@@ -426,7 +456,11 @@ export function Component() {
         </section>
       ) : null}
 
-      <section aria-labelledby="sek-nicht" className="mt-4">
+      <section
+        id="nicht-anrufbar"
+        aria-labelledby="sek-nicht"
+        className="mt-4 scroll-mt-[calc(var(--head-h,0px)+16px)]"
+      >
         <SektionsKopf
           id="sek-nicht"
           label="Noch nicht anrufbar"
@@ -444,11 +478,32 @@ export function Component() {
         />
         {nichtOffen ? (
           liste.nichtAnrufbar.length ? (
-            <ul role="list" aria-label="Noch nicht anrufbar">
-              {liste.nichtAnrufbar.map((z) => (
-                <GesperrtRow key={z.lead.id} zeile={z} />
-              ))}
-            </ul>
+            <>
+              <Segment<NichtFilter>
+                klein
+                className="mb-2"
+                ariaLabel="Grund"
+                optionen={(['alle', 'keine_nummer', 'kein_anrufgrund', 'gesperrt'] as const)
+                  .filter((k) => k === 'alle' || nichtZaehlung[k] > 0)
+                  .map((k) => ({
+                    key: k,
+                    label: NICHT_FILTER_LABEL[k],
+                    zaehler: k === 'alle' ? liste.nichtAnrufbar.length : nichtZaehlung[k],
+                  }))}
+                wert={nichtFilterWirksam}
+                onChange={setNichtFilter}
+              />
+              <ul role="list" aria-label="Noch nicht anrufbar">
+                {nichtSichtbar.map((z) => (
+                  <GesperrtRow
+                    key={z.lead.id}
+                    zeile={z}
+                    // Gefiltert auf „Keine Nummer“/„Ohne Anrufgrund“ wiederholt der Chip nur den Filter – Zeile bleibt einzeilig
+                    zeigeGrund={nichtFilterWirksam === 'alle' || nichtFilterWirksam === 'gesperrt'}
+                  />
+                ))}
+              </ul>
+            </>
           ) : (
             <p className="text-small text-ink-3 py-3">Alle Leads mit Nummer sind anrufbar.</p>
           )
@@ -704,24 +759,40 @@ function AnrufRow({
   )
 }
 
-function GesperrtRow({ zeile: z }: { zeile: GesperrtZeile }) {
+function GesperrtRow({ zeile: z, zeigeGrund = true }: { zeile: GesperrtZeile; zeigeGrund?: boolean }) {
   return (
     <li
       className="border-line text-table flex h-11 items-center gap-3 border-b px-3 max-md:h-auto max-md:flex-wrap max-md:gap-y-2 max-md:py-3"
       data-grund={z.grund}
     >
-      <span className={NAME_BLOCK} title={[z.lead.full_name, z.lead.company_name].filter(Boolean).join(' · ')}>
-        <span className="font-medium">{z.lead.full_name}</span>
+      <span
+        className="truncate-1 min-w-[8.5rem] flex-1"
+        title={[z.lead.full_name, z.lead.company_name].filter(Boolean).join(' · ')}
+      >
+        <LeadName leadId={z.lead.id} name={z.lead.full_name} />
         <span className="text-small text-ink-3">{z.lead.company_name ? ` · ${z.lead.company_name}` : ''}</span>
       </span>
-      <Chip
-        ton={z.grund === 'kein_anrufgrund' || z.grund === 'keine_nummer' ? 'muted' : 'danger'}
-        className="flex-none"
-      >
-        {telefonGrundLabel(z.grund)}
-      </Chip>
+      {zeigeGrund ? (
+        <Chip
+          ton={z.grund === 'kein_anrufgrund' || z.grund === 'keine_nummer' ? 'muted' : 'danger'}
+          className="flex-none"
+        >
+          {telefonGrundLabel(z.grund)}
+        </Chip>
+      ) : null}
       <span className="ml-auto flex flex-none items-center gap-1.5">
         {z.grund === 'kein_anrufgrund' ? <AnrufgrundSetzen lead={z.lead} /> : null}
+        {z.grund === 'keine_nummer' ? (
+          // Peek mit Telefon-Karte: dort Nummer eintragen (Quelle + Datum, BAUPLAN § 8.2 Nr. 4) – danach Anrufgrund
+          <Button
+            variante="quiet"
+            groesse="S"
+            title="Im Peek öffnen und die Nummer in der Telefon-Karte eintragen"
+            onClick={() => peekOeffnen(z.lead.id)}
+          >
+            Nummer ergänzen
+          </Button>
+        ) : null}
       </span>
     </li>
   )

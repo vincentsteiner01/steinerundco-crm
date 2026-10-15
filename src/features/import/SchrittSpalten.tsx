@@ -160,7 +160,9 @@ export function SchrittSpalten({ api }: { api: ImportApi }) {
             onChange={(e) => api.setzePerson(e.target.value)}
             optionen={
               members.data && members.data.length > 0
-                ? members.data.map((m) => ({ value: m.short_name ?? '', label: anzeigeName(m, '–') }))
+                ? // Runde 3: Wert = Vorname („Vincent“), nicht short_name – das ist inzwischen ein Kürzel („VS“) oder leer;
+                  // crm.member_id_by_name findet den Vornamen über display_name, ein leerer Wert träfe jedes Profil ohne Kürzel
+                  members.data.map((m) => ({ value: anzeigeName(m, m.id ?? ''), label: anzeigeName(m, '–') }))
                 : [
                     { value: 'Vincent', label: 'Vincent' },
                     { value: 'Mike', label: 'Mike' },

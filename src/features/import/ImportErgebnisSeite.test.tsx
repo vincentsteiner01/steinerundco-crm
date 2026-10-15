@@ -120,20 +120,52 @@ describe('ImportErgebnisSeite', () => {
     await waitFor(() => expect(router.state.location.search).toBe('?quelle=b1'))
   })
 
-  it('Sheet-Batch: Hinweise statt Zeilen, kein Rückgängig, Hinweis idempotent', async () => {
+  it('Sheet-Batch: Bilanz „neu“ groß, Hinweise nach Art mit Anzahl, Einzelzeilen eingeklappt, kein Rückgängig', async () => {
     batch = batchNeu({
       source: 'import_sheet',
       preset: 'sheet_crm',
       label: 'CRM-Sheet „CRM - Steiner & Co.“ (Tab CRM)',
-      summary: { hinweise: [{ id: 4, name: 'Test Person', hinweis: 'Unternehmen fehlt' }] },
+      member_id: null,
+      row_count: 216,
+      inserted: 216,
+      updated: 0,
+      summary: {
+        hinweise: [
+          { id: 4, name: 'Test Person', hinweis: 'Unternehmen fehlt' },
+          { id: 5, name: 'Erika Beispiel', hinweis: 'Unternehmen fehlt' },
+          { id: 9, name: 'Otto Muster', hinweis: 'kein nächster Schritt im Sheet' },
+        ],
+      },
     })
     rendern()
-    await screen.findByRole('list', { name: 'Hinweise' })
-    expect(screen.getByText('Unternehmen fehlt')).toBeInTheDocument()
-    // Runde 2: Überschrift mit Anzahl; Dateline mit Preset-Label statt „sheet_crm“
-    expect(screen.getByRole('heading', { name: /Hinweise\s*1/ })).toBeInTheDocument()
+    // Runde 3: Dateline „Import · CRM-Tabelle · Datum“, nie der interne Schlüssel, kein leeres „· –“
+    await screen.findByText(/^Import · CRM-Tabelle · \d{2}\.\d{2}\.\d{4}/)
     expect(screen.queryByText(/sheet_crm/)).toBeNull()
-    expect(screen.getByText(/CRM-Tabelle/)).toBeInTheDocument()
+    expect(screen.queryByText(/· –/)).toBeNull()
+    // „216 neu“ als größte Zahl der Seite
+    const bilanz = document.querySelector('[data-bilanz]') as HTMLElement
+    expect(within(bilanz).getByText('216', { selector: '[data-neu]' })).toHaveClass('display')
+    expect(within(bilanz).getByText('neu angelegt')).toBeInTheDocument()
+    expect(bilanz).toHaveTextContent(/216 Zeilen · 0 aktualisiert · 0 übersprungen · 0 gesperrt/)
+
+    // Hinweise: Überschrift mit Anzahl, Arten gezählt, Einzelzeilen erst nach Klick
+    expect(screen.getByRole('heading', { name: /Hinweise\s*3/ })).toBeInTheDocument()
+    const arten = screen.getByRole('list', { name: 'Hinweise nach Art' })
+    expect(
+      within(arten)
+        .getAllByRole('listitem')
+        .map((li) => li.textContent),
+    ).toEqual(['Unternehmen fehlt2', 'kein nächster Schritt im Sheet1'])
+    expect(screen.queryByRole('list', { name: 'Hinweise' })).toBeNull()
+    expect(screen.queryByText('Erika Beispiel')).toBeNull()
+    const knopf = screen.getByRole('button', { name: 'Alle 3 Zeilen anzeigen' })
+    expect(knopf).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(knopf)
+    const zeilen = screen.getByRole('list', { name: 'Hinweise' })
+    expect(within(zeilen).getAllByRole('listitem')).toHaveLength(3)
+    expect(within(zeilen).getByText('Erika Beispiel')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Einzelne Zeilen ausblenden' })).toHaveAttribute('aria-expanded', 'true')
+
     expect(screen.queryByRole('button', { name: 'Rückgängig' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Zu den Leads/ })).not.toBeInTheDocument()
     expect(screen.getByText(/idempotent/)).toBeInTheDocument()

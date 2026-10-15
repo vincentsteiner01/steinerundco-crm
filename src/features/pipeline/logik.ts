@@ -4,6 +4,7 @@ import type { LeadZeile } from '@/features/leads/spalten'
 import { PHASEN, phaseVon } from '@/lib/stufen'
 import { werktageZwischen } from '@/lib/werktage'
 import { berlinTag, tageDifferenz } from '@/lib/zeit'
+import { fmtZahl } from '@/lib/format'
 import type { Lead, PhaseKey } from '@/types/domain'
 
 /** Badge-Regel ux § 3.4: Beantwortet/Gepitcht ab 5 Werktagen, andere ab 14 Kalendertagen; nie mit aktivem Sequenzschritt. */
@@ -68,4 +69,21 @@ export function schreibeEingeklappt(s: ReadonlySet<PhaseKey>): void {
   } catch {
     /* kein Storage */
   }
+}
+
+/** Ab dieser Kartenzahl rendert die Spalte virtuell. */
+export const VIRTUELL_AB = 40
+/** Geschätzte Kartenhöhe inkl. 8 px Abstand (Name · Firma · Meta-Zeile); gemessen wird danach je Karte. */
+export const KARTE_SCHAETZUNG = 98
+
+const SCHMAL = '\u202f'
+
+/**
+ * Konversion als Prozent – immer ×100. `fmtProzent` liest Werte > 1 als fertige Prozentzahl: 184 / 2 = 92 erschien als „92 %“ und
+ * 2 / 1 als „2 %“ (Runde 3, echte Daten). Bestandsquoten über 100 % sind keine Konversion, sie stehen als „> 100 %“.
+ */
+export function konversionText(k: number): string {
+  if (!Number.isFinite(k)) return `–${SCHMAL}%`
+  if (k > 1) return `>${SCHMAL}100${SCHMAL}%`
+  return `${fmtZahl(Math.round(k * 100))}${SCHMAL}%`
 }

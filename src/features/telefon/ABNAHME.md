@@ -42,3 +42,9 @@ Stand 15.10.2026 · Prüfer: M3-Agent (Fortsetzung) · Umgebung: Vitest 5 + jsdo
 - Screens gegen `reference.html` („Anruf“, „Telefon“) nur per Markup-Vergleich (Callbar, drei Spalten 300 · 1fr · 320, Ergebnisgruppen, Wrap-up, Zeilen mit Slot/Chip); Pixelvergleich 1440/390 px offen bis Login möglich.
 - Bundle-Budget nicht gemessen (`npm run build` laut Auftrag nicht ausführen).
 - jsdom meldet beim Klick auf den `tel:`-Link „Not implemented: navigation to another Document“ – kein `console.error` aus dem Modul.
+
+## Runde 3 (15.10.2026, echte Daten, eingeloggt; 1440 · 1024 · 390)
+
+- `/telefon` Leerzustand: „116 Leads ohne Telefonnummer · 2 gesperrt. Die Anrufliste füllt sich, sobald ein Lead eine Telefonnummer und einen Anrufgrund hat.“ + „Nummern ergänzen“ (öffnet „Noch nicht anrufbar“, gefiltert auf „Keine Nummer“, Zeile → „Nummer ergänzen“ → Peek mit Telefon-Feld). Filter „Alle · Keine Nummer · Ohne Anrufgrund · Gesperrt“ über der Liste. Tests: `nichtAnrufbar.test.ts`, `TelefonSeite.test.tsx`.
+- Anruf-Screen Skript: 9 Phasen als Raster 3 × 3 (1440: 318 px, 1024: 356 px, 390: 356 px – alle sichtbar, kein Überlauf); Vorlagen-Select mit `title`. Test: `Skript.test.tsx`.
+- T-08 deterministisch: Ursache war der 50-ms-Fokus der Wrap-up-Zeile, der auf langsamen Runnern in das offene Datum-Popover fiel (Radix schloss es, „Morgen“ traf einen abgehängten Knopf). Fix im Produkt (`WrapUp.tsx`: Fokus nie aus Feld/Popover/Dialog wegnehmen, Test `WrapUp.test.tsx`) und im Test (jeder Schritt wartet auf sichtbaren Zustand, Zeitlimit 5 s). 20/20 im Einzel-Loop, 84/84 unter Parallel-Last (vorher 2 von 56 rot).

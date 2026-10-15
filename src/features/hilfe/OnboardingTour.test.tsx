@@ -20,7 +20,8 @@ import { OnboardingTour } from './OnboardingTour'
 const VINCENT: Partial<Member> = {
   id: '6b6a66af-06a0-47fb-a151-d131860982f5',
   display_name: 'Vincent',
-  short_name: 'Vincent',
+  // echte Daten seit Runde 2: Kürzel „VS“ im Profil – die Tour sagt trotzdem „Willkommen, Vincent.“
+  short_name: 'VS',
   linkedin_plan: 'premium',
   weekly_budget: 150,
   daily_target: 30,

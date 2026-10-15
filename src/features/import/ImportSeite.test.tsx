@@ -302,7 +302,14 @@ describe('ImportSeite', () => {
     )
     await screen.findByRole('list', { name: 'Erkannte Monate' })
     expect(screen.getByText(/2026-09 · 3 Werte · 2 Tage · Σ 7/)).toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Person'), { target: { value: 'Mike' } })
+    // Runde 3: Werte sind Vornamen (Vincent hat das Kürzel „VS“), Standard Vincent ist ausgewählt
+    const person = screen.getByLabelText('Person') as HTMLSelectElement
+    expect([...person.options].map((o) => [o.value, o.textContent])).toEqual([
+      ['Vincent', 'Vincent'],
+      ['Mike', 'Mike'],
+    ])
+    expect(person.value).toBe('Vincent')
+    fireEvent.change(person, { target: { value: 'Mike' } })
     fireEvent.click(weiter())
     await screen.findByText('Monatswerte')
     expect(rpc).not.toHaveBeenCalledWith('import_leads', expect.anything())

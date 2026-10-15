@@ -120,6 +120,16 @@ describe('texte/de.ts', () => {
     })
   }
 
+  it('Runde 3: rückdatierte Sheet-Anlage klingt nicht wie der Importzeitpunkt', () => {
+    expect(TIMELINE_TEXT(aktivitaet('angelegt', { source: 'import_sheet', metadata: { row: 12 } }))).toBe(
+      'Angelegt in der CRM-Tabelle (importiert, Zeile 12)',
+    )
+    expect(TIMELINE_TEXT(aktivitaet('angelegt', { source: 'import_sheet' }))).toBe(
+      'Angelegt in der CRM-Tabelle (importiert)',
+    )
+    expect(TIMELINE_TEXT(aktivitaet('import', { metadata: { row: 12 } }))).toBe('Importiert aus CRM-Tabelle (Zeile 12)')
+  })
+
   it('Timeline-Sonderfälle (§ 1.5 Nr. 25, 32, 34)', () => {
     expect(TIMELINE_TEXT(aktivitaet('vernetzung_zurueckgezogen', { note: 'abgelehnt' }))).toBe('Anfrage abgelehnt')
     expect(TIMELINE_TEXT(aktivitaet('vernetzung_zurueckgezogen', { note: 'zurueckgezogen' }))).toBe(
@@ -157,14 +167,10 @@ describe('texte/de.ts', () => {
   })
 })
 
-const { nichtAnrufbarAktion, nichtAnrufbarSatz, telefonGrundLabel } = de
+const { telefonGrundLabel } = de
 
+// Satz und Knopf für „Noch nicht anrufbar“ liegen seit Runde 3 in features/telefon/nichtAnrufbar.ts (eigene Tests dort).
 describe('Telefon: Noch nicht anrufbar nach Grund (Runde 2, echte Daten)', () => {
-  it('119 ohne Nummer + 2 gesperrt → Satz nach Grund und Knopf „Leads ohne Nummer zeigen“', () => {
-    const z = { keineNummer: 119, keinAnrufgrund: 0, gesperrt: 2 }
-    expect(nichtAnrufbarSatz(z)).toBe('Noch nicht anrufbar: 119 ohne Telefonnummer · 2 gesperrt.')
-    expect(nichtAnrufbarAktion(z)).toBe('Leads ohne Nummer zeigen')
-  })
   it('Firma gesperrt heißt am Telefon „nicht anrufen“', () => {
     expect(telefonGrundLabel('firma_gesperrt')).toBe('Firma gesperrt – nicht anrufen')
     expect(telefonGrundLabel('keine_nummer')).toBe('Keine Nummer')

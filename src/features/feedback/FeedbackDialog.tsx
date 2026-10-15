@@ -4,15 +4,7 @@
 // Radien (DESIGN-SYSTEM § 5.20); auf dem Telefon als Blatt von unten.
 import * as RD from '@radix-ui/react-dialog'
 import { ImageOff, ImagePlus, X } from 'lucide-react'
-import {
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type ClipboardEvent,
-  type DragEvent,
-  type KeyboardEvent,
-} from 'react'
+import { useId, useRef, useState, type ClipboardEvent, type DragEvent, type KeyboardEvent } from 'react'
 import { toast } from '@/components/toast'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/components/ui/cn'
@@ -23,6 +15,7 @@ import { FEEDBACK_ARTEN, useFeedbackSenden, type FeedbackArt } from '@/data/feed
 import { istEingabe, MOD_LABEL, useHotkeyScope } from '@/lib/keyboard'
 import { IGNORIEREN_ATTR, normalisiereBild } from './aufnahme'
 import type { FeedbackKontext } from './kontext'
+import { useObjektUrl } from './objektUrl'
 import { ART_LABEL, ART_PLATZHALTER, TEXT } from './texte'
 
 export type FeedbackDialogProps = {
@@ -57,18 +50,8 @@ export function FeedbackDialog({ bild: startBild, kontext, onSchliessen }: Feedb
   const dateiRef = useRef<HTMLInputElement | null>(null)
   const feldId = useId()
 
-  // Runde 2: useMemo(createObjectURL) + Cleanup-Effekt widerrief die URL im StrictMode-Doppellauf – die Vorschau zeigte ein
-  // kaputtes Bild (ERR_FILE_NOT_FOUND). Die URL entsteht deshalb im Effekt und lebt genau so lange wie er.
-  const [bildUrl, setBildUrl] = useState<string | null>(null)
-  useEffect(() => {
-    if (!bild) {
-      setBildUrl(null)
-      return
-    }
-    const u = URL.createObjectURL(bild.blob)
-    setBildUrl(u)
-    return () => URL.revokeObjectURL(u)
-  }, [bild])
+  // Vorschau-URL lebt, bis das Bild ersetzt/entfernt oder der Dialog geschlossen ist (objektUrl.ts, Runde 3)
+  const bildUrl = useObjektUrl(bild?.blob ?? null)
 
   const schliessen = () => {
     setOffen(false)

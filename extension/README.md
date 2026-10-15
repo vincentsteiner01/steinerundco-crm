@@ -24,10 +24,11 @@ Du pflegst nichts doppelt – was du auf LinkedIn tust, bestätigst du mit einem
   „Reaktion nachtragen“ und setzt nur das Label an dieser Antwort (`crm.set_reply_label`) – keine zweite Antwort, kein Rückgängig.
 - **Eingang** (`eingang.html`): LinkedIn-Mails, die das CRM nicht allein zuordnen konnte (`crm.eingang`, Apps Script →
   Edge Function `linkedin-eingang`), und Einladungen von Leads. Lead suchen → „Zuordnen“ (`crm.eingang_zuordnen`, verbucht
-  sofort im Namen des Postfach-Inhabers) oder „Ignorieren“. Zeigt, wann dein Apps Script zuletzt gemeldet hat.
+  sofort im Namen des Postfach-Inhabers) oder „Ignorieren“. Zeigt, wann dein Apps Script zuletzt gemeldet hat. Denselben Eingang
+  (live, beide Postfächer) gibt es im CRM unter Einstellungen → Verbindungen → Tab „Eingang“.
 - **Optionen → LinkedIn-Mails ins CRM:** eigenes LinkedIn-Profil (damit die Mail-Erkennung es nie für einen Lead hält) und
   Eingangs-Schlüssel erzeugen/widerrufen (`crm.eingang_token_erzeugen`; einmal sichtbar, gleich in der Zwischenablage).
-  Einrichtung des Apps Scripts: `tools/apps-script/ANLEITUNG.md`.
+  Dasselbe geht im CRM unter Einstellungen → Verbindungen. Einrichtung des Apps Scripts: `tools/apps-script/ANLEITUNG.md`.
 - Rechtliche Gates wie im CRM (`lib/gates.ts`): Widerspruch, Sperrliste und gesperrte Firma sperren Kopieren, Gesendet und
   Anfrage – mit Grund. Antworten und Notizen bleiben möglich (Historie ist kein Kontakt).
 

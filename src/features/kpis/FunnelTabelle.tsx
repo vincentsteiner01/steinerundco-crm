@@ -4,7 +4,7 @@
 // Klick auf die Ziffer → /leads gefiltert (§ 7.5).
 import { Link } from 'react-router'
 import { cn } from '@/components/ui/cn'
-import { fmtDelta, fmtPp, fmtProzent, fmtZahl } from '@/lib/format'
+import { fmtAnteil, fmtDelta, fmtPp, fmtZahl } from '@/lib/format'
 import { FunnelBalken } from './charts/FunnelBalken'
 import type { FunnelZeile } from './kennzahlen'
 import { leadsUrl, type LeadsKontext } from './leadsLink'
@@ -30,11 +30,11 @@ export function FunnelTabelle({ zeilen, vorLabel, kontext, className }: FunnelTa
         )
         const vor = [
           `${vorLabel} ${fmtZahl(z.vorWert)}`,
-          z.vorQuote !== undefined && z.vorQuote !== null ? fmtProzent(z.vorQuote) : null,
+          z.vorQuote !== undefined && z.vorQuote !== null ? fmtAnteil(z.vorQuote) : null,
         ]
           .filter(Boolean)
           .join(' · ')
-        const ziel = z.ziel !== null ? `Ziel ${fmtProzent(z.ziel)}` : null
+        const ziel = z.ziel !== null ? `Ziel ${fmtAnteil(z.ziel)}` : null
         return (
           <li
             key={z.metric}
@@ -65,8 +65,8 @@ export function FunnelTabelle({ zeilen, vorLabel, kontext, className }: FunnelTa
               {z.quote !== undefined ? (
                 <span className="tnum text-ink-2 flex items-center gap-2.5 font-mono text-[12.5px]" data-konversion>
                   <FunnelBalken anteil={z.quote} className="min-w-0 flex-1" />
-                  <span>{z.quote === null ? '–' : fmtProzent(z.quote)}</span>
-                  {z.erreicht ? <ZielPunkt text={`Ziel ${fmtProzent(z.ziel ?? 0)} erreicht`} /> : null}
+                  <span>{z.quote === null ? '–' : fmtAnteil(z.quote)}</span>
+                  {z.erreicht ? <ZielPunkt text={`Ziel ${fmtAnteil(z.ziel ?? 0)} erreicht`} /> : null}
                 </span>
               ) : (
                 <span className="text-small text-ink-3">{z.hinweis}</span>

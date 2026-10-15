@@ -202,7 +202,8 @@ const LINKEDIN: Tour = {
       pfad: PFADE.heute,
       ziele: ['[data-sektion="annahme_pruefen"]'],
       titel: 'Annahme prüfen',
-      text: 'Das CRM sieht nicht, wer in LinkedIn angenommen hat. Du hakst es hier ab – dann startet die Sequenz und der Opener liegt für heute bereit.',
+      // Runde 3: Annahmen aus den LinkedIn-Mails verbucht das CRM selbst (Einstellungen → Verbindungen)
+      text: 'Ist dein Gmail unter Verbindungen angeschlossen, verbucht das CRM Annahmen aus den LinkedIn-Mails selbst. Was ohne Mail bleibt, hakst du hier ab – dann startet die Sequenz und der Opener liegt für heute bereit.',
       tasten: ['E', 'Space', 'D', 'X'],
       leer: 'Gerade keine offenen Anfragen der letzten 7 Tage.',
     },
@@ -220,7 +221,7 @@ const LINKEDIN: Tour = {
       pfad: PFADE.heute,
       ziele: ['[data-sektion="antworten"]'],
       titel: 'Antworten',
-      text: 'LinkedIn meldet dem CRM keine Antworten. Antwortet jemand, trägst du es am Lead ein – die Sequenz stoppt, der passende Antwort-Leitfaden liegt bereit.',
+      text: 'Antworten aus den LinkedIn-Mails landen hier von selbst, mit Nachrichtentext. Was du live in LinkedIn liest, trägst du mit A am Lead ein – die Sequenz stoppt, der passende Antwort-Leitfaden liegt bereit.',
       tasten: ['A', '⌘K'],
       leer: 'Gerade wartet keine Antwort auf dich.',
     },

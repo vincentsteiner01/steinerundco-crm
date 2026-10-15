@@ -91,9 +91,15 @@ function anredeWort(lead: PlatzhalterLead, ctx: PlatzhalterKontext): string | nu
   return null
 }
 
+/** `short_name` nur als Name, wenn er kein Kürzel ist (Runde 3: „VS“ aus dem Profil darf nie als Absender/Anrufer erscheinen). */
+function nameAusKurz(me: PlatzhalterMe | null | undefined): string | null {
+  const s = me?.short_name?.trim()
+  return s && s.length > 3 ? s : null
+}
+
 function absenderName(me: PlatzhalterMe | null | undefined): { vorname: string | null; nachname: string | null } {
   const name = me?.display_name?.trim()
-  if (!name) return { vorname: me?.short_name?.trim() || null, nachname: null }
+  if (!name) return { vorname: nameAusKurz(me), nachname: null }
   const teile = name.split(/\s+/)
   if (teile.length === 1) return { vorname: teile[0] ?? null, nachname: null }
   return { vorname: teile.slice(0, -1).join(' '), nachname: teile[teile.length - 1] ?? null }
@@ -119,8 +125,7 @@ export function platzhalterWert(name: string, lead: PlatzhalterLead, ctx: Platzh
         ? fmtDatum(ctx.meeting.scheduled_at)
         : null
     case 'Anrufer': {
-      const n = ctx.me?.display_name?.trim() || ctx.me?.short_name?.trim()
-      return n || null
+      return ctx.me?.display_name?.trim() || nameAusKurz(ctx.me)
     }
     case 'Absender Vorname':
       return absenderName(ctx.me).vorname

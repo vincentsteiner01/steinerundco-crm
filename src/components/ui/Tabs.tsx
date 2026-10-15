@@ -29,6 +29,19 @@ export function Tabs<K extends string>({ tabs, wert, onChange, ariaLabel, umbrec
     ro.observe(el)
     return () => ro.disconnect()
   }, [pruefe, tabs.length])
+  // Runde 3 (Wunsch verbindungen.md Nr. 3): der aktive Tab steht beim Öffnen und bei jedem Wechsel in Sicht – bei 390 px lag der
+  // 7. Einstellungen-Tab „Verbindungen“ sonst außerhalb der quer scrollenden Leiste. Nur die Leiste scrollt, nie die Seite.
+  useEffect(() => {
+    const el = leiste.current
+    if (!el || umbrechen) return
+    const tab = el.querySelector<HTMLElement>('[role=tab][aria-selected=true]')
+    if (!tab) return
+    const t = tab.getBoundingClientRect()
+    const l = el.getBoundingClientRect()
+    if (t.left < l.left) el.scrollLeft -= l.left - t.left
+    else if (t.right > l.right) el.scrollLeft += t.right - l.right
+    pruefe()
+  }, [wert, umbrechen, pruefe])
   const tasten = (e: KeyboardEvent<HTMLDivElement>) => {
     const i = tabs.findIndex((t) => t.key === wert)
     if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {

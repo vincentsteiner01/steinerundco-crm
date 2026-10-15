@@ -40,6 +40,7 @@ export function spaltenHelper<T extends RowData>() {
  * - breite: CSS-Breite für `<col>` (z. B. '16%'); fehlt sie, gilt `size` (px) oder `auto`
  * - ausblenden: 'lg' = unter 1024 px aus (Letzte Bewegung, Notiz), 'xl' = unter 1280 px aus (Unternehmen – wird zweite Zeile)
  * - klasse: zusätzliche Klassen für Kopf und Zelle
+ * - kopfTitel: Erklärung im `title` des Spaltenkopfs (statt nur des Kopftexts), z. B. was „Zuletzt“ zählt
  */
 export type SpaltenMeta = {
   editierbar?: boolean
@@ -49,6 +50,7 @@ export type SpaltenMeta = {
   breite?: string
   ausblenden?: 'lg' | 'xl'
   klasse?: string
+  kopfTitel?: string
 }
 
 export function spaltenMeta(def: { meta?: unknown }): SpaltenMeta {

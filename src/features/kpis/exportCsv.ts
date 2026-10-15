@@ -1,6 +1,6 @@
 // BAUPLAN § 3.6 `exportCsv.ts` / K-12: Funnel-Zeilen + Tageswerte des gewählten Zeitraums → eine CSV (lib/csv: `;`, BOM, CRLF).
 import { csvText, download, type CsvSpalte } from '@/lib/csv'
-import { fmtProzent } from '@/lib/format'
+import { fmtAnteil } from '@/lib/format'
 import { TAGES_METRIKEN, type FunnelZeile, type TagesWert } from './kennzahlen'
 
 export type KpiExport = {
@@ -15,7 +15,7 @@ export type KpiExport = {
 }
 
 const pp = (n: number | null) => (n === null ? '' : `${Math.round(n * 10) / 10}`.replace('.', ','))
-const prozent = (q: number | null | undefined) => (q === undefined || q === null ? '' : fmtProzent(q))
+const prozent = (q: number | null | undefined) => (q === undefined || q === null ? '' : fmtAnteil(q))
 
 const FUNNEL_SPALTEN: CsvSpalte<FunnelZeile>[] = [
   { key: 'nr', label: 'Nr.' },

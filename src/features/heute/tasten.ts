@@ -34,7 +34,7 @@ export const TASTEN: TastenGruppe[] = [
       { tasten: ['D'], beschreibung: 'Datum der Annahme (Annahme prüfen)' },
       { tasten: ['1', '2', '3', '7'], beschreibung: 'Telefon-Karte: Schnell-Ergebnis · Meeting-Karte: 1–4 Status' },
       { tasten: ['⇧↓'], beschreibung: 'Bereich auswählen (Abhakzeilen), dann E/Space für alle · Esc hebt auf' },
-      { tasten: ['⌥1', '⌥9'], beschreibung: 'Batch-Chip 1–9 · ⌥0 alle' },
+      { tasten: ['⌥1–9', '⌥0'], beschreibung: 'Batch-Chip 1–9 · alle Chips' },
       { tasten: ['⌥R'], beschreibung: 'Liste neu sortieren' },
       { tasten: ['⌥H'], beschreibung: 'Alle verschieben auf heute (Schritte ab −14 T)' },
       { tasten: ['⌥M'], beschreibung: 'E-Mail an den Lead der Karte' },

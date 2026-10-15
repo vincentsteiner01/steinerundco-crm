@@ -234,6 +234,26 @@ describe('QueueKarte', () => {
     expect(screen.getByTestId('ort')).toHaveTextContent(/^\/heute$/)
   })
 
+  it('Runde 3: zugeklappt im Peek/auf der Vollseite – eingebettet, ohne Name/Firma, Label mit title, „… vorbereitet“ bleibt', async () => {
+    const item = zeile('heute', 4, { template_id: T_KF2.id, step_id: KF2.id, title: 'Kurzfristig 2' })
+    mitKontext(<QueueKarte item={item} aktiv={false} kontext="peek" onAktion={vi.fn()} />)
+    const karte = document.querySelector('article') as HTMLElement
+    expect(karte).toHaveAttribute('data-eingebettet')
+    expect(karte.className).not.toContain('border')
+    expect(screen.queryByText(item.lead_name as string)).not.toBeInTheDocument()
+    expect(screen.queryByText(item.company_name as string)).not.toBeInTheDocument()
+    expect(screen.getByText(/vorbereitet/)).toBeInTheDocument()
+    const label = karte.querySelector('.label') as HTMLElement
+    expect(label).toHaveAttribute('title')
+  })
+
+  it('zugeklappt auf Heute: Name und Firma wie bisher', () => {
+    const item = zeile('heute', 4, { template_id: T_KF2.id, step_id: KF2.id, title: 'Kurzfristig 2' })
+    mitKontext(<QueueKarte item={item} aktiv={false} onAktion={vi.fn()} />)
+    expect(screen.getByText(item.lead_name as string)).toBeInTheDocument()
+    expect(document.querySelector('article')).not.toHaveAttribute('data-eingebettet')
+  })
+
   it('Peek (kontext peek): die Karte bindet C und E selbst – Kopieren und Gesendet wirken auf diesen Lead (Review)', async () => {
     leadsSetzen(leadMitBezug(3))
     const item = zeile('heute', 3, { template_id: T_KF2.id, step_id: KF2.id, enrollment_id: 'enr-3' })

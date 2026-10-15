@@ -53,6 +53,13 @@ describe('Quoten (§ 7.2)', () => {
     expect(q.connect_rate).toBeNull()
   })
 
+  it('Quoten über 100 % (Annahmen älterer Anfragen) zeigen den echten Wert – nicht „2 %“ (Runde 3, fmtAnteil)', () => {
+    const q = quotenAus({ vernetzungen_versendet: 2, vernetzungen_angenommen: 3 } as never)
+    expect(q.annahme_quote).toBe(1.5)
+    expect(formatWert('prozent', q.annahme_quote)).toBe('150\u202F%')
+    expect(formatWert('prozent', 0.28)).toBe('28\u202F%')
+  })
+
   it('Division durch 0 → null → „–“; Telefon-Quoten und Termine/100 Dials', () => {
     expect(quotenAus({}).annahme_quote).toBeNull()
     expect(formatWert('prozent', null)).toBe('–')

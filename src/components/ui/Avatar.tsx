@@ -39,10 +39,12 @@ export function fotoVon(m: AvatarMember | null | undefined): string | undefined 
 
 export function kuerzel(m: AvatarMember | null | undefined): string {
   if (!m) return ''
-  // Echte Daten: crm.members.short_name ist der Vorname („Vincent“), nicht das Kürzel – Register gewinnt.
+  // Regel (Runde 3): Kürzel = short_name, wenn er höchstens 3 Zeichen hat („VS“ aus dem Profil); sonst die Initialen aus
+  // personen.ts (short_name war früher der Vorname „Vincent“); sonst aus display_name abgeleitet.
+  const kurz = m.short_name?.trim()
+  if (kurz && kurz.length <= 3) return kurz.toUpperCase()
   const person = personVon(m)
   if (person) return person.initialen
-  if (m.short_name && m.short_name.length <= 3) return m.short_name.toUpperCase()
   const name = m.display_name ?? m.email?.split('@')[0] ?? ''
   const teile = name.split(/[\s.]+/).filter(Boolean)
   if (teile.length >= 2) return `${teile[0]?.[0] ?? ''}${teile[1]?.[0] ?? ''}`.toUpperCase()

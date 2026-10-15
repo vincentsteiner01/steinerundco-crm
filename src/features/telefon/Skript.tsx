@@ -2,18 +2,26 @@
 // Einwände · Abschluss · Mailbox · Datenschutz (Tab/⇧Tab); Vorlagen Kanal telefon je Phase; Platzhalter gefüllt (lib/platzhalter),
 // offene amber markiert. Logik in skript.ts.
 import { ChevronDown } from 'lucide-react'
-import { Fragment, useEffect, useRef, type ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 import { cn } from '@/components/ui/cn'
 import { Segment } from '@/components/ui/Segment'
 import { Select } from '@/components/ui/Select'
 import { Tabs } from '@/components/ui/Tabs'
 import { platzhalterWert, type PlatzhalterKontext, type PlatzhalterLead } from '@/lib/platzhalter'
 import type { CallBasis, Template } from '@/types/domain'
-import { tabSichtbar } from './anzeige'
 import { SKRIPT_TABS, skriptVorlagen, type SkriptTab } from './skriptLogik'
 
 /** Bis zu dieser Gesamtlänge der Vorlagennamen passt das Segment in die 318-px-Skriptspalte. */
 const VORLAGEN_SEGMENT_MAX = 32
+
+/**
+ * Neun Phasen als Raster 3 × 3 (Runde 3): in der 318-px-Spalte (1440) und der halben Breite (1024) brachen die Tabs
+ * ungleichmäßig um (3/3/3 bzw. 4/4/1, „Datenschutz“ allein). Das Raster hält jede Phase an fester Stelle – Zentrale · Einstieg ·
+ * Problem / Qualifizierung · Pitch · Einwände / Abschluss · Mailbox · Datenschutz – alle sichtbar, nichts scrollt quer.
+ * Kind-Selektoren (Spezifität 0,2,0) überstimmen `flex`/`px-3` der gemeinsamen Tabs-Komponente ohne `!important`.
+ */
+const PHASEN_RASTER =
+  '[&>[role=tablist]]:grid [&>[role=tablist]]:grid-cols-3 [&_[role=tab]]:min-w-0 [&_[role=tab]]:justify-center [&_[role=tab]]:px-2'
 
 const TOKEN = /(\[[^[\]\n]{1,40}\])/
 
@@ -80,19 +88,8 @@ export function Skript({
 }: SkriptProps) {
   const liste = skriptVorlagen(templates, tab, { callBasis: lead.call_basis, versuch })
   const aktiv = liste.find((t) => t.id === vorlageId) ?? liste[0] ?? null
-  const ref = useRef<HTMLElement | null>(null)
-  // Die Tab-Leiste scrollt (9 Phasen in 320 px): Phasenwechsel per Tab/⇧Tab holt den aktiven Tab ins Bild
-  // (nur horizontal in der Leiste – kein Seiten-Scroll)
-  useEffect(() => {
-    const t = ref.current?.querySelector<HTMLElement>('[role=tab][aria-selected=true]')
-    const leiste = t?.parentElement
-    if (!t || !leiste) return
-    const links = t.getBoundingClientRect().left - leiste.getBoundingClientRect().left + leiste.scrollLeft
-    leiste.scrollLeft = tabSichtbar(leiste.scrollLeft, leiste.clientWidth, links, t.offsetWidth)
-  }, [tab, eingeklappt])
   return (
     <section
-      ref={ref}
       aria-label="Skript"
       className={cn('bg-surface-raised border-line overflow-hidden rounded-md border', className)}
     >
@@ -118,20 +115,23 @@ export function Skript({
       ) : null}
       {eingeklappt ? null : (
         <>
-          <Tabs
-            tabs={SKRIPT_TABS.map((t) => ({ key: t.key, label: t.label }))}
-            wert={tab}
-            onChange={onTab}
-            ariaLabel="Skript-Phase"
-            umbrechen
-            className="px-1"
-          />
+          <div className={PHASEN_RASTER} data-testid="skript-phasen">
+            <Tabs
+              tabs={SKRIPT_TABS.map((t) => ({ key: t.key, label: t.label }))}
+              wert={tab}
+              onChange={onTab}
+              ariaLabel="Skript-Phase"
+              umbrechen
+              className="px-1"
+            />
+          </div>
           <div className="px-4 py-3.5 text-[14px] leading-[1.5]">
             {liste.length > 1 && liste.reduce((n, t) => n + t.name.length, 0) > VORLAGEN_SEGMENT_MAX ? (
               // Lange Vorlagennamen: Select über die volle Breite statt eines rechts abgeschnittenen Segments (Runde 2, 1024)
               <Select
                 aria-label="Vorlage"
                 className="mb-3 h-8 w-full min-w-0"
+                title={aktiv?.name}
                 value={aktiv?.id ?? ''}
                 onChange={(e) => onVorlage(e.target.value)}
                 optionen={liste.map((t) => ({ value: t.id, label: t.name }))}

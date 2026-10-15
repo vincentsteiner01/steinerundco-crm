@@ -3,7 +3,7 @@
 // Warnung ab warn_at_pct des Wochenbudgets (Amber), bei 0 „Wochenbudget erreicht – weitere Anfragen auf eigenes Risiko“.
 import { Stepper } from '@/components/ui/Stepper'
 import { cn } from '@/components/ui/cn'
-import { fmtProzent, fmtVerhaeltnis, fmtZahl, monatLabel } from '@/lib/format'
+import { fmtAnteil, fmtVerhaeltnis, fmtZahl, monatLabel } from '@/lib/format'
 import type { TageszaehlerDaten } from './useTageszaehler'
 
 export type TageszaehlerProps = {
@@ -33,7 +33,7 @@ export function Tageszaehler({ daten, onListeEinfuegen, className }: Tageszaehle
             {daten.annahmeQuote7 !== null ? (
               <>
                 {' '}
-                · Annahme (7 T) <span className="font-mono">{fmtProzent(daten.annahmeQuote7)}</span>
+                · Annahme (7 T) <span className="font-mono">{fmtAnteil(daten.annahmeQuote7)}</span>
               </>
             ) : null}{' '}
             · Heute noch möglich <span className="font-mono">{fmtZahl(budget.moeglich)}</span>

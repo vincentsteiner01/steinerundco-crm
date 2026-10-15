@@ -4,16 +4,17 @@ LinkedIn schickt dir für neue Nachrichten und angenommene Einladungen eine Bena
 
 - **„Einladung angenommen“** → Vernetzung angenommen, die LinkedIn-Sequenz startet (wie Taste „Angenommen“).
 - **„Neue Nachricht von …“** → Antwort erhalten mit dem Nachrichtentext, laufende Sequenzen stoppen (wie Taste `A`).
-- Lässt sich eine Mail keinem Lead sicher zuordnen, landet sie als „unbekannt“ im **Eingang**. Den Eingang gibt es vorerst nur in der Chrome-Erweiterung: Popup → „Eingang ansehen“ (erscheint, sobald etwas offen ist) oder Einstellungen → „Eingang ansehen“. Dort suchst du den Lead und klickst „Zuordnen“ – dann wird sofort verbucht. In der CRM-App selbst fehlt der Eingang noch.
+- Lässt sich eine Mail keinem Lead sicher zuordnen, landet sie als „unbekannt“ im **Eingang**: im CRM unter **Einstellungen → Verbindungen → Tab „Eingang“** (live, beide Postfächer, Filter nach Person und Status; „Eingang n zuordnen“ steht auch im Kopf von Heute) oder in der Chrome-Erweiterung (Popup → „Eingang ansehen“). Dort suchst du den Lead und klickst „Zuordnen“ – dann wird sofort verbucht.
 
 Das Script klickt, schreibt und sendet nichts bei LinkedIn. Es verstößt deshalb nicht gegen die LinkedIn-Nutzungsvereinbarung.
 
 ---
 
-## Schritt 0 – Erweiterung aktualisieren und dein LinkedIn-Profil eintragen
+## Schritt 0 – Dein LinkedIn-Profil eintragen
 
-1. Chrome-Erweiterung auf Version 1.1.0 bringen (`chrome://extensions` → Neu laden; Mike: neue ZIP entpacken, dann Neu laden).
-2. Rechtsklick auf das S&-Symbol → **Optionen** → Abschnitt **„LinkedIn-Mails ins CRM“** → **„Dein LinkedIn-Profil“**: deine eigene Profil-Adresse (`linkedin.com/in/…`) eintragen → „Speichern“.
+Im CRM unter **Einstellungen → Verbindungen** (Taste `G E`, dann `7`) → Zeile **„Dein LinkedIn-Profil“** → „Eintragen“: deine eigene Profil-Adresse (`linkedin.com/in/…`) → speichern. Die Seite zeigt dieselben Schritte wie diese Anleitung, mit Status, Schlüssel und dem Script zum Kopieren.
+
+Alternativ in der Chrome-Erweiterung (Version 1.1.0, `chrome://extensions` → Neu laden; Mike: neue ZIP entpacken, dann Neu laden): Rechtsklick auf das S&-Symbol → **Optionen** → Abschnitt **„LinkedIn-Mails ins CRM“** → **„Dein LinkedIn-Profil“**.
 
 Warum: LinkedIn verlinkt in jeder Benachrichtigung auch **dein** Profil. Kennt das CRM deine Adresse, hält es sie nie für die eines Leads.
 
@@ -21,7 +22,7 @@ Warum: LinkedIn verlinkt in jeder Benachrichtigung auch **dein** Profil. Kennt d
 
 Der Schlüssel verbindet dein Script mit deinem CRM-Konto. Jede Person hat ihren eigenen.
 
-- **Am einfachsten:** im selben Abschnitt der Erweiterung **„Schlüssel erzeugen“**. Er liegt danach in der Zwischenablage und ist einmal sichtbar.
+- **Am einfachsten:** im CRM unter **Einstellungen → Verbindungen**, Schritt 3 **„Schlüssel erzeugen“** – einmal sichtbar, mit Kopieren-Knopf. Gleich gut: in der Erweiterung im Abschnitt „LinkedIn-Mails ins CRM“ → „Schlüssel erzeugen“ (liegt danach in der Zwischenablage).
 - **Oder im eigenen Terminal** (selbst tippen, nicht über Claude – sonst landet der Schlüssel in einem Protokoll): `bash tools/eingang-token.sh vincent@steinerundco.de` – das Skript legt ihn nur in die Zwischenablage.
 
 Der Schlüssel hat 43 Zeichen aus Buchstaben, Ziffern, `-` und `_`. Füge ihn direkt in Schritt 3 ein, nicht in eine Datei oder einen Chat – wer ihn hat, kann in deinem Namen Annahmen und Antworten ins CRM buchen. Ein neuer Schlüssel macht den alten ungültig.
@@ -32,7 +33,7 @@ Der Schlüssel hat 43 Zeichen aus Buchstaben, Ziffern, `-` und `_`. Füge ihn di
 2. Klicke links oben auf **„Neues Projekt“**.
 3. Klicke oben auf den Namen „Unbenanntes Projekt“ und nenne es **„LinkedIn ins CRM“** → „Umbenennen“.
 4. Im Editor steht in `Code.gs` schon `function myFunction() { … }`. Markiere alles (`⌘ A`) und lösche es.
-5. Kopiere den kompletten Inhalt von `tools/apps-script/LinkedIn-ins-CRM.gs` hinein.
+5. Kopiere den kompletten Inhalt von `tools/apps-script/LinkedIn-ins-CRM.gs` hinein (im CRM: Einstellungen → Verbindungen → Schritt 1 „Code ansehen“ / Kopieren).
 6. Speichern mit `⌘ S` (oder das Disketten-Symbol).
 
 ## Schritt 3 – Schlüssel eintragen (nicht in den Code)
@@ -75,7 +76,8 @@ Fertig. Beim ersten Lauf werden die LinkedIn-Mails der letzten 3 Tage übertrage
 ## Prüfen, ob es läuft
 
 - **Gmail:** Links erscheint das Label **„CRM/erfasst“**. LinkedIn-Mails, die übertragen wurden, tragen es.
-- **CRM:** In der Timeline des Leads stehen „Vernetzung angenommen“ bzw. „Nachricht erhalten“ mit dem Text aus LinkedIn. Nicht zugeordnete Mails stehen im Eingang der Erweiterung.
+- **CRM:** In der Timeline des Leads stehen „Vernetzung angenommen“ bzw. „Nachricht erhalten“ mit dem Text aus LinkedIn. Nicht zugeordnete Mails stehen im Eingang (Einstellungen → Verbindungen → „Eingang“).
+- **CRM → Einstellungen → Verbindungen:** Status, „Letzte 7 Tage“ und „Letzter Eingang“; Schritt 5 zeigt den ersten Eingang live.
 - **Erweiterung → Optionen:** „Apps Script zuletzt gemeldet: vor 3 Min.“ – mehr als 30 Minuten her heißt: Takt prüfen.
 - **script.google.com → links „Ausführungen“:** alle 5 Minuten ein Eintrag `sync` mit Status „Abgeschlossen“.
 - **Von Hand testen:** Funktion **`test`** wählen → „Ausführen“. Im Protokoll steht die Antwort des CRM.
@@ -89,14 +91,14 @@ Bedeutung der Zahlen: **neu** = erstmals übertragen · **doppelt** = schon da g
 | „Kein gültiger Schlüssel …“ | Schritt 3 prüfen: Name genau `CRM_SCHLUESSEL`, Wert ohne Leerzeichen. |
 | „Schlüssel ungültig oder widerrufen …“ | Neuen Schlüssel erzeugen (Schritt 1) und in Schritt 3 ersetzen. |
 | „CRM antwortet 5xx …“ | Nichts tun, der nächste Lauf versucht es erneut. Hält es an: Claude Bescheid geben. |
-| Viele „unbekannt“ | Im Eingang der Erweiterung zuordnen. Prüfen, ob dein LinkedIn-Profil eingetragen ist (Schritt 0). Claude kann die Regeln anhand der gespeicherten Betreffzeilen nachschärfen. |
+| Viele „unbekannt“ | Im Eingang zuordnen (CRM → Einstellungen → Verbindungen → „Eingang“ oder in der Erweiterung). Prüfen, ob dein LinkedIn-Profil eingetragen ist (Schritt 0). Claude kann die Regeln anhand der gespeicherten Betreffzeilen nachschärfen. |
 
 **Gut zu wissen – nichts doppelt:**
 
 - LinkedIn schickt Nachrichten-Mails oft nur, wenn du die Nachricht nicht schon in LinkedIn gelesen hast. Antworten, die du live liest, trägst du weiter mit `A` ein (am besten in der Seitenleiste der Erweiterung).
 - **`A` zuerst, Mail danach:** Das CRM bucht die Mail nicht noch einmal, wenn es seit 24 Stunden vor der Mail schon eine erfasste Antwort gibt und du dazwischen nichts geschrieben hast – egal, wie viel später du `A` gedrückt hast. Ebenso bei ±10 Minuten oder gleichem Text.
 - **Schon geantwortet, Mail kommt erst danach** (z. B. beim ersten Lauf mit 3 Tagen Rückstand): Die alte Nachricht wird nicht mehr gebucht. Der Lead taucht also nicht wieder als „Antwort offen“ in Heute auf, und „Nachfassen im Gespräch“ läuft weiter.
-- **Mail zuerst, `A` danach:** Die Antwort steht dann schon ohne Reaktion am Lead. In der **Seitenleiste** heißt der Knopf jetzt „Reaktion nachtragen“ – er setzt nur die Reaktion an dieser Antwort, es entsteht keine zweite. Die `A`-Taste in der **CRM-App** kann das noch nicht und legt eine zweite Antwort an – bis zum App-Update die Reaktion in der Seitenleiste nachtragen.
+- **Mail zuerst, `A` danach:** Die Antwort steht dann schon ohne Reaktion am Lead. In der **Seitenleiste** heißt der Knopf jetzt „Reaktion nachtragen“, in der **CRM-App** zeigt `A` den Hinweis „… kam schon über die LinkedIn-Mail ins CRM – du trägst nur die Reaktion nach“ und den Knopf „Reaktion speichern“. Beide setzen nur die Reaktion an dieser Antwort, es entsteht keine zweite.
 - **Zuordnung nur über den Namen** (Mail ohne verwertbaren Profil-Link): Eine Annahme bucht das CRM nur, wenn du an diesen Lead eine offene Anfrage hast, eine Antwort nur, wenn du mit ihm vernetzt bist. Sonst landet sie im Eingang – so bekommt keine andere Person gleichen Namens Opener-Aufgaben.
 
 In LinkedIn müssen die E-Mail-Benachrichtigungen für **Nachrichten** und **angenommene Einladungen** eingeschaltet sein (Einstellungen → Mitteilungen). Vincent bekommt sie bereits.
@@ -106,7 +108,7 @@ In LinkedIn müssen die E-Mail-Benachrichtigungen für **Nachrichten** und **ang
 ## Anhalten
 
 - **Pausieren:** Funktion **`stoppen`** wählen → „Ausführen“. Der 5-Minuten-Takt ist weg, es wird nichts mehr übertragen. Wieder starten mit `einrichten`.
-- **Schlüssel sperren:** Erweiterung → Optionen → „Widerrufen“ (oder im eigenen Terminal `bash tools/eingang-token.sh --widerrufen vincent@steinerundco.de`).
+- **Schlüssel sperren:** CRM → Einstellungen → Verbindungen → Zeile „Schlüssel“ → „Widerrufen“, oder Erweiterung → Optionen → „Widerrufen“ (oder im eigenen Terminal `bash tools/eingang-token.sh --widerrufen vincent@steinerundco.de`).
 - **Google-Zugriff ganz entziehen:** myaccount.google.com/permissions → „LinkedIn ins CRM“ → „Zugriff entfernen“.
 - Das Label „CRM/erfasst“ kannst du in Gmail jederzeit löschen, die Mails bleiben erhalten.
 
@@ -116,7 +118,7 @@ In LinkedIn müssen die E-Mail-Benachrichtigungen für **Nachrichten** und **ang
 
 Mike macht genau dieselben Schritte – in **seinem eigenen** Gmail und mit **seinem eigenen** Schlüssel:
 
-- Bei seinem ersten Login in der Erweiterung (Version 1.1.0): Optionen → „LinkedIn-Mails ins CRM“ → eigenes LinkedIn-Profil eintragen → „Schlüssel erzeugen“. Er braucht dafür kein Terminal.
+- Im CRM (mit seinem eigenen Login): Einstellungen → Verbindungen → eigenes LinkedIn-Profil eintragen → Schritt 3 „Schlüssel erzeugen“. Oder in der Erweiterung (Version 1.1.0): Optionen → „LinkedIn-Mails ins CRM“. Er braucht dafür kein Terminal.
 - Annahmen und Antworten aus seinem Postfach werden in seinem Namen verbucht (seine Vernetzungen, seine Sequenzen).
 - Voraussetzung: LinkedIn schickt ihm die Benachrichtigungs-Mails (Einstellungen → Mitteilungen in seinem LinkedIn).
 

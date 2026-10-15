@@ -1,6 +1,6 @@
 // Reine Helfer des Moduls M6: Schlüssel-Vergabe (BAUPLAN § 3.7 „DB“), Statistik aus Aktivitäten (LF-06), Suche, Baum-Gruppen.
 import type { ActivityZeitraum } from '@/data/activities'
-import { fmtProzent, fmtZahl } from '@/lib/format'
+import { fmtAnteil, fmtZahl } from '@/lib/format'
 import { berlinTag, tagPlus, tageDifferenz } from '@/lib/zeit'
 import type { Channel, Template, TemplatePerformance, TemplatePhase } from '@/types/domain'
 import { KANAELE, KEY_PRAEFIX, phaseRang, phasenFuer, type PhaseDef } from './phasen'
@@ -172,7 +172,7 @@ export function nutzung(perf: TemplatePerformance | undefined): { gesendet: numb
 
 /** Klartext der Nutzung für title/aria-label: „148 gesendet · 5 % Antwort“ (Runde 2: Werte standen unbeschriftet im Baum). */
 export function nutzungText(n: { gesendet: number; quote: number | null }): string {
-  return `${fmtZahl(n.gesendet)} gesendet · ${n.quote === null ? 'Antwortquote –' : `${fmtProzent(n.quote)} Antwort`}`
+  return `${fmtZahl(n.gesendet)} gesendet · ${n.quote === null ? 'Antwortquote –' : `${fmtAnteil(n.quote)} Antwort`}`
 }
 
 /** Standard-Verwendung in Sequenzschritten: „Standard für Schritt 2“ (Sequenzname · Position). */

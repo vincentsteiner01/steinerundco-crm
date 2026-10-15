@@ -83,6 +83,17 @@ describe('fuellen – Absender, Signatur, Meeting, Anlass', () => {
     })
     expect(a.text).toBe('Vincent Steiner · Vincent Steiner · +4940123456 · https://calendly.com/x')
   })
+  it('Runde 3: ein Kürzel („VS“) aus short_name wird nie Absender oder Anrufer', () => {
+    const nurKuerzel = { short_name: 'VS' }
+    expect(fuellen('[Anrufer] [Absender Vorname]', frau, { me: nurKuerzel }).offen).toEqual([
+      'Anrufer',
+      'Absender Vorname',
+    ])
+    expect(fuellen('[Anrufer]', frau, { me: { short_name: 'Vincent' } }).text).toBe('Vincent')
+    expect(fuellen('[Absender Vorname]', frau, { me: { display_name: 'Vincent', short_name: 'VS' } }).text).toBe(
+      'Vincent',
+    )
+  })
   it('ohne me bleiben Absender-Platzhalter offen', () => {
     const r = fuellen('[Signatur] [Termin-Link]', frau)
     expect(r.offen).toEqual(['Signatur', 'Termin-Link'])

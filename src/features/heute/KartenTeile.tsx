@@ -31,7 +31,13 @@ export function KartenRahmen({
   const eingebettet = useContext(KarteEingebettet)
   if (eingebettet)
     return (
-      <article ref={ref} data-eingebettet aria-current={aktiv || undefined} className={cn('relative', className)} {...rest}>
+      <article
+        ref={ref}
+        data-eingebettet
+        aria-current={aktiv || undefined}
+        className={cn('relative', className)}
+        {...rest}
+      >
         {children}
       </article>
     )
@@ -147,6 +153,9 @@ export function KartenWer({
   const eingebettet = useContext(KarteEingebettet)
   const zweiter = salesOwner && owner && salesOwner.id !== owner.id ? salesOwner : null
   if (eingebettet && !kollabiert) return null
+  // eingebettet + zugeklappt (Lead-Vollseite): nur „Kurzfristig 1 vorbereitet“, ohne Name/Firma (stehen in der H1)
+  if (eingebettet)
+    return rechts ? <div className="text-ink-3 flex items-center gap-1.5 text-[12.5px]">{rechts}</div> : null
   return (
     <div className={cn('flex flex-wrap gap-x-2.5 gap-y-1', kollabiert ? 'items-center' : 'items-baseline')}>
       <span className={kollabiert ? 'text-h3 text-ink' : 'lead-name'}>{item.lead_name ?? '–'}</span>
@@ -230,6 +239,8 @@ export function KollabierteKarte({
   ref?: Ref<HTMLElement>
   onClick?: () => void
 }) {
+  const eingebettet = useContext(KarteEingebettet)
+  const label = kartenLabel(item)
   return (
     <KartenRahmen
       aktiv={false}
@@ -241,8 +252,8 @@ export function KollabierteKarte({
     >
       <div className="mb-1 flex items-center justify-between gap-3">
         {/* gekürzt am iPhone („Kurzfristig 2 · LinkedIn Standard (ohne …“) → voller Text im title (Integration Runde 2) */}
-        <span className="label truncate-1 min-w-0" title={kartenLabel(item)}>
-          {kartenLabel(item)}
+        <span className="label truncate-1 min-w-0" title={label}>
+          {eingebettet ? ohneSeit(label) : label}
         </span>
         <span className="flex flex-none items-center gap-2.5">
           <NeuChip item={item} />

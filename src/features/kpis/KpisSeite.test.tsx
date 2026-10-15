@@ -127,6 +127,8 @@ describe('KpisSeite', () => {
     expect(within(ob).getByText('9 Werktage')).toBeInTheDocument()
     expect(within(ob).getByRole('button', { name: /Wiedervorlage/ })).toBeInTheDocument()
     expect(within(ob).getByRole('button', { name: /Beenden/ })).toBeInTheDocument()
+    // Runde 3: Aktionen überlappen nicht – Knöpfe schrumpfen nie, bei Platzmangel Umbruch statt Überlauf
+    expect(ob.querySelector('[data-aktionen]')).toHaveClass('flex-wrap', '[&>*]:shrink-0')
   })
 
   it('Tasten: ← Vormonat, → Folgemonat (gesperrt im laufenden Monat), 3 → Team, 1 → Vincent; Segmente schreiben die URL', async () => {

@@ -244,7 +244,9 @@ export function useLeadUpdate() {
       if ((e as { code?: string }).code === 'KONFLIKT') {
         // Die andere Person relativ zur angemeldeten (LE-16) – im Team von zwei hat sie den Lead zuletzt geändert
         const andere = qc
-          .getQueryData<{ id: string | null; short_name: string | null; display_name?: string | null; email?: string | null }[]>(qk.members)
+          .getQueryData<
+            { id: string | null; short_name: string | null; display_name?: string | null; email?: string | null }[]
+          >(qk.members)
           ?.find((m) => m.id !== me)
         toastFehler(MELDUNG.konflikt(anzeigeName(andere, 'Jemand')))
         void qc.invalidateQueries({ queryKey: qk.leads.detail(id) })

@@ -50,6 +50,11 @@ export type SpaltenOptionen = {
   batches?: readonly { id: string; label: string | null; created_at: string }[]
   /** Anker einer Zeilen-Aktion (Popover/Dialog) – wird in der Name-Zelle der Zeile gerendert */
   anker?: { rowId: string; node: ReactNode }
+  /**
+   * Unternehmen als zweite Zeile unter dem Namen (Spalte Unternehmen fehlt). Ohne Angabe wie bisher über die Fensterbreite
+   * (`max-xl`); LeadsSeite setzt es nach der gemessenen Tabellenbreite (Runde 3).
+   */
+  firmaUnterName?: boolean
 }
 
 export const ROLLE_KURZ: Record<LeadRole, string> = {
@@ -269,6 +274,88 @@ export function ohneVerdeckte<T extends { meta?: unknown }>(defs: T[], unterXl: 
   })
 }
 
+/** Kurze Tabellenköpfe für schmale Spalten (Runde 3); Spaltenwahl, CSV und Fuß nutzen SPALTEN_LABEL. */
+export const KOPF_KURZ = { letzteBewegung: 'Zuletzt' } as const
+/** Runde 3 (Migration 8): `last_activity_at` = letzter Kontakt – Stufenwechsel, Notizen und Importe zählen nicht mehr. */
+export const LETZTE_BEWEGUNG_TITEL =
+  'Letzte Bewegung = letzter Kontakt (Anfrage, Annahme, Nachricht, Antwort, Pitch, Anruf, Mail, Termin); Stufenwechsel, Notizen und Importe zählen nicht'
+
+/**
+ * Spaltensatz nach der gemessenen Tabellenbreite (Container, nicht Fenster – ab 1600 px steht der Peek als dritte Spalte daneben):
+ * - `breit` (≥ 1100 px, 1440er Fenster = 1136 px): alle Standardspalten, Notiz bekommt den Rest (≈ 160 px)
+ * - `mittel` (960–1099 px, 1280er Fenster = 984 px): ohne Notiz (Name ≥ 160 px)
+ * - `schmal` (< 960 px, 1024er Fenster = 741 px, 1680er Fenster mit Peek-Spalte = 928 px): Name (Firma darunter) · Phase · Schritt · Zuständig · Nächste Aktion
+ * Runde 3 (echte Daten): bei 1024 war die Tabelle 1040 px in 741 px, „Nächste Aktion“ abgeschnitten; bei 1440 Notiz 69 px.
+ */
+export type SpaltenStufe = 'breit' | 'mittel' | 'schmal'
+export const STUFE_AB = { breit: 1100, mittel: 960 } as const
+
+export function spaltenStufe(breite: number): SpaltenStufe {
+  if (breite >= STUFE_AB.breit) return 'breit'
+  if (breite >= STUFE_AB.mittel) return 'mittel'
+  return 'schmal'
+}
+
+const FEHLT_AB: Record<SpaltenStufe, readonly SpaltenKey[]> = {
+  breit: [],
+  mittel: ['notiz'],
+  schmal: ['notiz', 'unternehmen', 'rolle', 'kanal', 'letzteBewegung'],
+}
+
+/**
+ * Breiten je Stufe: feste px für Inhalte fester Breite (Glyphe, Chip, Avatar + Vorname, Mono-Datum „Mo 05.10. −10 T“), Prozent für
+ * Text, `auto` = Rest (Notiz breit, sonst Name). Summe ohne Rest bei 1136 px ≈ 970 px → Notiz ≈ 165 px.
+ */
+export const BREITEN: Record<SpaltenStufe, Partial<Record<SpaltenKey, string>>> = {
+  breit: {
+    name: '14%',
+    unternehmen: '15%',
+    rolle: '64px',
+    kanal: '64px',
+    phase: '104px',
+    schritt: '10%',
+    zustaendig: '100px',
+    letzteBewegung: '92px',
+    naechsteAktion: '140px',
+    notiz: 'auto',
+  },
+  mittel: {
+    name: 'auto',
+    unternehmen: '16%',
+    rolle: '64px',
+    kanal: '64px',
+    phase: '104px',
+    schritt: '12%',
+    zustaendig: '100px',
+    letzteBewegung: '92px',
+    naechsteAktion: '140px',
+  },
+  schmal: {
+    name: 'auto',
+    phase: '104px',
+    schritt: '21%',
+    zustaendig: '100px',
+    naechsteAktion: '140px',
+  },
+}
+
+/** Spalten der Stufe: fehlende weglassen, Breiten setzen, `ausblenden` (Fensterbreite) entfällt – die Stufe entscheidet. */
+export function fuerStufe<T extends { id?: string; meta?: unknown }>(defs: T[], stufe: SpaltenStufe): T[] {
+  const fehlt = FEHLT_AB[stufe]
+  return defs
+    .filter((d) => !fehlt.includes(d.id as SpaltenKey))
+    .map((d) => {
+      const breite = BREITEN[stufe][d.id as SpaltenKey]
+      const meta = { ...((d.meta as object | undefined) ?? {}), ausblenden: undefined }
+      return { ...d, meta: breite ? { ...meta, breite } : meta }
+    })
+}
+
+/** Nur Standardspalten sichtbar → die Breiten passen ohne Querscroll (DataTable `minBreite = null`). */
+export function nurStandardSpalten(ids: readonly (string | undefined)[]): boolean {
+  return ids.every((id) => !!id && id in BREITEN.breit)
+}
+
 /** Baut die Spaltendefinitionen für die gewählten Keys. Die Reihenfolge ist die der Keys. */
 export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): DataTableSpalte<LeadZeile>[] {
   const bearbeitet = (rowId: string, key: SpaltenKey) => o.bearbeitung?.rowId === rowId && o.bearbeitung.spalte === key
@@ -308,7 +395,13 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
                     >
                       {l.full_name ?? '–'}
                     </span>
-                    <span className="text-ink-3 hidden truncate text-[11.5px] max-xl:block">
+                    <span
+                      className={cn(
+                        'text-ink-3 truncate text-[11.5px]',
+                        o.firmaUnterName === undefined ? 'hidden max-xl:block' : o.firmaUnterName ? 'block' : 'hidden',
+                      )}
+                      title={l.company_name ?? undefined}
+                    >
                       {l.company_name ?? ''}
                     </span>
                   </span>
@@ -475,16 +568,17 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
               const owner = istFrei(l) ? null : mitglied(o.members, l.owner_id)
               const sales =
                 l.sales_owner_id && l.sales_owner_id !== l.owner_id ? mitglied(o.members, l.sales_owner_id) : null
+              // Runde 3: die Spalte ist für den Kopf „Zuständig“ ohnehin ≈ 100 px breit – der Vorname neben dem Avatar nutzt den Platz
+              const titel = owner
+                ? `Zuständig: ${anzeigeName(owner)}${sales ? ` · Sales: ${anzeigeName(sales)}` : ''}`
+                : 'Frei'
               return (
-                <Avatar
-                  member={owner}
-                  zweiter={sales}
-                  title={
-                    owner
-                      ? `Zuständig: ${anzeigeName(owner)}${sales ? ` · Sales: ${anzeigeName(sales)}` : ''}`
-                      : 'Frei'
-                  }
-                />
+                <span className="flex min-w-0 items-center gap-1.5" title={titel}>
+                  <Avatar member={owner} zweiter={sales} className="shrink-0" />
+                  <span className={cn('min-w-0 truncate text-[13px]', owner ? 'text-ink-2' : 'text-ink-3')}>
+                    {owner ? anzeigeName(owner) : 'Frei'}
+                  </span>
+                </span>
               )
             },
           }),
@@ -494,8 +588,16 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
         defs.push(
           h.accessor('last_activity_at', {
             id: 'letzteBewegung',
-            header: SPALTEN_LABEL.letzteBewegung,
-            meta: { rechts: true, mono: true, breite: BREITE_ECHT.letzteBewegung, ausblenden: 'xl' },
+            // Runde 3: „LETZTE BEWEGUNG“ (≈ 145 px) wurde zu „LETZTE BEW…“ – der Tabellenkopf sagt kurz „Zuletzt“, Spaltenwahl und CSV
+            // behalten den langen Namen
+            header: KOPF_KURZ.letzteBewegung,
+            meta: {
+              rechts: true,
+              mono: true,
+              breite: BREITE_ECHT.letzteBewegung,
+              ausblenden: 'xl',
+              kopfTitel: LETZTE_BEWEGUNG_TITEL,
+            },
             cell: (c) => {
               const v = c.getValue()
               return v ? <Mono title={relativ(v, o.heute)}>{fmtDatumKurz(v)}</Mono> : <Mono ton="later">–</Mono>
@@ -693,7 +795,8 @@ export function leadSpalten(keys: readonly SpaltenKey[], o: SpaltenOptionen): Da
               return v ? (
                 <span className="text-ink-2 truncate">{ANRUFGRUND_LABEL[v]}</span>
               ) : (
-                <span className="text-overdue text-[12.5px]">fehlt</span>
+                // Amber heißt nur „überfällig“ (DESIGN-SYSTEM § 3.2) – ein fehlender Anrufgrund ist ein Hinweis (Runde 3, wie die Telefon-Karte)
+                <span className="text-ink-3 text-[12.5px]">fehlt</span>
               )
             },
           }),
@@ -848,7 +951,7 @@ export function csvSpalten(
 ): CsvSpalte<LeadZeile>[] {
   const m = (id: string | null) => {
     const x = mitglied(o.members, id)
-    return x ? (anzeigeName(x, '')) : ''
+    return x ? anzeigeName(x, '') : ''
   }
   return keys.map((key): CsvSpalte<LeadZeile> => {
     const label = SPALTEN_LABEL[key]

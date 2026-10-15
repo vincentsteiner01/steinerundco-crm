@@ -12,6 +12,11 @@ import { STANDARD_SPALTEN } from './ansichten'
 import {
   csvSpalten,
   faelligkeitsGruppe,
+  fuerStufe,
+  KOPF_KURZ,
+  LETZTE_BEWEGUNG_TITEL,
+  nurStandardSpalten,
+  spaltenStufe,
   kanalZustand,
   leadSpalten,
   mitFirmensperre,
@@ -111,6 +116,59 @@ describe('Zeitfarben und Fälligkeit', () => {
     for (const weg of ['unternehmen', 'rolle', 'letzteBewegung', 'notiz']) expect(schmal).not.toContain(weg)
     expect(schmal).toContain('naechsteAktion')
     expect(schmal.length).toBeLessThanOrEqual(8)
+  })
+
+  it('spaltenStufe: Tabellenbreite 1136 (1440er Fenster) → breit, 984 (1280) → mittel, 741 (1024) → schmal (Runde 3)', () => {
+    expect(spaltenStufe(1136)).toBe('breit')
+    expect(spaltenStufe(1100)).toBe('breit')
+    expect(spaltenStufe(1099)).toBe('mittel')
+    expect(spaltenStufe(984)).toBe('mittel')
+    expect(spaltenStufe(960)).toBe('mittel')
+    // 1680er Fenster mit Peek als dritter Spalte: Tabelle 928 px – Name hätte in „mittel“ nur 140 px
+    expect(spaltenStufe(928)).toBe('schmal')
+    expect(spaltenStufe(741)).toBe('schmal')
+  })
+
+  it('fuerStufe: schmal = Name · Phase · Schritt · Zuständig · Nächste Aktion; Name nimmt den Rest, Breiten passen in 741 px', () => {
+    const defs = leadSpalten(STANDARD_SPALTEN, {
+      heute: HEUTE,
+      settings: SETTINGS,
+      members: MEMBERS,
+      bearbeitung: null,
+      onSave: vi.fn(),
+      onCancel: vi.fn(),
+      onTab: vi.fn(),
+    })
+    const ids = (d: typeof defs) => d.map((x) => x.id)
+    const breite = (d: typeof defs, id: string) =>
+      (d.find((x) => x.id === id)?.meta as { breite?: string; ausblenden?: string } | undefined)?.breite
+    const schmal = fuerStufe(defs, 'schmal')
+    expect(ids(schmal)).toEqual(['name', 'phase', 'schritt', 'zustaendig', 'naechsteAktion'])
+    expect(breite(schmal, 'name')).toBe('auto')
+    expect(breite(schmal, 'naechsteAktion')).toBe('140px')
+    // ausblenden (Fensterbreite) entfällt – die gemessene Breite entscheidet
+    expect(schmal.every((d) => (d.meta as { ausblenden?: string }).ausblenden === undefined)).toBe(true)
+    // feste px + Prozent bei 741 px: 28 (Auswahl) + 104 + 21 % + 100 + 140 ≈ 528 → Name ≈ 213 px
+    const fest = 28 + 104 + 100 + 140 + 0.21 * 741
+    expect(741 - fest).toBeGreaterThan(180)
+
+    const mittel = fuerStufe(defs, 'mittel')
+    expect(ids(mittel)).not.toContain('notiz')
+    expect(ids(mittel)).toContain('letzteBewegung')
+    expect(breite(mittel, 'name')).toBe('auto')
+
+    const breit = fuerStufe(defs, 'breit')
+    expect(ids(breit)).toEqual(ids(defs))
+    expect(breite(breit, 'notiz')).toBe('auto')
+    expect(breite(breit, 'kanal')).toBe('64px')
+    // Notiz-Rest bei 1136 px (1440er Fenster, Rolle leer) ≥ 140 px (vorher 69 px „First O…“)
+    const summe = 28 + 64 + 104 + 100 + 92 + 140 + (0.14 + 0.15 + 0.1) * 1136
+    expect(1136 - summe).toBeGreaterThanOrEqual(140)
+  })
+
+  it('nurStandardSpalten: Zusatzspalten (z. B. Ort) erlauben wieder Querscroll', () => {
+    expect(nurStandardSpalten(['name', 'phase', 'naechsteAktion'])).toBe(true)
+    expect(nurStandardSpalten(['name', 'ort'])).toBe(false)
   })
 
   it('ohneLeereRolle: Rolle fällt weg, wenn alle Leads „unbekannt“ sind (echte Daten), bleibt bei einer echten Rolle', () => {
@@ -215,7 +273,80 @@ describe('Spalten der Tabelle', () => {
     ])
     tabelle([zeile(1)], STANDARD_SPALTEN)
     const kopf = screen.getAllByRole('columnheader').map((h) => h.textContent?.replace(/[↑↓]/g, '').trim())
-    for (const k of STANDARD_SPALTEN) expect(kopf).toContain(SPALTEN_LABEL[k])
+    // Runde 3: der Tabellenkopf von „Letzte Bewegung“ heißt kurz „Zuletzt“ (sonst „LETZTE BEW…“ in 92 px)
+    for (const k of STANDARD_SPALTEN)
+      expect(kopf).toContain(k === 'letzteBewegung' ? KOPF_KURZ.letzteBewegung : SPALTEN_LABEL[k])
+  })
+
+  it('„Zuletzt“ erklärt im title, was zählt: nur Kontakte – keine Stufenwechsel, Notizen, Importe (Runde 3, Migration 8)', () => {
+    tabelle([zeile(1)], ['name', 'letzteBewegung'])
+    const knopf = screen.getByRole('button', { name: /Zuletzt/ })
+    expect(knopf).toHaveAttribute('title', expect.stringContaining(LETZTE_BEWEGUNG_TITEL))
+    expect(knopf.getAttribute('title')).toMatch(/letzter Kontakt .*Stufenwechsel, Notizen und Importe zählen nicht/)
+  })
+
+  it('Zuständig: Avatar + Vorname aus display_name – nie das Kürzel „VS“ (Runde 3)', () => {
+    const mitKuerzel = [
+      { id: MEMBER_V, display_name: 'Vincent Steiner', short_name: 'VS', initial: 'V' },
+      { id: MEMBER_M, display_name: 'Mike Meier', short_name: 'Mike', initial: 'M' },
+    ] as unknown as Member[]
+    const spalten = leadSpalten(['name', 'zustaendig'], {
+      heute: HEUTE,
+      settings: SETTINGS,
+      members: mitKuerzel,
+      bearbeitung: null,
+      onSave: vi.fn(),
+      onCancel: vi.fn(),
+      onTab: vi.fn(),
+    })
+    render(
+      <DataTable<LeadZeile>
+        ariaLabel="Leads"
+        daten={[zeile(1, { owner_id: MEMBER_V }), zeile(3, { owner_id: null })]}
+        spalten={spalten}
+        rowId={(r) => r.id}
+      />,
+    )
+    const [z1, z2] = screen.getAllByRole('row').slice(1) as HTMLElement[]
+    expect(within(z1 as HTMLElement).getByText('Vincent')).toBeInTheDocument()
+    // „VS“ steht nur im Avatar (Kürzel ≤ 3 Zeichen), der Name daneben ist der Vorname
+    expect(
+      within(z1 as HTMLElement)
+        .getByText('Vincent')
+        .closest('[title]'),
+    ).toHaveAttribute('title', 'Zuständig: Vincent')
+    expect(within(z2 as HTMLElement).getByText('Frei')).toBeInTheDocument()
+  })
+
+  it('firmaUnterName: Unternehmen als zweite Zeile unter dem Namen (Spalte fehlt), sonst nicht', () => {
+    const opts = {
+      heute: HEUTE,
+      settings: SETTINGS,
+      members: MEMBERS,
+      bearbeitung: null,
+      onSave: vi.fn(),
+      onCancel: vi.fn(),
+      onTab: vi.fn(),
+    }
+    const { unmount } = render(
+      <DataTable<LeadZeile>
+        ariaLabel="Leads"
+        daten={[zeile(1, { company_name: 'Sonnenhof Energie GmbH' })]}
+        spalten={leadSpalten(['name'], { ...opts, firmaUnterName: true })}
+        rowId={(r) => r.id}
+      />,
+    )
+    expect(screen.getByText('Sonnenhof Energie GmbH')).toHaveClass('block')
+    unmount()
+    render(
+      <DataTable<LeadZeile>
+        ariaLabel="Leads"
+        daten={[zeile(1, { company_name: 'Sonnenhof Energie GmbH' })]}
+        spalten={leadSpalten(['name'], { ...opts, firmaUnterName: false })}
+        rowId={(r) => r.id}
+      />,
+    )
+    expect(screen.getByText('Sonnenhof Energie GmbH')).toHaveClass('hidden')
   })
 
   it('Chip „Firma gesperrt“ in der Name-Zelle (LE-17) und „fehlt“ bei leerem Unternehmen', () => {
@@ -224,6 +355,12 @@ describe('Spalten der Tabelle', () => {
     expect(within(zeilen[0] as HTMLElement).getByText('Firma gesperrt')).toBeInTheDocument()
     expect(within(zeilen[0] as HTMLElement).getByText('fehlt')).toBeInTheDocument()
     expect(within(zeilen[1] as HTMLElement).queryByText('Firma gesperrt')).toBeNull()
+  })
+
+  it('Anrufgrund „fehlt“ in ink-3, nicht Amber (Amber = überfällig, Runde 3)', () => {
+    tabelle([zeile(1, { call_basis: null })], ['name', 'anrufgrund'])
+    expect(screen.getByText('fehlt')).toHaveClass('text-ink-3')
+    expect(screen.getByText('fehlt')).not.toHaveClass('text-overdue')
   })
 
   it('Zeitfarbe in der Spalte Nächste Aktion', () => {

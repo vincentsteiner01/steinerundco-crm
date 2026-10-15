@@ -10,6 +10,7 @@ import { Passcode } from './Passcode'
 import { Profil } from './Profil'
 import { Sequenzen } from './Sequenzen'
 import { Sperrliste } from './Sperrliste'
+import { Verbindungen } from './Verbindungen'
 import { Ziele } from './Ziele'
 
 const INHALT: Record<Bereich, () => React.JSX.Element> = {
@@ -19,6 +20,7 @@ const INHALT: Record<Bereich, () => React.JSX.Element> = {
   sequenzen: Sequenzen,
   sperrliste: Sperrliste,
   export: Export,
+  verbindungen: Verbindungen,
 }
 
 export function Component() {
@@ -29,6 +31,7 @@ export function Component() {
     navigate,
   ])
 
+  // Mobil: den aktiven Tab der quer scrollenden Leiste hält `Tabs` selbst in Sicht (Runde 3, 7. Tab „Verbindungen“ bei 390 px)
   if (!istBereich(bereich)) return <Navigate to={PFADE.einstellungen(STANDARD_BEREICH)} replace />
   const aktiv = BEREICHE.find((b) => b.key === bereich) ?? BEREICHE[0]!
   const Inhalt = INHALT[bereich]

@@ -2414,6 +2414,14 @@ export type Database = {
         Returns: boolean
       }
       is_holiday: { Args: { p: string }; Returns: boolean }
+      ist_kontakt: {
+        Args: { p_type: Database['crm']['Enums']['activity_type'] }
+        Returns: boolean
+      }
+      lead_spiegel_berechnen: {
+        Args: { p_lead_id: string }
+        Returns: undefined
+      }
       log_activity: {
         Args: {
           p_call_id?: string

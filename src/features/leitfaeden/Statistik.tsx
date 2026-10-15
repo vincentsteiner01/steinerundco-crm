@@ -3,7 +3,7 @@
 import { useId } from 'react'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { useTemplateActivities } from '@/data/activities'
-import { fmtProzent, fmtZahl, heuteBerlin, relativ } from '@/lib/format'
+import { fmtAnteil, fmtZahl, heuteBerlin, relativ } from '@/lib/format'
 import { tagPlus } from '@/lib/zeit'
 import type { TemplatePerformance } from '@/types/domain'
 import { fmtTage, statistikAusAktivitaeten, statistikVon, WOCHEN } from './helfer'
@@ -43,8 +43,7 @@ export function Statistik({ templateId, perf }: StatistikProps) {
               <b className="text-ink-bright text-[16px] font-medium">{fmtZahl(beantwortet)}</b> Antworten 7 T
             </span>
             <span>
-              <b className="text-ink-bright text-[16px] font-medium">{quote === null ? '–' : fmtProzent(quote)}</b>{' '}
-              Quote
+              <b className="text-ink-bright text-[16px] font-medium">{quote === null ? '–' : fmtAnteil(quote)}</b> Quote
             </span>
             <span>
               <b className="text-ink-bright text-[16px] font-medium">

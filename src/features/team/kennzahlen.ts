@@ -4,6 +4,7 @@
 // Team-Protokolls. Reine Funktionen.
 import type { ActivityZeitraum } from '@/data/activities'
 import type { MetricEventZeile } from '@/data/kpis'
+import { ERLEDIGT_TYPEN as ERLEDIGT_TYPEN_DATEN } from '@/data/tagesbilanz'
 import { summiereEvents } from '@/features/kpis/kennzahlen'
 import { fmtDatumKurz, fmtZeit } from '@/lib/format'
 import { berlinTag, tagPlus, type Tag } from '@/lib/zeit'
@@ -76,21 +77,10 @@ export const TEAM_METRIKEN: readonly TeamMetrik[] = [
 export const FOLLOWUP_TYPEN: ActivityType[] = ['nachricht_gesendet']
 
 /**
- * „Heute erledigt“ je Person: die Erledigt-Typen der Heute-Seite (gesendet, Aufgabe erledigt, Schritt übersprungen) plus
- * Anrufe und abgehakte Vernetzungen – auf Heute zählen die Abhak-Zeilen nur in der Sitzung, hier sind sie dauerhaft.
+ * „Heute erledigt“ je Person – EINE Liste mit dem Heute-Kopf (`src/data/tagesbilanz.ts`, Runde 3). Kopie als veränderbares Array,
+ * weil `useActivitiesZeitraum` es so erwartet; gleiche Reihenfolge → gleicher Query-Key wie `useErledigtHeute`.
  */
-export const ERLEDIGT_TYPEN: ActivityType[] = [
-  'gespraech_eroeffnet',
-  'nachricht_gesendet',
-  'pitch_gesendet',
-  'email_gesendet',
-  'aufgabe_erledigt',
-  'schritt_uebersprungen',
-  'anruf',
-  'vernetzung_gesendet',
-  'vernetzung_angenommen',
-  'vernetzung_zurueckgezogen',
-]
+export const ERLEDIGT_TYPEN: ActivityType[] = [...ERLEDIGT_TYPEN_DATEN]
 
 export type PersonWerte = {
   werte: Record<TeamMetrikKey, number>

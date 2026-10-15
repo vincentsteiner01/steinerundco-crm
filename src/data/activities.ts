@@ -51,6 +51,51 @@ export function ohneDoppelteEmailSendung<A extends SendungsTeile>(zeilen: readon
   )
 }
 
+type ImportTeile = Pick<Activity, 'type' | 'lead_id' | 'source'>
+
+/**
+ * Doppelten Sheet-Import in der Timeline ausblenden (QA Runde 3: „Importiert aus CRM-Tabelle“ stand je Lead zweimal). Der Import
+ * schreibt je neuem Lead „angelegt“ (Trigger `leads_after_insert`, rückdatiert auf das erste Sheet-Datum) und „import“
+ * (`import_sheet_leads`, Zeitpunkt des Imports, mit den Sheet-Metadaten). Beide bleiben als Beleg in der DB; angezeigt wird nur die
+ * rückdatierte „angelegt“-Zeile, wenn es sie für denselben Lead aus derselben Quelle gibt. Beim Re-Import eines bestehenden Leads
+ * (kein neues „angelegt“) bleibt „import“ sichtbar. `alle` = Zeilen, in denen nach „angelegt“ gesucht wird (Timeline: alle geladenen
+ * Seiten, damit die Paarung auch seitenübergreifend greift).
+ */
+export function ohneDoppeltenImport<A extends ImportTeile>(
+  zeilen: readonly A[],
+  alle: readonly ImportTeile[] = zeilen,
+): A[] {
+  const angelegt = new Set(
+    alle.filter((a) => a.type === 'angelegt' && a.source !== 'app').map((a) => `${a.lead_id}|${a.source}`),
+  )
+  if (angelegt.size === 0) return zeilen as A[]
+  return zeilen.filter((a) => !(a.type === 'import' && angelegt.has(`${a.lead_id}|${a.source}`)))
+}
+
+/**
+ * Kontakt-Ereignisse („Letzte Bewegung“) – wie `crm.ist_kontakt` (Migration 8): nur sie setzen `leads.last_activity_at`.
+ * System-Einträge (angelegt, import, stage_wechsel, sequenz_*, notiz, …) zählen nicht.
+ */
+export const KONTAKT_TYPEN: readonly ActivityType[] = [
+  'vernetzung_gesendet',
+  'vernetzung_angenommen',
+  'vernetzung_zurueckgezogen',
+  'vernetzung_abgelaufen',
+  'gespraech_eroeffnet',
+  'nachricht_gesendet',
+  'nachricht_erhalten',
+  'pitch_gesendet',
+  'anruf',
+  'email_gesendet',
+  'email_erhalten',
+  'meeting_geplant',
+  'meeting_stattgefunden',
+  'meeting_no_show',
+  'meeting_abgesagt',
+  'meeting_verschoben',
+]
+export const istKontakt = (t: ActivityType | null | undefined): boolean => !!t && KONTAKT_TYPEN.includes(t)
+
 export async function ladeTimelineSeite(
   leadId: string,
   cursor: TimelineCursor,
@@ -103,8 +148,12 @@ export function useActivities(leadId: string | null | undefined, filter?: Activi
       const l = letzte[letzte.length - 1]
       return letzte.length < TIMELINE_SEITE || !l ? undefined : { occurredAt: l.occurred_at, id: l.id }
     },
-    // Doppelte Sequenz-Mail nur in der Anzeige ausblenden – die Seitenlänge (Cursor) bleibt die der Rohdaten
-    select: (d) => ({ ...d, pages: d.pages.map((p) => ohneDoppelteEmailSendung(p)) }),
+    // Doppelte Sequenz-Mail und doppelten Sheet-Import nur in der Anzeige ausblenden – die Seitenlänge (Cursor) bleibt die der
+    // Rohdaten. Import-Paar über alle geladenen Seiten („import“ ist die jüngste, „angelegt“ die älteste Zeile des Leads).
+    select: (d) => {
+      const alle = d.pages.flat()
+      return { ...d, pages: d.pages.map((p) => ohneDoppeltenImport(ohneDoppelteEmailSendung(p), alle)) }
+    },
   })
 }
 

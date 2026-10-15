@@ -55,8 +55,7 @@ export function ZustaendigWaehlen({
     setLaeuft(false)
     inval(leadId)
     const m = members?.find((x) => x.id === wert)
-    const text =
-      wert === FREI ? 'Freigegeben.' : `Übergeben an ${anzeigeName(m, 'die andere Person')}.`
+    const text = wert === FREI ? 'Freigegeben.' : `Übergeben an ${anzeigeName(m, 'die andere Person')}.`
     const a = await nachleseAktivitaet(leadId, wert === FREI ? ['freigabe'] : ['uebergabe'])
     if (a) anbieten(a.id, text, leadId)
     else toast(text)
@@ -75,9 +74,7 @@ export function ZustaendigWaehlen({
         if (e.key === 'Escape') onAbbrechen?.()
       }}
       optionen={[
-        ...(members ?? [])
-          .filter((m) => !!m.id)
-          .map((m) => ({ value: m.id as string, label: anzeigeName(m, '') })),
+        ...(members ?? []).filter((m) => !!m.id).map((m) => ({ value: m.id as string, label: anzeigeName(m, '') })),
         { value: FREI, label: 'Frei' },
       ]}
     />

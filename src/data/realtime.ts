@@ -158,11 +158,7 @@ export async function realtimeToast(qc: QueryClient, e: RealtimeEreignis, me: st
     if (wer && wer !== me && leadId && wann && toastErlaubt()) {
       const m = mitgliedAusCache(qc, wer)
       const name = await leadName(leadId)
-      toastRealtime(
-        TOAST.terminAnderePerson(anzeigeName(m, 'Jemand'), name, kurzDatum(wann)),
-        m,
-        leadId,
-      )
+      toastRealtime(TOAST.terminAnderePerson(anzeigeName(m, 'Jemand'), name, kurzDatum(wann)), m, leadId)
     }
   }
 }

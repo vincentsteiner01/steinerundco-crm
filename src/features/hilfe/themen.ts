@@ -1,5 +1,6 @@
 // Handbuch-Inhalt als Daten (durchsuchbar, eine Quelle für Seite und Suche). Geschrieben aus dem tatsächlichen Verhalten des
-// Codes (Stand 15.10.2026, v1) – nichts versprechen, was nicht gebaut ist; Geplantes trägt {{geplant}}.
+// Codes (Stand 15.10.2026, v1 + LinkedIn-Brücke: supabase/functions/linkedin-eingang, tools/apps-script/ANLEITUNG.md,
+// extension/README.md, Einstellungen → Verbindungen) – nichts versprechen, was nicht gebaut ist; Geplantes trägt {{geplant}}.
 // Auszeichnung: {Taste} · {G H} · **betont** · [Link](/pfad) · {{geplant}} (markup.ts, Inline.tsx).
 import { PFADE } from '@/app/pfade'
 import type { PersonId } from '@/features/auth/personen'
@@ -43,8 +44,8 @@ const VINCENT_TAG: readonly Block[] = [
   {
     art: 'schritte',
     punkte: [
-      'In LinkedIn deine Kontakte öffnen und daneben die Sektion „Annahme prüfen“ durchgehen.',
-      'Wer angenommen hat: {E} oder {Space}. Das CRM setzt die Phase auf „Vernetzt“, startet die Sequenz und legt den Opener für heute an. War die Annahme gestern, wählst du das Datum mit {D}.',
+      'Ist dein Gmail unter [Verbindungen](/einstellungen/verbindungen) angeschlossen, hat das CRM die meisten Annahmen schon aus den LinkedIn-Mails verbucht – diese Leads stehen direkt in „Opener senden“.',
+      'Den Rest prüfst du in „Annahme prüfen“, daneben deine LinkedIn-Kontakte. Wer angenommen hat: {E} oder {Space}. Das CRM setzt die Phase auf „Vernetzt“, startet die Sequenz und legt den Opener für heute an. War die Annahme gestern, wählst du das Datum mit {D}.',
       'In „Opener senden“ steht der fertige Text: {C} kopiert, in LinkedIn einfügen und senden, zurück im CRM {E}.',
     ],
   },
@@ -57,8 +58,9 @@ const VINCENT_TAG: readonly Block[] = [
   {
     art: 'schritte',
     punkte: [
-      'LinkedIn-Posteingang durchgehen. Für jede Antwort den Lead mit {⌘K} suchen und {A} drücken: Reaktion wählen ({1}–{9}), Zitat optional.',
-      'Die Sequenz stoppt, der Lead steht in „Antworten“ mit einem passenden Antwort-Leitfaden. Antworten und {E} – oder {P}, wenn du gepitcht hast, {T} für einen Termin.',
+      'Antworten, für die LinkedIn dir eine Mail geschickt hat, stehen mit angeschlossenem Gmail schon in „Antworten“ – mit Nachrichtentext, die Sequenz ist gestoppt.',
+      'Was du live in LinkedIn gelesen hast, meldet LinkedIn oft nicht per Mail: Lead mit {⌘K} suchen und {A} drücken – oder in der Seitenleiste der Chrome-Erweiterung die Unterhaltung öffnen, dort steht die letzte Nachricht schon drin. Reaktion wählen ({1}–{9}), Zitat optional.',
+      'Der Lead steht in „Antworten“ mit einem passenden Antwort-Leitfaden. Antworten und {E} – oder {P}, wenn du gepitcht hast, {T} für einen Termin.',
     ],
   },
 ]
@@ -128,6 +130,7 @@ export const THEMEN: readonly Thema[] = [
           'Die Einführungstour machen – eine Minute, Knopf „Tour erneut starten“ oben rechts.',
           '[Einstellungen → Profil](/einstellungen/profil): Kürzel, LinkedIn-Plan, Rufnummer und Signatur prüfen.',
           '[Einstellungen → Ziele](/einstellungen/ziele): Tagesziel und Wochenbudget für Vernetzungsanfragen.',
+          '[Einstellungen → Verbindungen](/einstellungen/verbindungen): LinkedIn-Mails aus Gmail und die Chrome-Erweiterung anschließen – dann kommen Annahmen und Antworten von selbst ins CRM (etwa zehn Minuten, siehe [Verbindungen einrichten](/hilfe/verbindungen)).',
           '[Heute](/heute) öffnen und die erste Karte abarbeiten.',
           'Wenn etwas hakt: {⌥F} drücken und es direkt melden.',
         ],
@@ -246,51 +249,139 @@ export const THEMEN: readonly Thema[] = [
   {
     key: 'linkedin',
     titel: 'LinkedIn: was automatisch geht',
-    kurz: 'LinkedIn hat keine Schnittstelle für Nachrichten: Das CRM bereitet vor, plant und zählt – senden und lesen tust du in LinkedIn.',
-    stichworte: 'synchronisieren sync automatisch nachrichten api posteingang doppelt pflegen annahme antwort',
+    kurz: 'Annahmen und neue Nachrichten erkennt das CRM aus deinen LinkedIn-Mails, die Chrome-Erweiterung bucht mit einem Klick – senden tust du weiter selbst in LinkedIn.',
+    stichworte:
+      'synchronisieren sync automatisch nachrichten api posteingang doppelt pflegen annahme antwort mail benachrichtigung erweiterung seitenleiste chrome',
     tour: 'linkedin',
     bloecke: [
       {
         art: 'absatz',
-        text: 'LinkedIn erlaubt keine automatisierten Nachrichten und bietet dafür keine offene Schnittstelle. Deshalb berührt das CRM LinkedIn nie: Es liest keine Nachrichten, sendet nichts und sieht nicht, wer angenommen hat. Es synchronisiert sich also nicht mit LinkedIn – es merkt sich, was du mit einer Taste bestätigst.',
+        text: 'LinkedIn hat keine offene Schnittstelle für Nachrichten und verbietet Bots. Deshalb berührt das CRM LinkedIn nie: Es sendet nichts, klickt nichts und liest keine LinkedIn-Seiten im Hintergrund – es synchronisiert sich nicht mit LinkedIn. Zwei Brücken nehmen dir trotzdem das Abtippen ab: die LinkedIn-Mails in deinem Gmail und die Chrome-Erweiterung.',
       },
-      { art: 'zwischentitel', text: 'Das macht das CRM automatisch' },
+      { art: 'zwischentitel', text: 'Automatisch: LinkedIn-Mails aus deinem Gmail' },
+      {
+        art: 'absatz',
+        text: 'LinkedIn schickt dir für angenommene Einladungen und neue Nachrichten eine Benachrichtigungs-Mail. Ein kleines Google-Script in **deinem eigenen** Gmail schickt alle 5 Minuten **nur diese LinkedIn-Mails** ans CRM. Daraus trägt das CRM von selbst ein:',
+      },
       {
         art: 'liste',
         punkte: [
-          'Füllt jeden Text aus dem passenden Leitfaden mit Anrede, Name und Unternehmen.',
-          'Startet nach einer bestätigten Annahme die Sequenz und legt den Opener für heute an.',
-          'Plant jedes Follow-up: Nach jedem bestätigten Schritt rechnet es den nächsten Termin aus; Wochenenden und Hamburger Feiertage werden übersprungen.',
-          'Stoppt die Sequenz sofort, wenn du eine Antwort, einen Termin oder „Beenden“ einträgst.',
-          'Zählt alles mit – Anfragen, Annahmen, eröffnete Gespräche, Antworten, Pitches. Daraus entstehen die KPIs, ohne dass du etwas tippst.',
-          'Warnt bei 90 % deines Wochenbudgets für Vernetzungsanfragen.',
+          '**Einladung angenommen** → Phase „Vernetzt“, die LinkedIn-Sequenz startet, der Opener steht in Heute – wie {E} in „Annahme prüfen“.',
+          '**Neue Nachricht** → „Antwort erhalten“ mit dem Nachrichtentext, laufende Sequenzen stoppen, der Lead steht in Heute unter „Antworten“. Die Reaktion (Interesse, Rückfrage, Nein …) wählst du selbst.',
+          'Lässt sich eine Mail keinem Lead sicher zuordnen, landet sie im **Eingang** unter [Einstellungen → Verbindungen](/einstellungen/verbindungen?tab=eingang). Lead suchen, „Zuordnen“ – dann ist sie verbucht. Dort stehen auch Einladungen, die dir ein Lead geschickt hat; annehmen tust du sie in LinkedIn.',
+          'Was du schon mit einer Taste erfasst hast, bucht das CRM nicht noch einmal.',
         ],
       },
-      { art: 'zwischentitel', text: 'Das machst du – mit je einer Taste' },
+      {
+        art: 'hinweis',
+        text: '**Grenze:** LinkedIn schickt eine Nachrichten-Mail meist nur, wenn du die Nachricht nicht schon in LinkedIn gelesen hast. Antworten, die du live liest, trägst du weiter selbst ein – mit {A} oder in der Seitenleiste der Erweiterung.',
+      },
+      {
+        art: 'absatz',
+        text: 'Einrichten: einmal je Person, etwa zehn Minuten – [Verbindungen einrichten](/hilfe/verbindungen). Das Script liest nur Mails von linkedin.com und sendet oder löscht nichts.',
+      },
+      { art: 'zwischentitel', text: 'Mit einem Klick: die Chrome-Erweiterung' },
+      {
+        art: 'absatz',
+        text: 'Die Erweiterung öffnet neben LinkedIn eine Seitenleiste ({⌥C}). Auf einem Profil oder in einer Unterhaltung zeigt sie, wer die Person im CRM ist – Phase, Zuständig, laufende Sequenz – und die nächste Nachricht mit gefüllten Platzhaltern.',
+      },
+      {
+        art: 'liste',
+        punkte: [
+          '**Kopieren** ({C}), in LinkedIn einfügen und senden, dann **Gesendet** ({E}) – der nächste Schritt ist geplant, 6 Sekunden lang mit {Z} rückgängig.',
+          '**Angenommen** und **Anfrage gesendet** bestätigst du direkt vom Profil aus.',
+          '**Antwort erhalten** ({A}): In einer Unterhaltung steht die letzte Nachricht der anderen Person schon drin, du wählst nur die Reaktion. Kam die Antwort bereits über die Mail, heißt der Knopf „Reaktion nachtragen“ – es entsteht keine zweite Antwort. Genauso hier im CRM: {A} trägt dann nur die Reaktion an dieser Antwort nach.',
+          'Nicht im CRM: **Als Lead anlegen** mit vorbefülltem Formular, auf Wunsch mit „Vernetzungsanfrage gerade gesendet“ – oder ein ähnlicher Name wird mit dem Profil verknüpft.',
+        ],
+      },
+      {
+        art: 'absatz',
+        text: 'Die Erweiterung klickt, tippt und sendet nie in LinkedIn. Sie liest nur die Seite, die du gerade ansiehst, und nur, solange die Seitenleiste offen ist.',
+      },
+      { art: 'zwischentitel', text: 'Bleibt bei dir' },
       {
         art: 'tasten',
         zeilen: [
           { tasten: ['O'], text: 'Profil in LinkedIn öffnen (neuer Tab)' },
-          { tasten: ['C'], text: 'Text kopieren, dann in LinkedIn einfügen und senden' },
-          { tasten: ['E'], text: 'Bestätigen: Anfrage gesendet · angenommen · Nachricht gesendet' },
-          { tasten: ['A'], text: 'Antwort erhalten – Reaktion wählen, Zitat optional' },
+          { tasten: ['C'], text: 'Text kopieren, in LinkedIn einfügen und senden – senden tust immer du' },
+          { tasten: ['E'], text: 'Bestätigen: Anfrage gesendet · Nachricht gesendet · Annahme ohne Mail' },
+          { tasten: ['A'], text: 'Antwort ohne Mail erfassen und die Reaktion wählen' },
           { tasten: ['X'], text: 'Abgelehnt bzw. passt nicht' },
         ],
       },
-      { art: 'zwischentitel', text: 'Nichts doppelt pflegen' },
       {
         art: 'absatz',
-        text: 'Die Wahrheit über einen Lead steht im CRM: Phase, Verlauf, nächster Schritt. In LinkedIn liest und schreibst du nur die Nachrichten. Antworten musst du nicht abtippen – die Reaktion per Taste reicht.',
+        text: 'Dazu: alte Anfragen zurückziehen (freitags in Heute) und Einladungen von Leads in LinkedIn annehmen.',
       },
+      { art: 'zwischentitel', text: 'Das rechnet das CRM ohnehin' },
       {
-        art: 'hinweis',
-        geplant: true,
-        text: 'Neue LinkedIn-Nachrichten automatisch erkennen – über die Benachrichtigungs-Mails, die LinkedIn an dein Gmail schickt. Das CRM würde dann anzeigen, wer geantwortet hat; eintragen bleibt ein Tastendruck.',
+        art: 'liste',
+        punkte: [
+          'Füllt jeden Text aus dem passenden Leitfaden mit Anrede, Name und Unternehmen.',
+          'Plant jedes Follow-up: Nach jedem bestätigten Schritt rechnet es den nächsten Termin aus; Wochenenden und Hamburger Feiertage werden übersprungen.',
+          'Stoppt die Sequenz sofort bei einer Antwort, einem Termin oder „Beenden“.',
+          'Zählt alles mit – Anfragen, Annahmen, eröffnete Gespräche, Antworten, Pitches. Daraus entstehen die KPIs, ohne dass du etwas tippst.',
+          'Warnt bei 90 % deines Wochenbudgets für Vernetzungsanfragen.',
+        ],
       },
       {
         art: 'hinweis',
         geplant: true,
         text: 'Annahmen aus dem LinkedIn-Datenexport (Connections.csv) importieren, statt sie abzuhaken.',
+      },
+    ],
+  },
+  {
+    key: 'verbindungen',
+    titel: 'Verbindungen einrichten',
+    // „Gmail“ bewusst nicht im Kurztext/Stichworten: ↵ bei „gmail“ öffnet weiter das Thema E-Mail, das hierher verlinkt
+    kurz: 'Die LinkedIn-Mails aus deinem Postfach und die Chrome-Erweiterung anschließen – einmal je Person, etwa zehn Minuten.',
+    stichworte:
+      'verbinden anschließen apps script google schlüssel token eingang zuordnen erweiterung chrome seitenleiste installieren einrichten benachrichtigung',
+    bloecke: [
+      {
+        art: 'absatz',
+        text: 'Alles Nötige steht unter [Einstellungen → Verbindungen](/einstellungen/verbindungen): das Script zum Kopieren, dein Eingangs-Schlüssel, der Stand („zuletzt gemeldet“) und der Eingang. Jede Person richtet ihr eigenes Gmail mit ihrem eigenen Schlüssel ein; verbucht wird in ihrem Namen.',
+      },
+      { art: 'zwischentitel', text: 'LinkedIn-Mails aus Gmail' },
+      {
+        art: 'schritte',
+        punkte: [
+          'Unter Verbindungen dein eigenes LinkedIn-Profil eintragen (linkedin.com/in/…) – so hält das CRM dich nie für einen Lead.',
+          '„Script kopieren“, auf script.google.com mit dem Google-Konto, in dem deine LinkedIn-Mails ankommen, ein neues Projekt anlegen, den Code einfügen und speichern.',
+          '„Schlüssel erzeugen“ – er ist nur einmal sichtbar und liegt gleich in der Zwischenablage. Im Script unter Projekteinstellungen → Skripteigenschaften als „CRM_SCHLUESSEL“ eintragen, nicht in den Code.',
+          'Im Editor die Funktion „einrichten“ wählen, „Ausführen“ und Google die Berechtigungen erlauben. Ab jetzt läuft das Script alle 5 Minuten; beim ersten Mal holt es die LinkedIn-Mails der letzten 3 Tage.',
+          'Prüfen: In Gmail erscheint das Label „CRM/erfasst“, unter Verbindungen steht, wann dein Script zuletzt gemeldet hat.',
+        ],
+      },
+      {
+        art: 'absatz',
+        text: 'In LinkedIn müssen die E-Mail-Benachrichtigungen für Nachrichten und angenommene Einladungen eingeschaltet sein (Einstellungen → Mitteilungen).',
+      },
+      { art: 'zwischentitel', text: 'Eingang' },
+      {
+        art: 'absatz',
+        text: 'Was das CRM nicht sicher zuordnen kann – etwa eine Mail ohne Profil-Link bei einem Namen, den es zweimal gibt –, landet im Tab [Eingang](/einstellungen/verbindungen?tab=eingang). Lead suchen und „Zuordnen“ oder „Ignorieren“. Lieber einmal zuordnen, als einer falschen Person Opener-Aufgaben anzulegen.',
+      },
+      { art: 'zwischentitel', text: 'Chrome-Erweiterung' },
+      {
+        art: 'schritte',
+        punkte: [
+          'Den Ordner der Erweiterung bekommen – wie, steht unter Verbindungen (Mike bekommt eine ZIP und entpackt sie an einen festen Ort).',
+          'In Chrome chrome://extensions öffnen und oben rechts den „Entwicklermodus“ einschalten.',
+          '„Entpackte Erweiterung laden“, den Ordner wählen und die Erweiterung über das Puzzle-Symbol anheften.',
+          'Auf das S&-Symbol klicken, Vincent oder Mike wählen – derselbe Passcode wie im CRM.',
+          '{⌥C} öffnet die Seitenleiste neben LinkedIn.',
+        ],
+      },
+      { art: 'zwischentitel', text: 'Anhalten und Datenschutz' },
+      {
+        art: 'liste',
+        punkte: [
+          'Schlüssel unter Verbindungen widerrufen – das Script kann danach nichts mehr übertragen. Oder im Script die Funktion „stoppen“ ausführen.',
+          'Übertragen werden nur Mails von linkedin.com. Gespeichert werden höchstens 2000 Zeichen Nachrichtentext je Annahme oder Nachricht, nie die ganze Mail; Werbung und Job-Mails löscht das CRM nach 30 Tagen.',
+          'Der Schlüssel liegt nur in deinen Skripteigenschaften, das CRM kennt nur einen nicht umkehrbaren Abdruck.',
+        ],
       },
     ],
   },
@@ -377,7 +468,7 @@ export const THEMEN: readonly Thema[] = [
       { art: 'zwischentitel', text: 'Gmail verbinden?' },
       {
         art: 'absatz',
-        text: 'Das CRM verschickt nicht selbst und liest dein Postfach nicht. Es öffnet Gmail mit fertigem Entwurf (am iPhone die Mail-App) – du behältst die Kontrolle, und alles liegt in deinem normalen Gesendet-Ordner. Ist ein Text zu lang für den Gmail-Link, kopierst du ihn.',
+        text: 'Für Mails an Leads nicht als Postfach: Das CRM verschickt nicht selbst und liest deine Mails nicht. Es öffnet Gmail mit fertigem Entwurf (am iPhone die Mail-App) – du behältst die Kontrolle, und alles liegt in deinem normalen Gesendet-Ordner. Ist ein Text zu lang für den Gmail-Link, kopierst du ihn. Einzige Ausnahme sind die LinkedIn-Benachrichtigungen: Die schickt ein Script in deinem Gmail ans CRM – [Verbindungen einrichten](/hilfe/verbindungen).',
       },
       {
         art: 'hinweis',
@@ -555,8 +646,8 @@ export const THEMEN: readonly Thema[] = [
       {
         art: 'liste',
         punkte: [
-          'Nichts in LinkedIn automatisch tun: keine Nachrichten senden oder lesen, keine Anfragen verschicken, keine Profile auslesen.',
-          'E-Mails selbst versenden oder dein Postfach lesen – Gmail öffnet sich mit fertigem Entwurf, senden tust du.',
+          'Nichts in LinkedIn automatisch tun: keine Nachrichten senden, keine Anfragen verschicken, keine Profile im Hintergrund auslesen. Erkannt wird nur, was LinkedIn dir ohnehin per Mail schickt, und die Erweiterung liest nur die Seite, die du gerade offen hast.',
+          'E-Mails selbst versenden oder dein Postfach lesen – Gmail öffnet sich mit fertigem Entwurf, senden tust du. Das Script unter Verbindungen liest nur Mails von linkedin.com.',
           'Anrufe selbst wählen oder aufzeichnen – „Anrufen“ öffnet die Telefon-App.',
           'Leads per KI priorisieren. Die Reihenfolge ist erklärbar: überfällig, heute, Funnel-Tiefe, Alter.',
         ],
@@ -565,7 +656,6 @@ export const THEMEN: readonly Thema[] = [
       {
         art: 'liste',
         punkte: [
-          '{{geplant}} LinkedIn-Antworten über die Gmail-Benachrichtigungen erkennen.',
           '{{geplant}} Calendly-Termine automatisch übernehmen (No-Show, Absage).',
           '{{geplant}} LinkedIn-Datenexport importieren und Annahmen abgleichen.',
           '{{geplant}} Dubletten zusammenführen.',
@@ -577,6 +667,15 @@ export const THEMEN: readonly Thema[] = [
           '{{geplant}} Sehen, woran die andere Person gerade arbeitet (Präsenz).',
           '{{geplant}} Erinnerung 10 Minuten vor einem Rückruf.',
           '{{geplant}} Wischgesten am iPhone.',
+        ],
+      },
+      { art: 'zwischentitel', text: 'Grenzen der LinkedIn-Brücke' },
+      {
+        art: 'liste',
+        punkte: [
+          'Nachrichten, die du schon in LinkedIn gelesen hast, meldet LinkedIn oft nicht per Mail – die trägst du mit {A} oder in der Seitenleiste ein.',
+          'Die Reaktion auf eine Antwort (Interesse, Rückfrage, Nein …) erkennt das CRM nicht, die wählst du.',
+          'Die Erweiterung gibt es nur für Chrome am Computer, nicht am iPhone.',
         ],
       },
       { art: 'zwischentitel', text: 'Am iPhone' },
@@ -593,14 +692,14 @@ export const HAEUFIGE_FRAGEN: readonly { frage: string; antwort: string; thema: 
   {
     frage: 'Kommen LinkedIn-Nachrichten automatisch ins CRM?',
     antwort:
-      'Nein – LinkedIn hat dafür keine Schnittstelle. Du bestätigst mit einer Taste, was in LinkedIn passiert ist; Planen und Zählen übernimmt das CRM.',
+      'Zum Teil: Angenommene Einladungen und neue Nachrichten erkennt das CRM aus den LinkedIn-Mails in deinem Gmail, sobald du das unter Verbindungen eingerichtet hast. Senden, die Reaktion wählen und live gelesene Antworten bleiben bei dir – die Chrome-Erweiterung macht das mit einem Klick.',
     thema: 'linkedin',
   },
   {
     frage: 'Kann ich mein Gmail verbinden?',
     antwort:
-      'Nicht als Postfach. Das CRM öffnet Gmail mit fertigem Entwurf, du sendest dort und bestätigst „Gesendet?“.',
-    thema: 'email',
+      'Für LinkedIn-Mails ja – ein Script in deinem Gmail schickt nur Mails von linkedin.com ans CRM. Als Postfach für Mails an Leads nicht: Das CRM öffnet Gmail mit fertigem Entwurf, du sendest dort und bestätigst „Gesendet?“.',
+    thema: 'verbindungen',
   },
   {
     frage: 'Sehe ich, was Mike macht – und er, was ich mache?',

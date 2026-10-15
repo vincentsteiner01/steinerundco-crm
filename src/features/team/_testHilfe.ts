@@ -100,7 +100,8 @@ const q = (member_id: string, section: string, n: number): Zeile[] =>
 export function tabellen(ueberschreiben: Partial<Tabellen> = {}): Tabellen {
   return {
     members: [
-      { id: MEMBER_V, email: 'vincent@steinerundco.de', display_name: 'Vincent', short_name: 'Vincent' },
+      // echte Daten seit Runde 2: Kürzel „VS“ – angezeigt wird der Vorname
+      { id: MEMBER_V, email: 'vincent@steinerundco.de', display_name: 'Vincent', short_name: 'VS' },
       { id: MEMBER_M, email: 'mike@steinerundco.de', display_name: 'Mike', short_name: 'Mike' },
     ],
     settings: Object.entries(SETTINGS).map(([key, value]) => ({ key, value })),

@@ -178,8 +178,30 @@ describe('Themen', () => {
     for (const t of THEMEN) if (t.tour) expect(TOUR_KEYS).toContain(t.tour)
     for (const f of HAEUFIGE_FRAGEN) expect(themaVon(f.thema)).toBeDefined()
     expect(THEMEN.map((t) => t.key)).toEqual(
-      expect.arrayContaining(['erste-schritte', 'dein-tag', 'linkedin', 'tastenkuerzel', 'feedback', 'noch-nicht']),
+      expect.arrayContaining([
+        'erste-schritte',
+        'dein-tag',
+        'linkedin',
+        'verbindungen',
+        'tastenkuerzel',
+        'feedback',
+        'noch-nicht',
+      ]),
     )
+    // Runde 3: „Verbindungen einrichten“ steht direkt hinter dem LinkedIn-Thema
+    const keys = THEMEN.map((t) => t.key)
+    expect(keys.indexOf('verbindungen')).toBe(keys.indexOf('linkedin') + 1)
+    // die Gmail-Erkennung ist gebaut – nicht mehr als „geplant“ geführt
+    expect(themaText(themaVon('noch-nicht')!)).not.toMatch(/geplant linkedin-antworten über die gmail/)
+    expect(themaText(themaVon('noch-nicht')!)).toContain('grenzen der linkedin-brücke')
+    // Runde 3: {A} im CRM trägt nur die Reaktion nach (antwortErfassen) – keine „zweite Antwort“ mehr als Grenze
+    expect(themaText(themaVon('noch-nicht')!)).not.toMatch(/zweite antwort/)
+    expect(themaText(themaVon('linkedin')!)).toMatch(/genauso hier im crm: .*nur die reaktion an dieser antwort nach/)
+    expect(HAEUFIGE_FRAGEN.find((f) => f.frage.startsWith('Kommen LinkedIn'))!.antwort).toMatch(/^Zum Teil/)
+    // die LinkedIn-Mini-Tour behauptet nicht mehr, das CRM sehe keine Annahmen/Antworten
+    const linkedinTour = TOUREN.linkedin.schritte.map((x) => x.text).join(' ')
+    expect(linkedinTour).not.toMatch(/sieht nicht, wer|meldet dem CRM keine Antworten/)
+    expect(linkedinTour).toMatch(/LinkedIn-Mails/)
   })
 
   it('Suche über den ganzen Text: Gmail → E-Mail, synchronisieren → LinkedIn, mehrere Wörter = alle müssen passen', () => {
@@ -194,6 +216,10 @@ describe('Themen', () => {
     expect(sucheThemen('synchronisiert')[0]!.key).toBe('linkedin')
     expect(sucheThemen('tastenkürzel')[0]!.key).toBe('tastenkuerzel')
     expect(sucheThemen('was macht mike')[0]!.key).toBe('kpis-team')
+    // Runde 3: die LinkedIn-Brücke ist auffindbar
+    expect(sucheThemen('script')[0]!.key).toBe('verbindungen')
+    expect(sucheThemen('seitenleiste').map((t) => t.key)).toEqual(expect.arrayContaining(['linkedin', 'verbindungen']))
+    expect(sucheThemen('gmail verbinden').map((t) => t.key)).toEqual(['email', 'verbindungen'])
   })
 
   it('Dein Tag: die angemeldete Person steht oben', () => {

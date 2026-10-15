@@ -17,5 +17,6 @@ export const SYSTEM_ANSICHTEN: readonly SystemAnsicht[] = [
   { key: 'frei', name: 'Freigegeben' },
   { key: 'ohne_unternehmen', name: 'Unvollständig' },
   { key: 'anrufliste', name: 'Anrufliste' },
+  { key: 'ohne_nummer', name: 'Ohne Telefonnummer' },
   { key: 'papierkorb', name: 'Papierkorb' },
 ]

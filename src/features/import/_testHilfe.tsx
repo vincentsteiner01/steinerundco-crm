@@ -13,7 +13,8 @@ import { supabaseMock, type Antwort } from '@/test/supabaseMock'
 export { MEMBER_M, MEMBER_V }
 
 export const MEMBERS = [
-  { id: MEMBER_V, display_name: 'Vincent Steiner', short_name: 'Vincent', preferences: {} },
+  // wie die echten Daten seit Runde 2: Vincent hat im Profil das Kürzel „VS“ gesetzt
+  { id: MEMBER_V, display_name: 'Vincent Steiner', short_name: 'VS', preferences: {} },
   { id: MEMBER_M, display_name: 'Mike Muster', short_name: 'Mike', preferences: {} },
 ]
 

@@ -1,4 +1,4 @@
-// EinstellungenSeite: Bereich aus der Route, unbekannter Bereich → Profil, Unternavigation mit Kbd, Tasten 1–6, Befehle/Tasten-Verträge.
+// EinstellungenSeite: Bereich aus der Route, unbekannter Bereich → Profil, Unternavigation mit Kbd, Tasten 1–7, Befehle/Tasten-Verträge.
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -14,6 +14,7 @@ import { useUiStore } from '@/app/uiStore'
 import { VERBOTEN, normalisiere } from '@/lib/keyboard'
 import { useAuth } from '@/features/auth/authStore'
 import { Component as EinstellungenSeite } from './EinstellungenSeite'
+import { EINGANG_PFAD } from '@/features/eingang/public'
 import { BEFEHLE } from './befehle'
 import { BEREICHE } from './bereiche'
 import { TASTEN } from './tasten'
@@ -29,12 +30,13 @@ describe('EinstellungenSeite', () => {
     useUiStore.setState({ hotkeyScope: 'global', scopeStack: [] })
   })
 
-  it('rendert Seitenkopf, Unternavigation (6 Einträge, 34 px, Kbd) und den Bereich aus der Route', async () => {
+  it('rendert Seitenkopf, Unternavigation (7 Einträge, 34 px, Kbd) und den Bereich aus der Route', async () => {
     rendern(<EinstellungenSeite />, '/einstellungen/ziele')
     expect(screen.getByRole('heading', { level: 1, name: 'Einstellungen' })).toBeInTheDocument()
     const nav = screen.getByRole('navigation', { name: 'Einstellungen' })
     const links = nav.querySelectorAll('a')
-    expect(links).toHaveLength(6)
+    expect(links).toHaveLength(7)
+    expect(links[6]).toHaveAttribute('href', '/einstellungen/verbindungen')
     expect(links[2]).toHaveAttribute('aria-current', 'page')
     expect(links[2]?.querySelector('kbd')).toHaveTextContent('3')
     expect(await screen.findByLabelText('Warnschwelle Budget')).toBeInTheDocument()
@@ -47,7 +49,7 @@ describe('EinstellungenSeite', () => {
     expect(await screen.findByLabelText('Anzeigename')).toBeInTheDocument()
   })
 
-  it('Tasten 1–6 wechseln den Bereich, nicht in Eingabefeldern', async () => {
+  it('Tasten 1–7 wechseln den Bereich, nicht in Eingabefeldern', async () => {
     const { router } = rendern(<EinstellungenSeite />, '/einstellungen/profil')
     await screen.findByLabelText('Anzeigename')
     fireEvent.keyDown(document.body, { key: '5' })
@@ -56,12 +58,15 @@ describe('EinstellungenSeite', () => {
     suche.focus()
     fireEvent.keyDown(suche, { key: '6' })
     expect(router.state.location.pathname).toBe('/einstellungen/sperrliste')
+    suche.blur()
+    fireEvent.keyDown(document.body, { key: '7' })
+    await waitFor(() => expect(router.state.location.pathname).toBe('/einstellungen/verbindungen'))
   })
 
   it('Mobil-Tabs tragen alle Bereiche und schalten um', async () => {
     const { router } = rendern(<EinstellungenSeite />, '/einstellungen/profil')
     const tabs = screen.getByRole('tablist', { name: 'Einstellungen' })
-    expect(tabs.querySelectorAll('[role=tab]')).toHaveLength(6)
+    expect(tabs.querySelectorAll('[role=tab]')).toHaveLength(7)
     fireEvent.click(screen.getByRole('tab', { name: 'Export & Backup' }))
     await waitFor(() => expect(router.state.location.pathname).toBe('/einstellungen/export'))
   })
@@ -76,6 +81,9 @@ describe('EinstellungenSeite', () => {
     const navigate = vi.fn()
     BEFEHLE[0]!.ausfuehren({ navigate, leadId: null, me: {} as never })
     expect(navigate).toHaveBeenCalledWith('/einstellungen/export?aktion=backup')
+    // Runde 3: Palette „Eingang öffnen“ führt auf denselben Pfad wie der Eingang-Badge (Heute, Sidebar)
+    BEFEHLE.find((b) => b.id === 'einstellungen:eingang')!.ausfuehren({ navigate, leadId: null, me: {} as never })
+    expect(navigate).toHaveBeenLastCalledWith(EINGANG_PFAD)
     for (const g of TASTEN)
       for (const e of g.eintraege)
         for (const t of e.tasten) expect(VERBOTEN).not.toContain(normalisiere(t.toLowerCase()))

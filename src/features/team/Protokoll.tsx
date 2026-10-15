@@ -1,5 +1,5 @@
 // Team-Protokoll: Aktivitäten beider Personen im Zeitraum, neueste oben, nach Tagen gruppiert (Heute · Gestern · Mo 12.10.).
-// Zeile: Avatar 22 · Uhrzeit Mono · Kanal-Glyph · Satz aus dem gemeinsamen Timeline-Wortlaut (leads/timelineText → TIMELINE_TEXT)
+// Zeile: Avatar 22 · Uhrzeit Mono · Kanal-Glyph · Satz aus dem gemeinsamen Timeline-Wortlaut (TIMELINE_TEXT, Phasen wie die Pipeline: protokollText.ts)
 // · Lead-Name (öffnet den Peek über `?lead=`) und Unternehmen. Filter Person (Beide · Vincent · Mike) und Kanal in der URL
 // (`?person=`, `?kanal=`). Keyset-Seiten à 50 („Ältere laden“); live über die Realtime-Invalidierung von ['activities', 'zeitraum'].
 import { useMemo } from 'react'
@@ -15,13 +15,13 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { useMembers } from '@/data/members'
 import { useSettings } from '@/data/settings'
 import { useTemplates } from '@/data/templates'
-import { timelineText } from '@/features/leads/timelineText'
 import { fmtDatumKurz, fmtZeit } from '@/lib/format'
 import type { Tag } from '@/lib/zeit'
 import { KANAL_LABEL } from '@/texte/de'
 import { useTeamProtokoll, type ProtokollZeile } from './daten/team'
 import { nachTagen } from './kennzahlen'
 import { parseKanal, parsePerson, type KanalWahl, type TeamPerson } from './personen'
+import { protokollText } from './protokollText'
 import type { TeamZeitraum } from './zeitraum'
 
 const KANAELE: { key: KanalWahl; label: string }[] = [
@@ -155,7 +155,7 @@ export function Protokoll({
                     key={r.id}
                     r={r}
                     person={personVon(r.member_id)}
-                    text={timelineText(r, ctx)}
+                    satz={protokollText(r, ctx)}
                     onOeffnen={oeffne}
                   />
                 ))}
@@ -180,12 +180,12 @@ export function Protokoll({
 function ProtokollEintrag({
   r,
   person,
-  text,
+  satz,
   onOeffnen,
 }: {
   r: ProtokollZeile
   person: TeamPerson | undefined
-  text: string
+  satz: { text: string; titel: string }
   onOeffnen: (leadId: string) => void
 }) {
   const name = r.lead?.full_name?.trim() || 'Lead ohne Namen'
@@ -209,8 +209,8 @@ function ProtokollEintrag({
         {r.channel && r.channel !== 'sonstiges' ? <Glyph kanal={r.channel} /> : null}
       </span>
       <div className="grid min-w-0 flex-1 items-baseline gap-x-5 gap-y-0.5 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-        <span className="text-small text-ink truncate" title={text} data-satz>
-          {text}
+        <span className="text-small text-ink truncate" title={satz.titel} data-satz>
+          {satz.text}
         </span>
         <span className="text-small flex min-w-0 items-baseline gap-1.5">
           <button

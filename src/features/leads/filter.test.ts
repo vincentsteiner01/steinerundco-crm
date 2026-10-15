@@ -1,4 +1,4 @@
-// filter.test.ts (BAUPLAN § 3.3): URL ↔ Filter ↔ PostgREST, alle 15 System-Ansichten; Keys identisch mit src/app/ansichten.ts.
+// filter.test.ts (BAUPLAN § 3.3): URL ↔ Filter ↔ PostgREST, alle 16 System-Ansichten; Keys identisch mit src/app/ansichten.ts.
 import { describe, expect, it } from 'vitest'
 import { SYSTEM_ANSICHTEN as APP_ANSICHTEN } from '@/app/ansichten'
 import { MEMBER_V, vollerLead } from '@/test/fixtures/leads'
@@ -71,9 +71,31 @@ describe('filter ↔ URL', () => {
 })
 
 describe('System-Ansichten', () => {
-  it('sind genau die 15 Keys aus src/app/ansichten.ts (gleiche Reihenfolge, gleiche Namen)', () => {
+  it('sind genau die 16 Keys aus src/app/ansichten.ts (gleiche Reihenfolge, gleiche Namen)', () => {
     expect(SYSTEM_ANSICHTEN.map((a) => [a.key, a.name])).toEqual(APP_ANSICHTEN.map((a) => [a.key, a.name]))
-    expect(SYSTEM_ANSICHTEN).toHaveLength(15)
+    expect(SYSTEM_ANSICHTEN).toHaveLength(16)
+  })
+
+  it('Ohne Telefonnummer (Runde 3, /telefon „In Leads öffnen“): dieselbe Menge wie Telefon „Keine Nummer“', () => {
+    const a = ansichtNachKey('ohne_nummer')
+    expect(a.key).toBe('ohne_nummer')
+    expect(a.spalten).toContain('telefon')
+    const ctx: AnsichtKontext = {
+      heute: '2026-10-15',
+      me: MEMBER_V,
+      firmaGesperrt: (l) => l.id === vollerLead(6).id,
+      sperrliste: () => false,
+      zurueckziehenTage: 21,
+    }
+    const passt = (l: ReturnType<typeof vollerLead>) => a.client?.(l, ctx)
+    expect(passt(vollerLead(1, { phone_e164: null, stage: 'gespraech_eroeffnet' }))).toBe(true)
+    expect(passt(vollerLead(2, { phone_e164: '+4989123456', stage: 'gespraech_eroeffnet' }))).toBe(false)
+    expect(passt(vollerLead(3, { phone_e164: null, stage: 'beendet' }))).toBe(false)
+    expect(passt(vollerLead(4, { phone_e164: null, stage: 'vernetzung_gesendet' }))).toBe(false) // noch kein Anruf-Kandidat
+    expect(
+      passt(vollerLead(5, { phone_e164: null, stage: 'vernetzt', do_not_contact: true, do_not_contact_channels: [] })),
+    ).toBe(false) // Widerspruch → auf /telefon „gesperrt“
+    expect(passt(vollerLead(6, { phone_e164: null, stage: 'vernetzt' }))).toBe(false) // Firmensperre
   })
 
   it('jede Ansicht liefert einen PostgREST-Aufruf mit deleted_at-Bedingung und Sortierung', () => {

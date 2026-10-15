@@ -6,7 +6,8 @@ vi.mock('@/data/supabase', async () => (await import('@/test/supabaseMock')).sup
 import type { QueueItem } from '@/types/domain'
 import { zaehleQueue } from './queue'
 
-const item = (p: Partial<QueueItem>): QueueItem => ({ section: 'ueberfaellig', item_kind: 'sequenz_schritt', ...p }) as QueueItem
+const item = (p: Partial<QueueItem>): QueueItem =>
+  ({ section: 'ueberfaellig', item_kind: 'sequenz_schritt', ...p }) as QueueItem
 
 describe('zaehleQueue', () => {
   it('ueberfaelligSektion zählt wie die Heute-Sektion: ohne Rückrufe und ohne Opener', () => {

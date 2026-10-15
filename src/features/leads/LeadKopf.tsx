@@ -27,6 +27,7 @@ export function KopfAktionen({
   sperrliste,
   settings,
   vollansicht,
+  kanaeleNurDesktop,
   className,
 }: {
   lead: LeadMitBezug
@@ -34,6 +35,11 @@ export function KopfAktionen({
   settings?: Settings | null
   /** Button „Vollansicht ⌘↵“ zeigen (Peek) */
   vollansicht?: boolean
+  /**
+   * LinkedIn · Anrufen · E-Mail erst ab 1024 px (Peek): darunter hat das Sheet die Aktionszeile mit Text (Anrufen · LinkedIn ·
+   * E-Mail · Notiz) – die Icons standen doppelt und machten die Kopfzeile bei 390 px zu breit (Runde 3).
+   */
+  kanaeleNurDesktop?: boolean
   className?: string
 }) {
   const navigate = useNavigate()
@@ -47,44 +53,46 @@ export function KopfAktionen({
   const mailGrund = mail.grund ? emailGateText(mail.grund, lead.first_name) : undefined
   return (
     <div className={cn('flex items-center gap-1', className)} role="toolbar" aria-label="Lead-Aktionen">
-      {href ? (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="LinkedIn öffnen (O)"
-          title="LinkedIn öffnen · O"
-          className="text-ink-2 hover:bg-surface-hover hover:text-ink grid h-8 w-8 place-items-center rounded-sm"
-        >
-          <span className="glyph">in</span>
-        </a>
-      ) : (
+      <span className={cn('contents', kanaeleNurDesktop && 'max-lg:hidden')} data-kanal-aktionen>
+        {href ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="LinkedIn öffnen (O)"
+            title="LinkedIn öffnen · O"
+            className="text-ink-2 hover:bg-surface-hover hover:text-ink grid h-8 w-8 place-items-center rounded-sm"
+          >
+            <span className="glyph">in</span>
+          </a>
+        ) : (
+          <Button
+            variante="icon"
+            icon={ExternalLink}
+            aria-label="LinkedIn öffnen (O)"
+            disabled
+            disabledGrund="Keine Profil-URL"
+          />
+        )}
         <Button
           variante="icon"
-          icon={ExternalLink}
-          aria-label="LinkedIn öffnen (O)"
-          disabled
-          disabledGrund="Keine Profil-URL"
+          icon={Phone}
+          aria-label="Anrufen (⌘⇧K)"
+          title="Anrufen · ⌘⇧K"
+          disabled={!tel.erlaubt}
+          disabledGrund={tel.grund ? GATE_GRUND_LABEL[tel.grund] : undefined}
+          onClick={() => navigate(PFADE.anruf(lead.id))}
         />
-      )}
-      <Button
-        variante="icon"
-        icon={Phone}
-        aria-label="Anrufen (⌘⇧K)"
-        title="Anrufen · ⌘⇧K"
-        disabled={!tel.erlaubt}
-        disabledGrund={tel.grund ? GATE_GRUND_LABEL[tel.grund] : undefined}
-        onClick={() => navigate(PFADE.anruf(lead.id))}
-      />
-      <Button
-        variante="icon"
-        icon={Mail}
-        aria-label="E-Mail (⌥M)"
-        title="E-Mail verfassen · ⌥M"
-        disabled={!mail.erlaubt}
-        disabledGrund={mailGrund}
-        onClick={() => navigate(`${PFADE.emailVerfassen}?lead=${encodeURIComponent(lead.id)}`)}
-      />
+        <Button
+          variante="icon"
+          icon={Mail}
+          aria-label="E-Mail (⌥M)"
+          title="E-Mail verfassen · ⌥M"
+          disabled={!mail.erlaubt}
+          disabledGrund={mailGrund}
+          onClick={() => navigate(`${PFADE.emailVerfassen}?lead=${encodeURIComponent(lead.id)}`)}
+        />
+      </span>
       {vollansicht ? (
         <Button
           variante="icon"
@@ -149,7 +157,7 @@ export function KopfChips({
         trigger={
           <button
             type="button"
-            aria-label={`Zuständig: ${owner ? (anzeigeName(owner)) : 'Frei'} – ändern`}
+            aria-label={`Zuständig: ${owner ? anzeigeName(owner) : 'Frei'} – ändern`}
             className="rounded-full"
           >
             <Avatar member={owner} zweiter={sales} />

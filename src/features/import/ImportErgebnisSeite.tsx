@@ -7,12 +7,13 @@ import { PFADE } from '@/app/pfade'
 import { useImportBatch, useMembers, useUndoImport } from '@/data'
 import { toast } from '@/components/toast'
 import { DataTable, spaltenHelper, type DataTableSpalte } from '@/components/tabelle'
-import { Button, Chip, Dialog, EmptyState, KopfStats, SeitenKopf, Skeleton } from '@/components/ui'
+import { Button, Chip, Dialog, EmptyState, SeitenKopf, Skeleton } from '@/components/ui'
 import { fmtDatum, fmtDatumZeit, fmtZahl } from '@/lib/format'
 import { phaseVon } from '@/lib/stufen'
 import { DIALOG, PHASE_LABEL } from '@/texte/de'
 import type { ImportErgebnis, LeadStage } from '@/types/domain'
 import { StatusChipImport, Zaehler } from './components/Assistent'
+import { Bilanz, Hinweise, importDateline } from './components/Ergebnis'
 import type { SheetDryRunZeile } from './presets/crmTabelle'
 import { batchPresetLabel } from './presets'
 import { anzeigeName } from '@/lib/mitglied'
@@ -123,29 +124,22 @@ export function Component() {
     <>
       <SeitenKopf
         titel={b.label ?? 'Import-Ergebnis'}
-        // Runde 2: Preset-Label statt internem Schlüssel („sheet_crm“), leere Teile („· –“) entfallen
-        dateline={[
-          fmtDatumZeit(b.created_at),
-          batchPresetLabel(b.preset, b.source),
-          b.file_name,
-          anzeigeName(members.data?.find((m) => m.id === b.member_id)) || null,
-        ]
-          .filter(Boolean)
-          .join(' · ')}
-        rechts={
-          <KopfStats
-            eintraege={[
-              { wert: fmtZahl(b.row_count ?? 0), label: 'Zeilen' },
-              // Lime bleibt „heute“ vorbehalten (DESIGN-SYSTEM) – „neu“ in ink-bright
-              { wert: fmtZahl(b.inserted ?? 0), label: 'neu' },
-              { wert: fmtZahl(b.updated ?? 0), label: 'aktualisiert' },
-              { wert: fmtZahl(b.skipped ?? 0), label: 'übersprungen' },
-              { wert: fmtZahl(b.blocked ?? 0), label: 'gesperrt', ton: b.blocked ? 'overdue' : undefined },
-            ]}
-          />
-        }
+        // Runde 3: „Import · CRM-Tabelle · Datum“ – Art und Vorlage zuerst, nie der interne Schlüssel, leere Teile entfallen
+        dateline={importDateline({
+          preset: batchPresetLabel(b.preset, b.source),
+          erstellt: fmtDatumZeit(b.created_at),
+          datei: b.file_name,
+          person: anzeigeName(members.data?.find((m) => m.id === b.member_id)) || null,
+        })}
       />
       <div className="grid gap-5">
+        <Bilanz
+          neu={b.inserted ?? 0}
+          zeilen={b.row_count ?? 0}
+          aktualisiert={b.updated ?? 0}
+          uebersprungen={b.skipped ?? 0}
+          gesperrt={b.blocked ?? 0}
+        />
         <div className="flex flex-wrap items-center gap-2">
           {b.undone_at ? (
             <Chip ton="ended">
@@ -195,23 +189,7 @@ export function Component() {
             />
           </>
         ) : hinweise.length > 0 ? (
-          <section aria-labelledby="import-hinweise">
-            <h2 id="import-hinweise" className="label mb-2 flex items-baseline gap-2">
-              Hinweise <span className="tnum font-mono tracking-normal normal-case">{fmtZahl(hinweise.length)}</span>
-            </h2>
-            <ul className="border-line-strong rounded-md border" aria-label="Hinweise">
-              {hinweise.slice(0, 200).map((h, i) => (
-                <li
-                  key={i}
-                  className="hairline text-small text-ink-2 flex min-h-8 items-center gap-3 px-3 py-1 last:border-b-0"
-                >
-                  <span className="text-ink-3 tnum w-10 font-mono">{h.id ?? '–'}</span>
-                  <span className="text-ink min-w-0 flex-1 truncate">{h.name ?? '–'}</span>
-                  <span>{h.hinweis ?? h.warnung ?? ''}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+          <Hinweise hinweise={hinweise} />
         ) : (
           <p className="text-ui text-ink-2">Keine Zeilen gespeichert.</p>
         )}

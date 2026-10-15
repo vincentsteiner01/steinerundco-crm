@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { HinweisKarte } from '@/components/ui/HinweisKarte'
 import { useLeads } from '@/data/leads'
 import { useSettings } from '@/data/settings'
-import { fmtProzent } from '@/lib/format'
+import { fmtAnteil } from '@/lib/format'
 import type { LinkedinBudget } from '@/lib/gates'
 import { berlinTag, tageDifferenz } from '@/lib/zeit'
 import { lies, schreibe, SPEICHER } from './speicher'
@@ -66,7 +66,7 @@ export function HinweisKarten({
   if (annahmeQuote7 !== null && annahmeQuote7 < (settings?.linkedin.acceptance_warn_below ?? 20) / 100)
     hinweise.push({
       key: 'annahme',
-      text: `Annahmequote ${fmtProzent(annahmeQuote7)} (7 T) – Volumen drosseln, ICP prüfen`,
+      text: `Annahmequote ${fmtAnteil(annahmeQuote7)} (7 T) – Volumen drosseln, ICP prüfen`,
       aktion: { label: 'Ziele', onClick: onZiele },
     })
   const backupAm = settings?.backup?.last_at ? berlinTag(settings.backup.last_at) : null

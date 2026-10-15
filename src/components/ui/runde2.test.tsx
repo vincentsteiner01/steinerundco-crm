@@ -1,6 +1,6 @@
 // Runde 2 (echte Daten, 216 Leads): Zeit-Chip, Seitenkopf und Hinweis-Karte mit langen Inhalten.
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ZeitChip } from './Chip'
 import { HinweisKarte } from './HinweisKarte'
 import { KopfStats, SeitenKopf } from './SeitenKopf'
@@ -94,6 +94,43 @@ describe('Tabs', () => {
     liste.scrollLeft = 280
     fireEvent.scroll(liste)
     expect(liste).not.toHaveAttribute('data-mehr-rechts')
+  })
+})
+
+describe('Tabs – aktiver Tab in Sicht (Runde 3)', () => {
+  it('scrollt die Leiste beim Mount und beim Wechsel so, dass der aktive Tab sichtbar ist', async () => {
+    const { Tabs } = await import('./Tabs')
+    const tabs = ['Profil', 'Passcode', 'Ziele', 'Sequenzen', 'Sperrliste', 'Export', 'Verbindungen'].map((l, i) => ({
+      key: String(i),
+      label: l,
+    }))
+    // jsdom kennt kein Layout: Leiste 0–300 px, Tab i bei i·100 px (100 px breit), verschoben um scrollLeft
+    const rect = (left: number, width: number) =>
+      ({
+        left,
+        right: left + width,
+        width,
+        top: 0,
+        bottom: 32,
+        height: 32,
+        x: left,
+        y: 0,
+        toJSON: () => ({}),
+      }) as DOMRect
+    const spy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const liste = this.closest('[role=tablist]') as HTMLElement | null
+      if (this.getAttribute('role') === 'tablist') return rect(0, 300)
+      const i = [...(liste?.querySelectorAll('[role=tab]') ?? [])].indexOf(this)
+      return rect(i * 100 - (liste?.scrollLeft ?? 0), 100)
+    })
+    const { rerender } = render(<Tabs tabs={tabs} wert="6" onChange={() => {}} />)
+    const liste = screen.getByRole('tablist')
+    expect(liste.scrollLeft).toBe(400) // Tab 7 (600–700) rechts bündig in 300 px
+    rerender(<Tabs tabs={tabs} wert="1" onChange={() => {}} />)
+    expect(liste.scrollLeft).toBe(100) // Tab 2 (100–200) links bündig
+    spy.mockRestore()
   })
 })
 

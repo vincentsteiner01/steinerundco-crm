@@ -33,13 +33,13 @@ export function OhneBewegung({ leads, settings, cursorId, onCursor, onOeffnen }:
     () => [
       h.accessor('full_name', {
         header: 'Name',
-        meta: { oeffnet: true, breite: '24%' },
+        meta: { oeffnet: true, breite: '22%' },
         cell: ({ getValue }) => <span className="text-ink-bright">{getValue() ?? '–'}</span>,
       }),
-      h.accessor('company_name', { header: 'Unternehmen', meta: { breite: '22%', ausblenden: 'xl' } }),
+      h.accessor('company_name', { header: 'Unternehmen', meta: { breite: '18%', ausblenden: 'xl' } }),
       h.accessor('stage', {
         header: 'Phase',
-        meta: { breite: '14%' },
+        meta: { breite: '12%' },
         cell: ({ getValue }) => {
           const s = getValue()
           return s ? <StatusChip stage={s} settings={settings} /> : null
@@ -57,7 +57,13 @@ export function OhneBewegung({ leads, settings, cursorId, onCursor, onOeffnen }:
         cell: ({ row }) => {
           const aktiv = cursorId === row.original.id
           return (
-            <span className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            // Runde 3 (echte Daten, 1440 px): die drei Knöpfe brauchen ≈ 385 px – in 28 % (318 px) schob sich „Wiedervorlage“ über
+            // „Sequenz starten“ und „Beenden“ lag rechts außerhalb. Jetzt 36 % Spaltenbreite, Knöpfe schrumpfen nie, sonst Umbruch.
+            <span
+              data-aktionen
+              className="flex flex-wrap items-center gap-1 [&>*]:shrink-0"
+              onClick={(e) => e.stopPropagation()}
+            >
               <SequenzStartenMenue leadId={row.original.id} kanal="linkedin" />
               <Wiedervorlage leadId={row.original.id} aktiv={aktiv} />
               <Beenden leadId={row.original.id} aktiv={aktiv} />

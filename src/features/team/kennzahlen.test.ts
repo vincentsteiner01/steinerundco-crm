@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import type { ActivityZeitraum } from '@/data/activities'
 import type { MetricEventZeile } from '@/data/kpis'
-import { anteile, erledigtJePerson, juengster, nachTagen, werteJePerson, zuletztAktiv } from './kennzahlen'
+import { ERLEDIGT_TYPEN as ERLEDIGT_HEUTE } from '@/data/tagesbilanz'
+import {
+  anteile,
+  ERLEDIGT_TYPEN,
+  erledigtJePerson,
+  juengster,
+  nachTagen,
+  werteJePerson,
+  zuletztAktiv,
+} from './kennzahlen'
 import { METRIK_ZEILEN, MEMBER_M, MEMBER_V } from './_testHilfe'
 
 const zeilen = METRIK_ZEILEN as unknown as MetricEventZeile[]
@@ -47,6 +56,12 @@ describe('erledigtJePerson', () => {
     )
     expect(erledigtJePerson(MEMBER_V, akt)).toBe(3)
     expect(erledigtJePerson(MEMBER_M, akt)).toBe(0)
+  })
+})
+
+describe('ERLEDIGT_TYPEN (Runde 3: eine Liste mit dem Heute-Kopf)', () => {
+  it('Team zählt genau die Typen aus src/data/tagesbilanz.ts, in derselben Reihenfolge (gleicher Query-Key)', () => {
+    expect(ERLEDIGT_TYPEN).toEqual([...ERLEDIGT_HEUTE])
   })
 })
 

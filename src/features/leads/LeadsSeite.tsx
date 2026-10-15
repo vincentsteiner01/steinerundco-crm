@@ -2,7 +2,7 @@
 // Gruppieren, Lead anlegen ⌥N, Schnellimport ⌘⇧O, Spaltenwähler, Export), DataTable (M0) mit exaktem Spaltensatz, Inline-Edit,
 // Bulk-Leiste, Fuß „n von m · sortiert nach …“. Zustand: Filter vollständig in der URL (LE-04), Cursor/Auswahl/Bearbeitung lokal,
 // Spalten je Ansicht in localStorage, uiStore.peekListe = IDs der gerenderten Liste (←/→ und J/K im Peek).
-import { Download, Upload } from 'lucide-react'
+import { Download, Plus, Upload } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { PFADE } from '@/app/pfade'
@@ -51,17 +51,19 @@ import {
   faelligkeitsGruppe,
   GRUPPE_LABEL,
   leadSpalten,
+  fuerStufe,
   mitFirmensperre,
   mobilZeile,
-  MIN_BREITE_SCHMAL,
+  nurStandardSpalten,
   ohneLeereRolle,
-  ohneVerdeckte,
   sortFeld,
+  spaltenStufe,
   zeitBalken,
   type Bearbeitung,
   type LeadZeile,
 } from './spalten'
 import { SPALTEN_LABEL, spalteNachFeld, type SpaltenKey } from './spaltenKeys'
+import { useElementBreite } from './useElementBreite'
 import { useLeadsHotkeys } from './useLeadsHotkeys'
 import { ZeilenAktion, type ZeilenAktionArt } from './ZeilenAktion'
 import { anzeigeName } from '@/lib/mitglied'
@@ -267,16 +269,20 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
     () => ({ heute, settings, members: members ?? [], batches: batches ?? [] }),
     [heute, settings, members, batches],
   )
-  // Unter 1280 px: verdeckte Spalten weglassen (sonst verrutschen die <col>-Breiten) und Kopf nicht sticky – im
-  // overflow-x-Wrapper der Tabelle rechnet `top: var(--head-h)` sonst ab Tabellenoberkante und legt den Kopf über Zeile 3–4.
+  // Spaltensatz nach der gemessenen Tabellenbreite (Runde 3): bei 1024 ist der Inhalt wegen der Sidebar nur ≈ 740 px breit, ab 1600
+  // steht der Peek daneben – die Fensterbreite allein entschied falsch. Ohne Messung (jsdom) gilt die Fensterbreite.
+  // Unter 1280 px klebt der Kopf nicht (overflow-x-Wrapper der Tabelle: `top: var(--head-h)` läge sonst über Zeile 3–4).
   const unterXl = useMediaQuery('(max-width: 1279px)')
   const telefon = useIstTelefon()
-  const unterLg = useMediaQuery('(max-width: 1023px)')
+  const tabelleRef = useRef<HTMLDivElement | null>(null)
+  const tabellenBreite = useElementBreite(tabelleRef)
+  const stufe = tabellenBreite !== null ? spaltenStufe(tabellenBreite) : unterXl ? 'schmal' : 'breit'
   const spalten = useMemo(
     () =>
-      ohneVerdeckte(
+      fuerStufe(
         leadSpalten(spaltenKeys, {
           ...spaltenOpts,
+          firmaUnterName: stufe === 'schmal' || !spaltenKeys.includes('unternehmen'),
           bearbeitung,
           onSave: (l, s, w) => void onSave(l, s, w),
           onCancel: () => setBearbeitung(null),
@@ -295,11 +301,10 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
               }
             : undefined,
         }),
-        unterXl,
-        unterLg,
+        stufe,
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [spaltenKeys, spaltenOpts, bearbeitung, aktion, unterXl, unterLg],
+    [spaltenKeys, spaltenOpts, bearbeitung, aktion, stufe],
   )
   // Runde 2 (echte Daten): Rolle war überall „–“ – ohne Werte keine Spalte
   const spaltenSichtbar = useMemo(() => ohneLeereRolle(spalten, rows), [spalten, rows])
@@ -345,7 +350,10 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
               : gruppe === 'zustaendig'
                 ? k === 'frei'
                   ? 'Frei'
-                  : anzeigeName(members?.find((m) => m.id === k), k)
+                  : anzeigeName(
+                      members?.find((m) => m.id === k),
+                      k,
+                    )
                 : k,
       }
     : undefined
@@ -450,6 +458,25 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
       )
     ) : null
 
+  const sucheFeld = (
+    <Input
+      ref={sucheRef}
+      data-suche
+      type="search"
+      aria-label="Leads durchsuchen"
+      placeholder={telefon ? 'Name, Unternehmen …' : 'Name, Unternehmen, URL, Notiz …'}
+      value={suche}
+      onChange={(e) => setSuche(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') sucheRef.current?.blur()
+        if (e.key === 'Enter') setOverrides({ ...overrides, q: suche.trim() || undefined })
+      }}
+      rechts={telefon ? undefined : <kbd className="kbd">/</kbd>}
+      className="h-[34px]"
+      rahmenClassName={telefon ? undefined : 'w-[280px] max-w-full'}
+    />
+  )
+
   return (
     <>
       <SeitenKopf
@@ -476,101 +503,118 @@ export function LeadsSeite({ kinder }: { kinder?: ReactNode }) {
           />
         }
       />
-      <div className="mb-3.5 flex flex-wrap items-center gap-2.5" data-toolbar>
-        <Input
-          ref={sucheRef}
-          data-suche
-          type="search"
-          aria-label="Leads durchsuchen"
-          placeholder="Name, Unternehmen, URL, Notiz …"
-          value={suche}
-          onChange={(e) => setSuche(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Escape') sucheRef.current?.blur()
-            if (e.key === 'Enter') setOverrides({ ...overrides, q: suche.trim() || undefined })
-          }}
-          rechts={<kbd className="kbd">/</kbd>}
-          className="h-[34px]"
-          rahmenClassName="w-[280px] max-w-full"
-        />
-        <AnsichtWahl
-          ansicht={ansicht}
-          favoriten={favoriten}
-          onAnsicht={setAnsicht}
-          onFavoriten={(l) => {
-            setFavoriten(l)
-            schreibeFavoriten(l)
-          }}
-        />
-        <FilterLeiste
-          ansicht={ansicht}
-          overrides={overrides}
-          onChange={setOverrides}
-          members={members ?? []}
-          tags={tags ?? []}
-          batches={batches ?? []}
-          me={me}
-        />
-        <span className="flex-1" />
-        <SpaltenWahl
-          offen={spaltenOffen}
-          onOpenChange={setSpaltenOffen}
-          keys={spaltenKeys}
-          onChange={(k) => {
-            setSpaltenKeys(k)
-            schreibeSpalten(ansicht, k)
-          }}
-        />
-        <Button
-          variante="icon"
-          icon={Download}
-          aria-label="Exportieren (CSV)"
-          title="CSV der aktuellen Ansicht"
-          onClick={exportieren}
-        />
-        <Button
-          variante="secondary"
-          groesse="M"
-          icon={Upload}
-          kbd="⌘⇧O"
-          onClick={() => navigate(PFADE.schnellimport(`${PFADE.leads}?${params.toString()}`))}
-        >
-          Schnellimport
-        </Button>
-        <Button variante="primary" groesse="M" kbd="⌥N" onClick={() => navigate(PFADE.leadNeu)}>
-          Lead anlegen
-        </Button>
-      </div>
+      {telefon ? (
+        // Telefon (Runde 3): eine Zeile – Suche · Filter (Ansicht, Kanal, Filter im Popover) · Lead anlegen. Spalten, CSV,
+        // Schnellimport und „Ansicht speichern“ ergeben ohne Tabelle keinen Sinn (vorher 360 px Bedienleiste vor dem ersten Lead).
+        <div className="mb-3 flex items-center gap-2" data-toolbar>
+          {/* Input rendert einen eigenen Grid-Wrapper – flex-1 gehört an diesen Rahmen */}
+          <div className="min-w-0 flex-1">{sucheFeld}</div>
+          <FilterLeiste
+            kompakt
+            ansicht={ansicht}
+            overrides={overrides}
+            onChange={setOverrides}
+            onAnsicht={setAnsicht}
+            members={members ?? []}
+            tags={tags ?? []}
+            batches={batches ?? []}
+            me={me}
+          />
+          <Button
+            variante="primary"
+            groesse="M"
+            icon={Plus}
+            aria-label="Lead anlegen"
+            title="Lead anlegen"
+            className="w-9 shrink-0 px-0"
+            onClick={() => navigate(PFADE.leadNeu)}
+          />
+        </div>
+      ) : (
+        <div className="mb-3.5 flex flex-wrap items-center gap-2.5" data-toolbar>
+          {sucheFeld}
+          <AnsichtWahl
+            ansicht={ansicht}
+            favoriten={favoriten}
+            onAnsicht={setAnsicht}
+            onFavoriten={(l) => {
+              setFavoriten(l)
+              schreibeFavoriten(l)
+            }}
+          />
+          <FilterLeiste
+            ansicht={ansicht}
+            overrides={overrides}
+            onChange={setOverrides}
+            members={members ?? []}
+            tags={tags ?? []}
+            batches={batches ?? []}
+            me={me}
+          />
+          <span className="flex-1" />
+          <SpaltenWahl
+            offen={spaltenOffen}
+            onOpenChange={setSpaltenOffen}
+            keys={spaltenKeys}
+            onChange={(k) => {
+              setSpaltenKeys(k)
+              schreibeSpalten(ansicht, k)
+            }}
+          />
+          <Button
+            variante="icon"
+            icon={Download}
+            aria-label="Exportieren (CSV)"
+            title="CSV der aktuellen Ansicht"
+            onClick={exportieren}
+          />
+          <Button
+            variante="secondary"
+            groesse="M"
+            icon={Upload}
+            kbd="⌘⇧O"
+            onClick={() => navigate(PFADE.schnellimport(`${PFADE.leads}?${params.toString()}`))}
+          >
+            Schnellimport
+          </Button>
+          <Button variante="primary" groesse="M" kbd="⌥N" onClick={() => navigate(PFADE.leadNeu)}>
+            Lead anlegen
+          </Button>
+        </div>
+      )}
 
       {fehler ? <LadeFehler text="Leads konnten nicht geladen werden" onNochmal={nachladen} /> : null}
-      {istLaden && rows.length === 0 && !fehler ? (
-        <Skeleton zeilen={6} />
-      ) : (
-        <DataTable<LeadZeile>
-          ariaLabel="Leads"
-          daten={rows}
-          spalten={spaltenSichtbar}
-          minBreite={spaltenSichtbar.length <= 8 ? MIN_BREITE_SCHMAL : undefined}
-          rowId={(r) => r.id}
-          cursorId={cursorId}
-          onCursor={onCursor}
-          auswahl={auswahl}
-          onAuswahl={setAuswahl}
-          onEnter={(r) => oeffnePeek(r.id)}
-          onZelleBearbeiten={(r, spalte) => {
-            if (spalte === 'schritt') setAktion({ leadId: r.id, art: 'spaeter' })
-            else setBearbeitung({ rowId: r.id, spalte: spalte as SpaltenKey })
-          }}
-          gruppierung={gruppierung}
-          sortierung={sortierung}
-          onSortierung={onSortierung}
-          zeitBalken={(r) => zeitBalken(r, heute)}
-          hatMehr={hatMehr}
-          leer={leer}
-          mobilZeile={(r, z) => mobilZeile(r, spaltenOpts, z)}
-          sticky={!unterXl}
-        />
-      )}
+      <div ref={tabelleRef} data-stufe={stufe}>
+        {istLaden && rows.length === 0 && !fehler ? (
+          <Skeleton zeilen={6} />
+        ) : (
+          <DataTable<LeadZeile>
+            ariaLabel="Leads"
+            daten={rows}
+            spalten={spaltenSichtbar}
+            // Standardspalten passen in jede Stufe ohne Querscroll; selbst gewählte Zusatzspalten dürfen scrollen
+            minBreite={nurStandardSpalten(spaltenSichtbar.map((c) => c.id)) ? null : undefined}
+            rowId={(r) => r.id}
+            cursorId={cursorId}
+            onCursor={onCursor}
+            auswahl={auswahl}
+            onAuswahl={setAuswahl}
+            onEnter={(r) => oeffnePeek(r.id)}
+            onZelleBearbeiten={(r, spalte) => {
+              if (spalte === 'schritt') setAktion({ leadId: r.id, art: 'spaeter' })
+              else setBearbeitung({ rowId: r.id, spalte: spalte as SpaltenKey })
+            }}
+            gruppierung={gruppierung}
+            sortierung={sortierung}
+            onSortierung={onSortierung}
+            zeitBalken={(r) => zeitBalken(r, heute)}
+            hatMehr={hatMehr}
+            leer={leer}
+            mobilZeile={(r, z) => mobilZeile(r, spaltenOpts, z)}
+            sticky={!unterXl}
+          />
+        )}
+      </div>
 
       <div className="text-ink-3 mt-3 flex flex-wrap items-center justify-between gap-3 text-[12.5px]" data-fuss>
         <span>

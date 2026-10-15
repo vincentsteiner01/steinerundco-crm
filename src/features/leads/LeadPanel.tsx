@@ -54,9 +54,18 @@ export function PeekKopfAktionen({ leadId }: { leadId: string }) {
   const { data: sperrliste } = useSperrliste()
   if (!lead) return null
   return (
-    <KopfAktionen lead={lead} sperrliste={sperrlistenEintraege(sperrliste, lead)} settings={settings} vollansicht />
+    <KopfAktionen
+      lead={lead}
+      sperrliste={sperrlistenEintraege(sperrliste, lead)}
+      settings={settings}
+      vollansicht
+      kanaeleNurDesktop
+    />
   )
 }
+
+/** Knopf der mobilen Aktionszeile: füllt die Rasterzelle, Text kürzt statt in die Nachbarzelle zu ragen. */
+const MOBIL_KNOPF = 'w-full min-w-0 gap-1.5 overflow-hidden px-2'
 
 export function LeadPanel({ leadId }: { leadId: string }) {
   const { data: lead, isPending, error } = useLead(leadId)
@@ -187,10 +196,13 @@ function PanelInhalt({ lead }: { lead: LeadMitBezug }) {
           className="mt-2.5"
         />
         {/* Mobil/Sheet (< 1024, DESIGN-SYSTEM § 5.11): Aktionszeile mit vier Icon+Label-Buttons */}
-        <div className="mt-3 grid grid-cols-4 gap-1.5 lg:hidden" data-mobil-aktionen>
+        {/* Runde 3 (390 px): gesperrtes „Anrufen“ steckt im Tooltip-Wrapper und war 92 px breit in einer 85-px-Zelle – Zellen
+            min-w-0, Buttons w-full mit schmalerem Innenabstand */}
+        <div className="mt-3 grid grid-cols-4 gap-1.5 lg:hidden [&>*]:min-w-0" data-mobil-aktionen>
           <Button
             variante="secondary"
             groesse="S"
+            className={MOBIL_KNOPF}
             icon={Phone}
             disabled={!tel.erlaubt}
             disabledGrund={tel.grund ? GATE_GRUND_LABEL[tel.grund] : undefined}
@@ -201,6 +213,7 @@ function PanelInhalt({ lead }: { lead: LeadMitBezug }) {
           <Button
             variante="secondary"
             groesse="S"
+            className={MOBIL_KNOPF}
             icon={ExternalLink}
             disabled={!href}
             disabledGrund="Keine Profil-URL"
@@ -211,6 +224,7 @@ function PanelInhalt({ lead }: { lead: LeadMitBezug }) {
           <Button
             variante="secondary"
             groesse="S"
+            className={MOBIL_KNOPF}
             icon={Mail}
             disabled={!mail.erlaubt}
             disabledGrund={mail.grund ? GATE_GRUND_LABEL[mail.grund] : undefined}
@@ -218,7 +232,13 @@ function PanelInhalt({ lead }: { lead: LeadMitBezug }) {
           >
             E-Mail
           </Button>
-          <Button variante="secondary" groesse="S" icon={NotebookPen} onClick={() => ausfuehren('notiz')}>
+          <Button
+            variante="secondary"
+            groesse="S"
+            className={MOBIL_KNOPF}
+            icon={NotebookPen}
+            onClick={() => ausfuehren('notiz')}
+          >
             Notiz
           </Button>
         </div>

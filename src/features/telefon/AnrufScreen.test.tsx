@@ -256,25 +256,36 @@ describe('AnrufScreen', () => {
   })
 
   it('T-08: 9 verlangt Gesprächspartner und Termin; danach Vorschlag „Terminbestätigung per E-Mail“ und Weiter', async () => {
+    // Deterministisch (Runde 3, flackerte auf langsamen Runnern): jeder Schritt wartet auf einen sichtbaren Zustand mit festem
+    // Zeitlimit statt auf Laufzeit; vor dem Öffnen der Datumsauswahl ist der 50-ms-Fokus der Wrap-up-Zeile abgeschlossen.
+    const BIS = { timeout: 5000 }
     stand.lead = leadMitBezug(LEAD_A)
     vi.mocked(supabase.rpc).mockImplementation(async () => ({
       data: call(LEAD_A.id, 'meeting_booked', { id: 'call-9' }),
       error: null,
     }))
     const { router } = rendern(<AnrufScreen />, PFAD, ROUTE)
-    await waitFor(() => expect(screen.getByTestId('anrufen')).toBeInTheDocument())
+    const anrufen = await screen.findByTestId('anrufen', {}, BIS)
+    await waitFor(() => expect(anrufen).toHaveAttribute('href', 'tel:+494131220418'), BIS) // Gate offen, Lead geladen
     taste('Enter')
+    await waitFor(() => expect(localStorage.getItem(ANRUF_KEY)).not.toBeNull(), BIS)
     taste('9')
-    const wrap = await screen.findByRole('group', { name: 'Wrap-up' })
-    expect(within(wrap).getByLabelText(/Gesprächspartner/)).toHaveValue('Lukas Feldhaus')
+    const wrap = await screen.findByRole('group', { name: 'Wrap-up' }, BIS)
+    const partner = within(wrap).getByLabelText(/Gesprächspartner/)
+    await waitFor(() => expect(partner).toHaveValue('Lukas Feldhaus'), BIS)
+    await waitFor(() => expect(partner).toHaveFocus(), BIS) // 20-s-Fokus erledigt – kein Timer mehr offen
     fireEvent.click(weiterKnopf(wrap))
-    expect(await within(wrap).findByText('Termin (Datum und Uhrzeit) ist Pflicht.')).toBeInTheDocument()
+    expect(await within(wrap).findByText('Termin (Datum und Uhrzeit) ist Pflicht.', {}, BIS)).toBeInTheDocument()
     expect(vi.mocked(supabase.rpc)).not.toHaveBeenCalled()
-    fireEvent.click(within(wrap).getByLabelText(/Erstgespräch/))
-    fireEvent.click(await screen.findByRole('button', { name: 'Morgen' }))
+    const termin = within(wrap).getByLabelText(/Erstgespräch/)
+    fireEvent.click(termin)
+    const auswahl = await screen.findByRole('dialog', {}, BIS)
+    fireEvent.click(within(auswahl).getByRole('button', { name: 'Morgen' }))
+    await waitFor(() => expect(termin).toHaveTextContent(/\d{2}\.\d{2}\. 09:00/), BIS)
+    await waitFor(() => expect(within(wrap).queryByText('Termin (Datum und Uhrzeit) ist Pflicht.')).toBeNull(), BIS)
     fireEvent.click(weiterKnopf(wrap))
-    // Unter Last (volle Suite) braucht der Weg über log_call + Nachlese länger als 1 s
-    const nach = await screen.findByTestId('nach-anruf', {}, { timeout: 4000 })
+    const nach = await screen.findByTestId('nach-anruf', {}, BIS)
+    expect(vi.mocked(supabase.rpc)).toHaveBeenCalledTimes(1)
     expect(vi.mocked(supabase.rpc).mock.calls[0]?.[1]).toMatchObject({
       p_outcome: 'meeting_booked',
       p_reached_person: 'entscheider',
@@ -284,7 +295,7 @@ describe('AnrufScreen', () => {
     expect(meetingArgs?.p_meeting_at).toBeTypeOf('string')
     expect(within(nach).getByRole('button', { name: 'Terminbestätigung per E-Mail' })).toBeInTheDocument()
     taste('Enter')
-    await waitFor(() => expect(router.state.location.pathname).toBe('/telefon'))
+    await waitFor(() => expect(router.state.location.pathname).toBe('/telefon'), BIS)
   })
 
   it('`?ergebnis=7` (Schnell-Ergebnis der Heute-Karte) wählt das Ergebnis vor; offline ist Weiter gesperrt', async () => {

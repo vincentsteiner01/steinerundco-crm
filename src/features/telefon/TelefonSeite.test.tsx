@@ -95,10 +95,18 @@ describe('TelefonSeite', () => {
     expect(nicht).toHaveTextContent('2')
     expect(nicht).toHaveAttribute('aria-expanded', 'false')
     fireEvent.click(nicht)
-    const gesperrt = within(screen.getByRole('list', { name: 'Noch nicht anrufbar' })).getAllByRole('listitem')
+    const nichtListe = screen.getByRole('list', { name: 'Noch nicht anrufbar' })
+    const gesperrt = within(nichtListe).getAllByRole('listitem')
     expect(gesperrt.map((g) => g.getAttribute('data-grund')).sort()).toEqual(['kein_anrufgrund', 'keine_nummer'])
-    expect(screen.getByText('Nummer ohne Anrufgrund')).toBeInTheDocument()
-    expect(screen.getByText('Keine Nummer')).toBeInTheDocument()
+    expect(within(nichtListe).getByText('Nummer ohne Anrufgrund')).toBeInTheDocument()
+    expect(within(nichtListe).getByText('Keine Nummer')).toBeInTheDocument()
+    expect(within(nichtListe).getByRole('button', { name: 'Nummer ergänzen' })).toBeInTheDocument()
+    // Filter nach Grund über der Liste (Runde 3)
+    expect(
+      within(screen.getByRole('group', { name: 'Grund' }))
+        .getAllByRole('button')
+        .map((b) => b.textContent),
+    ).toEqual(['Alle2', 'Keine Nummer1', 'Ohne Anrufgrund1'])
     expect(screen.getByRole('button', { name: /Alle mit LinkedIn-Antwort/ })).toHaveTextContent('(1)')
   })
 
@@ -164,17 +172,66 @@ describe('TelefonSeite', () => {
     await waitFor(() => expect(screen.getByRole('listbox', { name: 'Anrufliste' })).toBeInTheDocument())
   })
 
-  it('Leerzustand: „Niemand anzurufen.“ zählt nach Grund (ohne Nummer · ohne Anrufgrund), Knopf nach dem häufigsten Grund', async () => {
+  it('Leerzustand: „Niemand anzurufen.“ zählt nach Grund, erklärt die Anrufliste, Knopf nach dem Hauptgrund (Gleichstand → Anrufgrund)', async () => {
     stand.leads = [LEAD_OHNE_GRUND, LEAD_OHNE_NUMMER]
     stand.tasks = []
     stand.enrollments = []
     rendern(<TelefonSeite />, '/telefon', '/telefon')
-    await waitFor(() => expect(screen.getByText('Niemand anzurufen.')).toBeInTheDocument())
-    // Runde 2: echte Daten hatten 119 „Keine Nummer“ + 2 „Firma gesperrt“ – „121 warten auf einen Anrufgrund“ war falsch
-    expect(screen.getByText('Noch nicht anrufbar: 1 ohne Telefonnummer · 1 ohne Anrufgrund.')).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText('Niemand anzurufen.')).toBeInTheDocument(), { timeout: 5000 })
+    // Runde 2/3: echte Daten hatten 119 „Keine Nummer“ + 2 „Firma gesperrt“ – „121 warten auf einen Anrufgrund“ war falsch
+    expect(screen.getByText('1 Lead ohne Anrufgrund · 1 ohne Telefonnummer.')).toBeInTheDocument()
+    expect(
+      screen.getByText(/Die Anrufliste füllt sich, sobald ein Lead eine Telefonnummer und einen Anrufgrund hat\./),
+    ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Anrufgrund setzen' }))
     expect(screen.getByRole('button', { name: /Noch nicht anrufbar/ })).toHaveAttribute('aria-expanded', 'true')
+    const liste = screen.getByRole('list', { name: 'Noch nicht anrufbar' })
+    expect(within(liste).getAllByRole('listitem')).toHaveLength(1)
+    expect(within(liste).getByRole('listitem')).toHaveAttribute('data-grund', 'kein_anrufgrund')
     expect(screen.getByRole('button', { name: /Call-Block starten/ })).toBeDisabled()
+  })
+
+  it('Leerzustand mit echter Verteilung (ohne Nummer · gesperrt): „Nummern ergänzen“ filtert auf „Keine Nummer“, Zeile öffnet den Peek', async () => {
+    const ohneNummer2 = { ...LEAD_OHNE_NUMMER, id: '10000000-0000-4000-8000-000000000071', full_name: 'Ida Kern' }
+    const gesperrt = {
+      ...LEAD_B,
+      id: '10000000-0000-4000-8000-000000000081',
+      full_name: 'Jan Moor',
+      do_not_contact: true,
+    }
+    stand.leads = [LEAD_OHNE_NUMMER, ohneNummer2, gesperrt]
+    stand.tasks = []
+    stand.enrollments = []
+    const peek = vi.fn()
+    window.addEventListener('crm:peek', peek)
+    try {
+      rendern(<TelefonSeite />, '/telefon', '/telefon')
+      await waitFor(() => expect(screen.getByText('2 Leads ohne Telefonnummer · 1 gesperrt.')).toBeInTheDocument(), {
+        timeout: 5000,
+      })
+      expect(screen.queryByRole('button', { name: 'Anrufgrund setzen' })).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'Nummern ergänzen' }))
+      expect(screen.getByRole('button', { name: /Noch nicht anrufbar/ })).toHaveAttribute('aria-expanded', 'true')
+      const filter = screen.getByRole('group', { name: 'Grund' })
+      expect(within(filter).getByRole('button', { name: /Keine Nummer/ })).toHaveAttribute('aria-pressed', 'true')
+      const liste = screen.getByRole('list', { name: 'Noch nicht anrufbar' })
+      expect(
+        within(liste)
+          .getAllByRole('listitem')
+          .map((li) => li.getAttribute('data-grund')),
+      ).toEqual(['keine_nummer', 'keine_nummer'])
+      expect(within(liste).queryByText('Keine Nummer')).toBeNull() // Chip wiederholt nur den Filter
+      fireEvent.click(within(liste).getAllByRole('button', { name: 'Nummer ergänzen' })[0] as HTMLElement)
+      expect(peek).toHaveBeenCalledTimes(1)
+      const ereignis = peek.mock.calls[0]?.[0] as CustomEvent<{ leadId: string }> | undefined
+      expect(ereignis?.detail.leadId).toBe(LEAD_OHNE_NUMMER.id)
+      // Filter „Alle“ zeigt auch den gesperrten Lead – dort bleibt der Grund-Chip
+      fireEvent.click(within(filter).getByRole('button', { name: /Alle/ }))
+      expect(within(liste).getAllByRole('listitem')).toHaveLength(3)
+      expect(within(liste).getByText('Widerspruch – nicht kontaktieren')).toBeInTheDocument()
+    } finally {
+      window.removeEventListener('crm:peek', peek)
+    }
   })
 
   it('Segment „Alle“ zeigt kommende Versuche; laufender Block zeigt die Hinweiszeile mit „Block beenden“', async () => {

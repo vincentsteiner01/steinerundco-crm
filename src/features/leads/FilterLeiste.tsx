@@ -22,7 +22,7 @@ import type {
   Salutation,
   Tag,
 } from '@/types/domain'
-import type { AnsichtDef } from './ansichten'
+import { SYSTEM_ANSICHTEN, type AnsichtDef } from './ansichten'
 import { hatOverrides, type UrlFilter } from './filter'
 import { ANREDE_LABEL, ROLLE_LABEL } from './spalten'
 import { anzeigeName } from '@/lib/mitglied'
@@ -60,9 +60,26 @@ export type FilterLeisteProps = {
   tags: readonly Tag[]
   batches: readonly { id: string; label: string | null; created_at: string }[]
   me: string | null
+  /**
+   * Telefon (Runde 3): nur der Knopf „Filter n“ – Ansicht, Kanal, alle Filter, aktive Chips und „Zurücksetzen“ stehen im Popover.
+   * Vorher standen 360 px Bedienleiste (7 Zeilen) vor dem ersten Lead.
+   */
+  kompakt?: boolean
+  /** Ansicht wechseln (kompakt: Auswahl im Popover statt Dropdown + Favoriten) */
+  onAnsicht?: (key: string) => void
 }
 
-export function FilterLeiste({ ansicht, overrides, onChange, members, tags, batches, me }: FilterLeisteProps) {
+export function FilterLeiste({
+  ansicht,
+  overrides,
+  onChange,
+  members,
+  tags,
+  batches,
+  me,
+  kompakt,
+  onAnsicht,
+}: FilterLeisteProps) {
   const setze = <K extends keyof UrlFilter>(k: K, v: UrlFilter[K] | undefined) => {
     const next = { ...overrides }
     if (v === undefined || (Array.isArray(v) && v.length === 0) || v === '') delete next[k]
@@ -71,9 +88,21 @@ export function FilterLeiste({ ansicht, overrides, onChange, members, tags, batc
   }
   const zustaendigLabel = (z: UrlFilter['zustaendig']) => {
     if (!z) return null
-    if (Array.isArray(z)) return z.map((id) => anzeigeName(members.find((m) => m.id === id), '?')).join(', ')
+    if (Array.isArray(z))
+      return z
+        .map((id) =>
+          anzeigeName(
+            members.find((m) => m.id === id),
+            '?',
+          ),
+        )
+        .join(', ')
     if (z === 'me') return 'Ich'
-    if (z === 'andere') return anzeigeName(members.find((m) => m.id !== me), 'Andere')
+    if (z === 'andere')
+      return anzeigeName(
+        members.find((m) => m.id !== me),
+        'Andere',
+      )
     if (z === 'frei') return 'Frei'
     return 'Alle'
   }
@@ -111,7 +140,12 @@ export function FilterLeiste({ ansicht, overrides, onChange, members, tags, batc
   if (overrides.ereignis) {
     // § 7.5: Funnel-Klick aus den KPIs (K-05) – Ereignis im Zeitraum, optional nur einer Person
     const e = overrides.ereignis
-    const wer = e.person ? ` · ${anzeigeName(members.find((m) => m.id === e.person), '?')}` : ''
+    const wer = e.person
+      ? ` · ${anzeigeName(
+          members.find((m) => m.id === e.person),
+          '?',
+        )}`
+      : ''
     chips.push({ key: 'ereignis', label: `${EREIGNIS_LABEL(e)} · ${fmtZeitraum(e.von, e.bis)}${wer}` })
   }
 
@@ -151,18 +185,64 @@ export function FilterLeiste({ ansicht, overrides, onChange, members, tags, batc
     setze('tag', aktuell.includes(id) ? aktuell.filter((x) => x !== id) : [...aktuell, id])
   }
 
+  const kanalSegment = (
+    <Segment
+      klein
+      ariaLabel="Kanal"
+      wert={(overrides.kanal?.[0] ?? 'alle') as Channel | 'alle'}
+      onChange={(k) => setze('kanal', k === 'alle' ? undefined : [k as Channel])}
+      optionen={[
+        { key: 'alle', label: 'Alle' },
+        { key: 'linkedin', label: <span className="glyph">in</span> },
+        { key: 'telefon', label: 'Telefon' },
+        { key: 'email', label: 'E-Mail' },
+      ]}
+    />
+  )
+  const chipListe = chips.map((c) => (
+    <Chip key={c.key} ton="neutral" onRemove={() => setze(c.key, undefined)}>
+      {c.label}
+    </Chip>
+  ))
+
   return (
     <div className="flex flex-wrap items-center gap-1.5" data-filterleiste>
       <Popover
         titel="Filter"
+        align={kompakt ? 'end' : 'start'}
         trigger={
-          <Button variante="secondary" groesse="S" icon={SlidersHorizontal} aria-label="Filter">
-            Filter
-          </Button>
+          kompakt ? (
+            <Button variante="secondary" groesse="M" icon={SlidersHorizontal} aria-label="Filter" data-filter-knopf>
+              Filter
+              {chips.length ? <span className="tnum font-mono text-[12px]">{chips.length}</span> : null}
+            </Button>
+          ) : (
+            <Button variante="secondary" groesse="S" icon={SlidersHorizontal} aria-label="Filter">
+              Filter
+            </Button>
+          )
         }
-        className="max-h-[70vh] w-[340px] max-w-[340px] overflow-auto"
+        className="max-h-[70vh] w-[340px] max-w-[min(340px,calc(100vw-32px))] overflow-auto"
       >
         <div className="grid gap-3 p-1.5">
+          {kompakt ? (
+            <>
+              <div className="grid gap-1.5">
+                <span className="label">Ansicht</span>
+                <Select
+                  aria-label="Ansicht"
+                  className="h-8"
+                  value={ansicht.key}
+                  onChange={(e) => onAnsicht?.(e.target.value)}
+                  optionen={SYSTEM_ANSICHTEN.map((a) => ({ value: a.key, label: a.name }))}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <span className="label">Kanal</span>
+                {kanalSegment}
+              </div>
+            </>
+          ) : null}
           <div className="grid gap-1.5">
             <span className="label">Zuständig</span>
             <Segment
@@ -172,7 +252,13 @@ export function FilterLeiste({ ansicht, overrides, onChange, members, tags, batc
               onChange={(k) => setze('zustaendig', k === 'alle' && !ansicht.filter.zustaendig ? undefined : k)}
               optionen={[
                 { key: 'me', label: 'Ich' },
-                { key: 'andere', label: anzeigeName(members.find((m) => m.id !== me), 'Andere') },
+                {
+                  key: 'andere',
+                  label: anzeigeName(
+                    members.find((m) => m.id !== me),
+                    'Andere',
+                  ),
+                },
                 { key: 'frei', label: 'Frei' },
                 { key: 'alle', label: 'Alle' },
               ]}
@@ -271,33 +357,31 @@ export function FilterLeiste({ ansicht, overrides, onChange, members, tags, batc
             disabled
             title="Über die Ansicht „Unvollständig“"
           />
+          {kompakt && hatOverrides(overrides) ? (
+            <div className="grid gap-1.5" data-aktive-filter>
+              <span className="label">Aktiv</span>
+              <div className="flex flex-wrap gap-1.5">{chipListe}</div>
+              <Button variante="quiet" groesse="S" className="justify-self-start" onClick={() => onChange({})}>
+                Zurücksetzen
+              </Button>
+            </div>
+          ) : null}
         </div>
       </Popover>
-      <Segment
-        klein
-        ariaLabel="Kanal"
-        wert={(overrides.kanal?.[0] ?? 'alle') as Channel | 'alle'}
-        onChange={(k) => setze('kanal', k === 'alle' ? undefined : [k as Channel])}
-        optionen={[
-          { key: 'alle', label: 'Alle' },
-          { key: 'linkedin', label: <span className="glyph">in</span> },
-          { key: 'telefon', label: 'Telefon' },
-          { key: 'email', label: 'E-Mail' },
-        ]}
-      />
-      {chips.map((c) => (
-        <Chip key={c.key} ton="neutral" onRemove={() => setze(c.key, undefined)}>
-          {c.label}
-        </Chip>
-      ))}
-      {hatOverrides(overrides) ? (
-        <Button variante="quiet" groesse="S" kbd="⌫" onClick={() => onChange({})}>
-          Zurücksetzen
-        </Button>
-      ) : null}
-      <Button variante="quiet" groesse="S" disabled disabledGrund="Kommt in v1.1">
-        Ansicht speichern
-      </Button>
+      {kompakt ? null : (
+        <>
+          {kanalSegment}
+          {chipListe}
+          {hatOverrides(overrides) ? (
+            <Button variante="quiet" groesse="S" kbd="⌫" onClick={() => onChange({})}>
+              Zurücksetzen
+            </Button>
+          ) : null}
+          <Button variante="quiet" groesse="S" disabled disabledGrund="Kommt in v1.1">
+            Ansicht speichern
+          </Button>
+        </>
+      )}
     </div>
   )
 }

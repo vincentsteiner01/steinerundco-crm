@@ -10,6 +10,7 @@ import {
   fmtDauer,
   fmtDelta,
   fmtPp,
+  fmtAnteil,
   fmtProzent,
   fmtVerhaeltnis,
   fmtZahl,
@@ -86,6 +87,14 @@ describe('Zahlen', () => {
     expect(fmtZahl(-1248)).toBe(`${MINUS}1.248`)
     expect(fmtZahl(1248.6)).toBe('1.249')
   })
+  it('Runde 3: fmtAnteil rechnet immer ×100 – auch Quoten über 100 % (fmtProzent las 1,25 als „1 %“)', () => {
+    expect(fmtAnteil(0.28)).toBe(`28${SCHMAL}%`)
+    expect(fmtAnteil(1)).toBe(`100${SCHMAL}%`)
+    expect(fmtAnteil(1.25)).toBe(`125${SCHMAL}%`)
+    expect(fmtAnteil(Number.NaN)).toBe(`–${SCHMAL}%`)
+    expect(fmtProzent(1.25)).toBe(`1${SCHMAL}%`) // Altverhalten bleibt für Aufrufer mit fertigen Prozentzahlen
+  })
+
   it('fmtProzent ganzzahlig mit U+202F', () => {
     expect(fmtProzent(0.3)).toBe(`30${SCHMAL}%`)
     expect(fmtProzent(0.254)).toBe(`25${SCHMAL}%`)

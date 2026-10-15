@@ -11,6 +11,14 @@ export const BEFEHLE: Befehl[] = [
     gruppe: 'aktionen',
     ausfuehren: ({ navigate }) => navigate(`${PFADE.einstellungen('export')}?aktion=backup`),
   },
+  {
+    // Runde 3: der Eingang (LinkedIn-Mails ohne sichere Zuordnung) ist ein Tab von Verbindungen – Pfad wie EINGANG_PFAD in
+    // features/eingang (hier ohne Import, damit Badge und Daten nicht ins Start-Bundle der Palette wandern)
+    id: 'einstellungen:eingang',
+    label: 'Eingang öffnen – LinkedIn-Mails zuordnen',
+    gruppe: 'seiten',
+    ausfuehren: ({ navigate }) => navigate(`${PFADE.einstellungen('verbindungen')}?tab=eingang`),
+  },
   ...BEREICHE.map<Befehl>((b) => ({
     id: `einstellungen:${b.key}`,
     label: `Zu Einstellungen → ${b.label}`,

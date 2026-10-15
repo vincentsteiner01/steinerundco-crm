@@ -1,6 +1,7 @@
 // Bereiche der Einstellungen (BAUPLAN § 3.9, Route `/einstellungen/:bereich`). v1.1: phasen · tags · icp · rechtliches.
 import type { PFADE } from '@/app/pfade'
 
+/** Bereiche = Union von `PFADE.einstellungen` (seit Runde 3 inkl. 'verbindungen'); Pfade baut `PFADE.einstellungen(b)`. */
 export type Bereich = Parameters<typeof PFADE.einstellungen>[0] & string
 
 export type BereichEintrag = { key: Bereich; label: string; beschreibung: string; taste: string }
@@ -12,6 +13,12 @@ export const BEREICHE: readonly BereichEintrag[] = [
   { key: 'sequenzen', label: 'Sequenzen', beschreibung: 'Kadenzen aktivieren und bearbeiten', taste: '4' },
   { key: 'sperrliste', label: 'Sperrliste', beschreibung: 'Wer nie wieder kontaktiert wird', taste: '5' },
   { key: 'export', label: 'Export & Backup', beschreibung: 'CSV je Tabelle, Voll-Backup JSON', taste: '6' },
+  {
+    key: 'verbindungen',
+    label: 'Verbindungen',
+    beschreibung: 'LinkedIn-Mails aus Gmail, Chrome-Erweiterung, Eingang',
+    taste: '7',
+  },
 ]
 
 export const STANDARD_BEREICH: Bereich = 'profil'

@@ -6,8 +6,8 @@ export const TASTEN: TastenGruppe[] = [
     gruppe: 'Einstellungen',
     eintraege: [
       {
-        tasten: ['1', '2', '3', '4', '5', '6'],
-        beschreibung: 'Bereich: Profil · Passcode · Ziele · Sequenzen · Sperrliste · Export',
+        tasten: ['1', '2', '3', '4', '5', '6', '7'],
+        beschreibung: 'Bereich: Profil · Passcode · Ziele · Sequenzen · Sperrliste · Export · Verbindungen',
       },
       { tasten: ['⌘↵'], beschreibung: 'Block speichern' },
       { tasten: ['N'], beschreibung: 'Sperrliste: Eintrag hinzufügen' },

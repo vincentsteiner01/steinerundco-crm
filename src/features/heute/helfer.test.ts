@@ -2,6 +2,7 @@
 // Skript-Stichpunkte, Kopfzeilen, Person aus ?person=, „Nächster Schritt“, Später-Texte, Nachfass-Zähler und Gate-Wortlaut.
 import { describe, expect, it } from 'vitest'
 import { emailGate, nachfassZaehler as nachfassZahl } from '@/lib/gates'
+import { VORLAGE } from '@/lib/vorlagenKeys'
 import { emailGateText as text } from '@/texte/de'
 import type { Email, Member, QueueItem } from '@/types/domain'
 import { leadMitBezug, T_JA, T_KF2, T_LF1, T_NEIN_MIT, T_OPENER, T_OPENER_KB, VORLAGEN, zeile } from './_testHilfe'
@@ -16,15 +17,34 @@ import { blockKopf, kartenArt, nachrichtErgebnis, skriptPunkte, vorlageFuerKarte
 const LEER = { vorlageId: null }
 
 describe('vorlageFuerKarte', () => {
-  it('Runde 2: Wiedervorlage ohne Vorlage („Follow-up (aus Sheet)“) bekommt einen Standard nach Phase', () => {
-    const wv = zeile('heute', 9, { item_kind: 'wiedervorlage', template_id: null, title: 'Follow-up (aus Sheet)' })
-    const mitKf1 = [...VORLAGEN, { ...T_KF2, id: 'kf1', key: 'li_fu_kurz_1', name: 'Kurzfristig 1' }]
-    expect(vorlageFuerKarte(wv, 'wiedervorlage', { role: 'unbekannt', stage: 'dm_beantwortet' }, mitKf1, LEER, null, false)?.id).toBe('kf1')
-    expect(vorlageFuerKarte(wv, 'wiedervorlage', { role: 'unbekannt', stage: 'langfristig' }, mitKf1, LEER, null, false)?.id).toBe(
-      T_LF1.id,
-    )
-    // ab Erstgespräch keine passende DM-Vorlage → Wahl bleibt offen
-    expect(vorlageFuerKarte(wv, 'wiedervorlage', { role: 'unbekannt', stage: 'erstgespraech' }, mitKf1, LEER, null, false)).toBeNull()
+  it('Runde 3: „Follow-up (aus Sheet)“ ohne Vorlage → nächster Kurzfristig-Schritt nach Nachfass-Zähler, sonst Langfristig 1', () => {
+    const kf = (n: 1 | 2 | 3) => ({ ...T_KF2, id: `kf${n}`, key: VORLAGE[`li_fu_kurz_${n}`], name: `Kurzfristig ${n}` })
+    const mitKf = [...VORLAGEN.filter((t) => t.id !== T_KF2.id), kf(1), kf(2), kf(3)]
+    const sheet = (n: number | null) =>
+      zeile('ueberfaellig', 9, {
+        item_kind: 'wiedervorlage',
+        template_id: null,
+        title: 'Follow-up (aus Sheet)',
+        follow_up_count: n,
+      })
+    const v = (i: QueueItem, lead: { role: 'unbekannt'; follow_up_count?: number | null } | null = null) =>
+      vorlageFuerKarte(i, 'wiedervorlage', lead, mitKf, LEER, null, false)?.id
+    expect(v(sheet(0))).toBe('kf1')
+    expect(v(sheet(null))).toBe('kf1')
+    expect(v(sheet(1))).toBe('kf2')
+    expect(v(sheet(2))).toBe('kf3')
+    expect(v(sheet(3))).toBe(T_LF1.id)
+    // das Lead-Detail (frischer Zähler) gewinnt über die View-Zeile
+    expect(v(sheet(0), { role: 'unbekannt', follow_up_count: 2 })).toBe('kf3')
+    // jede andere Wiedervorlage ohne Vorlage → Langfristig 1
+    const wv = zeile('heute', 9, { item_kind: 'wiedervorlage', template_id: null, title: 'Wiedervorlage' })
+    expect(v(wv)).toBe(T_LF1.id)
+    // gewechselte Vorlage (⌘⇧E) bleibt möglich
+    expect(vorlageFuerKarte(sheet(0), 'wiedervorlage', null, mitKf, { vorlageId: 'kf3' }, null, false)?.id).toBe('kf3')
+    // eine Vorlage aus der View gewinnt immer
+    expect(
+      v(zeile('heute', 9, { item_kind: 'wiedervorlage', template_id: T_LF1.id, title: 'Follow-up (aus Sheet)' })),
+    ).toBe(T_LF1.id)
   })
   const opener = zeile('heute', 1, { template_id: T_OPENER.id })
   it('H-13: Opener nach Rolle – Kundenbetreuer/Innendienst bekommen „ZG – Kundenbetreuer“, sonst die Schritt-Vorlage V1', () => {

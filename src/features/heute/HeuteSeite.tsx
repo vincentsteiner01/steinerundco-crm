@@ -3,7 +3,7 @@
 // (Tageszähler · Später heute · Tastenhinweise). `?person=` zeigt die Queue der anderen Person mit Banner (§ 1.5 Nr. 13),
 // `?sektion=zurueckziehen`, `?schritt=`. Sitzungszustand (Cursor, Erledigt-Zeilen, gehaltene Positionen, Auswahl, Dialoge) liegt
 // in einem zustand-Store je Seite: Effekte und Ereignisse schreiben, der Render liest.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { useStore } from 'zustand'
 import { createStore, type StoreApi } from 'zustand/vanilla'
@@ -21,6 +21,7 @@ import { nachleseAktivitaet, useActivitiesZeitraum } from '@/data/activities'
 import { useSnoozeStep } from '@/data/enrollments'
 import { usePipelineCounts } from '@/data/leads'
 import { useMe, useMembers } from '@/data/members'
+import { ERLEDIGT_TYPEN } from '@/data/tagesbilanz'
 import { useUndo } from '@/data/undo'
 import { fmtVerhaeltnis, fmtZahl, fmtZeit, heuteBerlin } from '@/lib/format'
 import { useHotkeys, useHotkeyScope } from '@/lib/keyboard'
@@ -56,15 +57,14 @@ import { useQueueHotkeys, type QueueTaste } from './useQueueHotkeys'
 import { useTageszaehler, type TageszaehlerDaten } from './useTageszaehler'
 import { anzeigeName, personSlug } from '@/lib/mitglied'
 
-/** „Erledigt“ im Kopf = eigene Aktivitäten heute dieser Typen (+ abgehakte Annahmen/Anfragen der Sitzung, § 3.2). */
-const ERLEDIGT_TYPEN: ActivityType[] = [
-  'gespraech_eroeffnet',
-  'nachricht_gesendet',
-  'pitch_gesendet',
-  'email_gesendet',
-  'aufgabe_erledigt',
-  'schritt_uebersprungen',
-]
+// „Eingang 3 zuordnen“ (LinkedIn-Mails, Runde 3 – Wunsch verbindungen.md Nr. 1): nachgeladen, rendert bei 0 nichts
+const EingangBadge = lazy(() => import('@/features/eingang/public').then((m) => ({ default: m.EingangBadge })))
+
+/**
+ * „Erledigt“ im Kopf = eigene Aktivitäten heute der Typen aus `ERLEDIGT_TYPEN` (src/data/tagesbilanz.ts – dieselbe Liste wie Team).
+ * Runde 3 (Wunsch daten.md Nr. 2): Abgehakte Annahmen/Anfragen/Zurückziehen zählen jetzt über ihre `vernetzung_*`-Aktivität
+ * (überlebt einen Reload, Team und Heute zeigen dieselbe Zahl) – kein eigener Sitzungszähler mehr, der doppelt zählte.
+ */
 const ZEITRAUM_TYPEN: ActivityType[] = [...ERLEDIGT_TYPEN, 'schritt_verschoben']
 
 const istAbhakItem = (i: QueueItem) =>
@@ -114,7 +114,6 @@ type SeiteStore = {
   verborgen: Set<string>
   auswahl: Set<string>
   dialog: AbhakDialog
-  abgehakt: number
   anfragen: { gesendet: number; uebersprungen: number }
 }
 
@@ -128,7 +127,6 @@ function neuerStore(): StoreApi<SeiteStore> {
     verborgen: new Set(),
     auswahl: new Set(),
     dialog: null,
-    abgehakt: 0,
     anfragen: { gesendet: 0, uebersprungen: 0 },
   }))
 }
@@ -168,7 +166,6 @@ function HeuteInhalt({
   const verborgenLokal = useStore(store, (s) => s.verborgen)
   const auswahl = useStore(store, (s) => s.auswahl)
   const dialog = useStore(store, (s) => s.dialog)
-  const abgehakt = useStore(store, (s) => s.abgehakt)
   const anfragenSitzung = useStore(store, (s) => s.anfragen)
   const setCursor = useCallback((k: string | null) => store.setState({ cursor: k }), [store])
   const setDialog = useCallback((d: AbhakDialog) => store.setState({ dialog: d }), [store])
@@ -242,7 +239,6 @@ function HeuteInhalt({
       onErledigt: zeileSetzen,
       onAbgehakt: (sektion, art) =>
         store.setState((s) => ({
-          abgehakt: s.abgehakt + (art === 'erledigt' ? 1 : 0),
           anfragen:
             sektion === 'neue_anfragen'
               ? {
@@ -332,8 +328,11 @@ function HeuteInhalt({
     const zaehler = (e: Event) => {
       const d = (e as CustomEvent<{ delta?: number; fokus?: boolean }>).detail
       if (d?.delta) tzDelta(d.delta)
+      // Das sichtbare Feld: ab 1180 px im Tageszähler rechts, darunter in der Kanalzeile (Runde 3: der Zähler steht nur einmal)
       if (d?.fokus)
-        document.querySelector<HTMLInputElement>('[data-tageszaehler] input[aria-label="Zähler setzen"]')?.focus()
+        [...document.querySelectorAll<HTMLInputElement>('input[aria-label="Zähler setzen"]')]
+          .find((el) => el.getClientRects().length > 0)
+          ?.focus()
     }
     const sortieren = () => neuSortieren()
     window.addEventListener('crm:heute:zaehler', zaehler)
@@ -399,14 +398,14 @@ function HeuteInhalt({
     [halte, setCursor, spaeterLokal, zeileSetzen],
   )
 
-  // Erledigt = eigene Aktivitäten heute + Erledigt-Zeilen dieser Sitzung, deren Aktivität noch nicht zurückgelesen ist
-  // (sofort +1 nach `E`, H-05) + abgehakte Annahmen/Anfragen.
+  // Erledigt = eigene Aktivitäten heute (ERLEDIGT_TYPEN, inkl. vernetzung_* der Abhakzeilen) + Erledigt-Zeilen dieser Sitzung,
+  // deren Aktivität noch nicht zurückgelesen ist (sofort +1 nach `E`, H-05).
   const erledigtAkt = (aktivitaeten ?? []).filter((a) => ERLEDIGT_TYPEN.includes(a.type))
   const aktIds = new Set(erledigtAkt.map((a) => a.id))
   const ausstehend = [...erledigt.values()].filter(
     (e) => e.art === 'erledigt' && e.activityId !== null && !aktIds.has(e.activityId),
   ).length
-  const erledigtHeute = erledigtAkt.length + ausstehend + abgehakt
+  const erledigtHeute = erledigtAkt.length + ausstehend
   const spaeterZahl = (aktivitaeten ?? []).filter((a) => a.type === 'schritt_verschoben').length
   const leadsGesamt = pipeline?.reduce((n, z) => n + (z.leads ?? 0), 0) ?? 0
   const linkedinAktiv =
@@ -473,10 +472,15 @@ function HeuteInhalt({
       />
       <SeitenKopf
         titel="Heute"
-        kontext={(anzeigeName(person) || undefined)}
+        kontext={anzeigeName(person) || undefined}
         voice={begruessung(anzeigeName(me, ''))}
         rechts={
           <>
+            {!fremd ? (
+              <Suspense fallback={null}>
+                <EingangBadge />
+              </Suspense>
+            ) : null}
             <KopfStats
               eintraege={[
                 { wert: q.zaehler.faellig, label: 'fällig', ton: 'signal' },
@@ -574,11 +578,7 @@ function HeuteInhalt({
                 </button>
               </p>
             ) : fremd ? (
-              <HeuteLeer
-                art="anderePerson"
-                name={anzeigeName(person, 'Die andere Person')}
-                onZurueck={zurueckZuMir}
-              />
+              <HeuteLeer art="anderePerson" name={anzeigeName(person, 'Die andere Person')} onZurueck={zurueckZuMir} />
             ) : leadsGesamt === 0 && q.items.length === 0 ? (
               <HeuteLeer art="keineDaten" onSchnellimport={listeEinfuegen} onSheets={() => navigate(PFADE.import)} />
             ) : (
@@ -595,8 +595,10 @@ function HeuteInhalt({
         {/* Unter 1180 px nach der Queue wie reference.html (`.heute-grid`/`.aside`) – vorher order-first, die erste Karte lag
             auf dem iPhone unter dem Falz (Review) */}
         <aside className="max-wide:grid-cols-2 grid content-start gap-[22px] max-md:grid-cols-1">
+          {/* Runde 3: der LinkedIn-Zähler steht nur an einer Stelle – ab 1180 px hier rechts, darunter als Kanalzeile über der
+              Queue (vorher zusätzlich als Tageszähler ganz unten nach allen Karten) */}
           {!fremd ? (
-            <div data-tageszaehler>
+            <div data-tageszaehler className={cn(linkedinAktiv && 'max-wide:hidden')}>
               <Tageszaehler daten={tz} onListeEinfuegen={listeEinfuegen} />
             </div>
           ) : null}
@@ -796,7 +798,14 @@ function Sektionen({
             ) : (
               zeilen.map((z) =>
                 z.art === 'item' ? (
-                  <div key={z.key} data-key={z.key} onClick={() => setCursor(z.key)} className="relative">
+                  // scroll-mt am Element, das scrollIntoView bekommt (J/K): Runde 3 – die Klasse saß nur am <article> darin, der
+                  // Kartenkopf landete beim Hochblättern (K) unter dem 56-px-Sticky-Kopf (gemessen: top 1 px)
+                  <div
+                    key={z.key}
+                    data-key={z.key}
+                    onClick={() => setCursor(z.key)}
+                    className="relative scroll-mt-[calc(var(--head-h,0px)+16px)]"
+                  >
                     <QueueKarte
                       item={z.item}
                       aktiv={cursor === z.key}

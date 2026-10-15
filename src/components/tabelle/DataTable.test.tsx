@@ -260,6 +260,16 @@ describe('DataTable – Runde 2: Spaltenköpfe', () => {
     expect(within(knopf).getByText('Nächste Aktion')).toHaveClass('truncate')
   })
 
+  it('meta.kopfTitel ersetzt den Kopftext im title (sortierbar) bzw. steht am <th> (nicht sortierbar)', () => {
+    const spalten: DataTableSpalte<Zeile>[] = h.columns([
+      h.accessor('name', { header: 'Name', meta: { kopfTitel: 'Name der Person' } }),
+      h.accessor('firma', { header: 'Firma', enableSorting: false, meta: { kopfTitel: 'Firma laut Import' } }),
+    ])
+    render(<Harness daten={zeilen(1)} spalten={spalten} />)
+    expect(screen.getByTitle('Name der Person – sortieren · ⇧Klick: sekundär')).toBeInTheDocument()
+    expect(screen.getByRole('columnheader', { name: 'Firma' })).toHaveAttribute('title', 'Firma laut Import')
+  })
+
   it('Kopf klebt nur ≥ 1280 px; <col> blendet mit der Spalte aus; minBreite steuert die Querscroll-Breite', () => {
     const spalten: DataTableSpalte<Zeile>[] = h.columns([
       h.accessor('name', { header: 'Name' }),

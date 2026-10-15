@@ -596,11 +596,13 @@ export function DataTable<T extends RowData>({
                 const richtung = header.column.getIsSorted()
                 const inhalt = header.isPlaceholder ? null : <table.FlexRender header={header} />
                 const kopfText =
-                  typeof header.column.columnDef.header === 'string' ? header.column.columnDef.header : undefined
+                  meta.kopfTitel ??
+                  (typeof header.column.columnDef.header === 'string' ? header.column.columnDef.header : undefined)
                 return (
                   <th
                     key={header.id}
                     scope="col"
+                    title={sortierbar ? undefined : meta.kopfTitel}
                     aria-sort={richtung === 'asc' ? 'ascending' : richtung === 'desc' ? 'descending' : undefined}
                     className={cn(
                       'label bg-canvas border-line-strong h-8 border-b px-2.5 pb-2.5 text-left align-bottom leading-[1.2] font-semibold whitespace-normal',

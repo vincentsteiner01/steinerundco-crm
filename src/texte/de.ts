@@ -153,25 +153,6 @@ export function telefonGrundLabel(grund: keyof typeof GATE_GRUND_LABEL): string 
   return grund === 'firma_gesperrt' ? 'Firma gesperrt – nicht anrufen' : GATE_GRUND_LABEL[grund]
 }
 
-/** Zählung „Noch nicht anrufbar“ nach Grund (Runde 2: 119 ohne Nummer, 2 gesperrt – nicht „121 warten auf einen Anrufgrund“). */
-export type NichtAnrufbarZaehlung = { keineNummer: number; keinAnrufgrund: number; gesperrt: number }
-
-export function nichtAnrufbarSatz(z: NichtAnrufbarZaehlung): string {
-  const teile = [
-    z.keineNummer ? `${z.keineNummer} ohne Telefonnummer` : null,
-    z.keinAnrufgrund ? `${z.keinAnrufgrund} ohne Anrufgrund` : null,
-    z.gesperrt ? `${z.gesperrt} gesperrt` : null,
-  ].filter(Boolean)
-  return teile.length ? `Noch nicht anrufbar: ${teile.join(' · ')}.` : ''
-}
-
-/** Primärknopf im Leerzustand nach dem häufigsten Grund. */
-export function nichtAnrufbarAktion(z: NichtAnrufbarZaehlung): string {
-  if (z.keinAnrufgrund >= z.keineNummer && z.keinAnrufgrund >= z.gesperrt) return 'Anrufgrund setzen'
-  if (z.keineNummer >= z.gesperrt) return 'Leads ohne Nummer zeigen'
-  return 'Gesperrte Leads zeigen'
-}
-
 // ux § 4.1 – Leere Zustände (eine Überschrift, ein Satz, max. eine Primäraktion)
 /**
  * Gate-Wortlaute für E-Mail (ux § 3.3.3 Tooltip, § 3.6.3; Regel 5 = offene Platzhalter § 3.1.9a). Eine Quelle für
@@ -374,8 +355,9 @@ export function TIMELINE_TEXT(a: Activity, ctx: TimelineKontext = {}): string {
     case 'angelegt': {
       const quelle = a.source
       if (quelle === 'schnellimport') return 'Angelegt per Schnellimport (ChatGPT)'
+      // Runde 3 (Wunsch daten.md Nr. 6): diese Zeile trägt das rückdatierte erste Sheet-Datum – nicht wie der Importzeitpunkt klingen
       if (quelle === 'import_sheet')
-        return `Importiert aus CRM-Tabelle${num(m.row) !== null ? ` (Zeile ${num(m.row)})` : ''}`
+        return `Angelegt in der CRM-Tabelle (importiert${num(m.row) !== null ? `, Zeile ${num(m.row)}` : ''})`
       if (quelle === 'import_csv') return 'Importiert aus CSV'
       return 'Angelegt'
     }

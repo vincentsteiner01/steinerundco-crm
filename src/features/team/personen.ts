@@ -8,8 +8,7 @@ export type TeamPerson = { id: string; slug: string; name: string; member: Membe
 
 export function teamPersonen(members: readonly Member[]): TeamPerson[] {
   const slug = (m: Member) =>
-    PERSONEN.find((p) => p.email === m.email?.toLowerCase())?.id ??
-    anzeigeName(m, m.id ?? '').toLowerCase()
+    PERSONEN.find((p) => p.email === m.email?.toLowerCase())?.id ?? anzeigeName(m, m.id ?? '').toLowerCase()
   const rang = (s: string) => {
     const i = PERSONEN.findIndex((p) => p.id === s)
     return i < 0 ? 99 : i

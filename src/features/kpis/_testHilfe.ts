@@ -224,7 +224,8 @@ export function tabellen(ueberschreiben: Partial<Tabellen> = {}): Tabellen {
         id: MEMBER_V,
         email: 'vincent@steinerundco.de',
         display_name: 'Vincent',
-        short_name: 'Vincent',
+        // echte Daten seit Runde 2: Kürzel „VS“ – angezeigt wird der Vorname
+        short_name: 'VS',
         preferences: {},
       },
       { id: MEMBER_M, email: 'mike@steinerundco.de', display_name: 'Mike', short_name: 'Mike', preferences: {} },

@@ -3,6 +3,7 @@
 // (Zähler · Konversion zur Vorstufe aus dem Bestand · Ø Tage aus v_pipeline_counts), dnd-kit-Drag mit Drop-Regeln (dropRegeln.ts),
 // Pflicht-Popovers (Termin · Grund · Datum · Vertragsabschluss), Tastatur J K H L ⇧→ ⇧← ↵. Ein Drop ändert nie Zuständig.
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
+import { SlidersHorizontal } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { PFADE } from '@/app/pfade'
@@ -14,6 +15,7 @@ import { DatePicker } from '@/components/ui/DatePicker'
 import { Dialog } from '@/components/ui/Dialog'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
+import { Popover } from '@/components/ui/Popover'
 import { KopfStats, SeitenKopf } from '@/components/ui/SeitenKopf'
 import { Segment } from '@/components/ui/Segment'
 import { Select } from '@/components/ui/Select'
@@ -32,6 +34,7 @@ import { useStabileListe } from '@/features/leads/hilfen'
 import { istFrei, mitFirmensperre, type LeadZeile } from '@/features/leads/spalten'
 import { fmtDatum, heuteBerlin } from '@/lib/format'
 import { anzeigeName } from '@/lib/mitglied'
+import { useIstTelefon } from '@/lib/useMediaQuery'
 import { PHASEN, phaseNachKey, phaseVon, type Phase } from '@/lib/stufen'
 import type { Channel, LeadStage, PhaseKey } from '@/types/domain'
 import { stufenwechselAlsPipeline } from './daten/stufenwechsel'
@@ -49,6 +52,7 @@ export function Component() {
   const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
   const me = useMeId()
+  const telefon = useIstTelefon()
   const heute = heuteBerlin()
   const overrides = useMemo(() => filterAusUrl(params), [params])
   const filter = useMemo(
@@ -278,6 +282,55 @@ export function Component() {
     return undefined
   }
 
+  const aktiveFilter =
+    (zustaendigWert !== 'alle' ? 1 : 0) + (filter.kanal?.length ? 1 : 0) + (overrides.tag?.length ? 1 : 0)
+  const filterSteuerung = (
+    <>
+      <Segment
+        klein
+        ariaLabel="Zuständig"
+        wert={zustaendigWert}
+        onChange={(k) =>
+          setOverrides({ ...overrides, zustaendig: k === 'alle' ? undefined : (k as 'me' | 'andere' | 'frei') })
+        }
+        optionen={[
+          { key: 'alle', label: 'Alle' },
+          { key: 'me', label: 'Ich' },
+          {
+            key: 'andere',
+            label: anzeigeName(
+              members?.find((m) => m.id !== me),
+              'Andere',
+            ),
+          },
+          { key: 'frei', label: 'Frei' },
+        ]}
+      />
+      <Segment
+        klein
+        ariaLabel="Kanal"
+        wert={(filter.kanal?.[0] ?? 'alle') as Channel | 'alle'}
+        onChange={(k) => setOverrides({ ...overrides, kanal: k === 'alle' ? undefined : [k as Channel] })}
+        optionen={[
+          { key: 'alle', label: 'Alle' },
+          { key: 'linkedin', label: <span className="glyph">in</span> },
+          { key: 'telefon', label: 'Telefon' },
+          { key: 'email', label: 'E-Mail' },
+        ]}
+      />
+      {tags?.length ? (
+        <Select
+          aria-label="Tag"
+          className="h-[34px] w-auto"
+          value={overrides.tag?.[0] ?? ''}
+          platzhalter="Tag"
+          onChange={(e) => setOverrides({ ...overrides, tag: e.target.value ? [e.target.value] : undefined })}
+          optionen={tags.map((t) => ({ value: t.id, label: t.name }))}
+        />
+      ) : null}
+    </>
+  )
+
   return (
     <>
       <SeitenKopf
@@ -298,58 +351,44 @@ export function Component() {
           />
         }
       />
-      <div className="mb-3.5 flex flex-wrap items-center gap-2.5" data-toolbar>
-        <Input
-          data-suche
-          type="search"
-          aria-label="Pipeline durchsuchen"
-          placeholder="Name, Unternehmen …"
-          value={suche}
-          onChange={(e) => setSuche(e.target.value)}
-          rechts={<kbd className="kbd">/</kbd>}
-          className="h-[34px]"
-          rahmenClassName="w-[240px] max-w-full"
-        />
-        <Segment
-          klein
-          ariaLabel="Zuständig"
-          wert={zustaendigWert}
-          onChange={(k) =>
-            setOverrides({ ...overrides, zustaendig: k === 'alle' ? undefined : (k as 'me' | 'andere' | 'frei') })
-          }
-          optionen={[
-            { key: 'alle', label: 'Alle' },
-            { key: 'me', label: 'Ich' },
-            { key: 'andere', label: anzeigeName(members?.find((m) => m.id !== me), 'Andere') },
-            { key: 'frei', label: 'Frei' },
-          ]}
-        />
-        <Segment
-          klein
-          ariaLabel="Kanal"
-          wert={(filter.kanal?.[0] ?? 'alle') as Channel | 'alle'}
-          onChange={(k) => setOverrides({ ...overrides, kanal: k === 'alle' ? undefined : [k as Channel] })}
-          optionen={[
-            { key: 'alle', label: 'Alle' },
-            { key: 'linkedin', label: <span className="glyph">in</span> },
-            { key: 'telefon', label: 'Telefon' },
-            { key: 'email', label: 'E-Mail' },
-          ]}
-        />
-        {tags?.length ? (
-          <Select
-            aria-label="Tag"
-            className="h-[34px] w-auto"
-            value={overrides.tag?.[0] ?? ''}
-            platzhalter="Tag"
-            onChange={(e) => setOverrides({ ...overrides, tag: e.target.value ? [e.target.value] : undefined })}
-            optionen={tags.map((t) => ({ value: t.id, label: t.name }))}
+      <div className="mb-3.5 flex flex-wrap items-center gap-2.5 max-md:flex-nowrap" data-toolbar>
+        {/* Input rendert einen eigenen Grid-Wrapper – auf dem Telefon nimmt dieser Rahmen die Restbreite */}
+        <div className="max-md:min-w-0 max-md:flex-1">
+          <Input
+            data-suche
+            type="search"
+            aria-label="Pipeline durchsuchen"
+            placeholder="Name, Unternehmen …"
+            value={suche}
+            onChange={(e) => setSuche(e.target.value)}
+            rechts={<kbd className="kbd max-md:hidden">/</kbd>}
+            className="h-[34px]"
+            rahmenClassName="w-[240px] max-w-full max-md:w-auto"
           />
-        ) : null}
-        <span className="flex-1" />
-        <Button variante="quiet" groesse="S" onClick={() => navigate(PFADE.leads)}>
-          Als Tabelle
-        </Button>
+        </div>
+        {telefon ? (
+          // Telefon (Runde 3): Zuständig · Kanal · Tag in einem Popover – vier Zeilen Bedienleiste ließen dem Board 380 px
+          <Popover
+            titel="Filter"
+            align="end"
+            trigger={
+              <Button variante="secondary" groesse="M" icon={SlidersHorizontal} aria-label="Filter" data-filter-knopf>
+                Filter{aktiveFilter ? <span className="tnum font-mono text-[12px]">{aktiveFilter}</span> : null}
+              </Button>
+            }
+            className="w-[300px] max-w-[calc(100vw-32px)]"
+          >
+            <div className="grid gap-3 p-1.5">{filterSteuerung}</div>
+          </Popover>
+        ) : (
+          <>
+            {filterSteuerung}
+            <span className="flex-1" />
+            <Button variante="quiet" groesse="S" onClick={() => navigate(PFADE.leads)}>
+              Als Tabelle
+            </Button>
+          </>
+        )}
       </div>
       {fehler ? (
         <p className="text-small text-danger mb-3" role="alert">
@@ -373,45 +412,59 @@ export function Component() {
             aria-label="Pipeline"
             data-kanban
           >
-            {spalten.map((s, i) => {
-              const kopf: SpaltenKopf = {
-                zaehler: s.leads.length,
-                konversion: konversion(zaehler, i),
-                tage: tage(s.phase),
-              }
-              return (
-                <Spalte
-                  key={s.phase.key}
-                  phase={s.phase}
-                  kopf={kopf}
-                  eingeklappt={eingeklappt.has(s.phase.key)}
-                  onToggle={() => toggle(s.phase.key)}
-                  pflicht={brauchtDialog(dropRegel(s.phase.key))}
-                  leer={s.leads.length === 0}
-                >
-                  {s.leads.map((l) => (
-                    <Karte
-                      key={l.id}
-                      lead={l}
-                      member={istFrei(l) ? null : (members?.find((m) => m.id === l.owner_id) ?? null)}
-                      zweiter={
-                        l.sales_owner_id && l.sales_owner_id !== l.owner_id
-                          ? (members?.find((m) => m.id === l.sales_owner_id) ?? null)
-                          : null
+            {/* Spalten erst mit bekannter Board-Höhe: sonst misst die virtuelle Liste beim ersten Layout die volle Inhaltshöhe
+                (184 Karten ≈ 18 000 px) und rendert alle Karten, bis ein ResizeObserver-Lauf nachzieht (Runde 3) */}
+            {hoehe === undefined
+              ? null
+              : spalten.map((s, i) => {
+                  const kopf: SpaltenKopf = {
+                    zaehler: s.leads.length,
+                    konversion: konversion(zaehler, i),
+                    vorstufe: i > 0 ? zaehler[i - 1] : undefined,
+                    tage: tage(s.phase),
+                  }
+                  const karte = (j: number) => {
+                    const l = s.leads[j] as LeadZeile
+                    return (
+                      <Karte
+                        key={l.id}
+                        lead={l}
+                        member={istFrei(l) ? null : (members?.find((m) => m.id === l.owner_id) ?? null)}
+                        zweiter={
+                          l.sales_owner_id && l.sales_owner_id !== l.owner_id
+                            ? (members?.find((m) => m.id === l.sales_owner_id) ?? null)
+                            : null
+                        }
+                        cursor={cursor.leadId === l.id}
+                        heute={heute}
+                        feiertage={settings?.feiertage}
+                        aktion={aktionFuer(l)}
+                        onClick={() => {
+                          setCursorState({ spalte: s.phase.key, leadId: l.id })
+                          oeffnePeek(l.id)
+                        }}
+                      />
+                    )
+                  }
+                  return (
+                    <Spalte
+                      key={s.phase.key}
+                      phase={s.phase}
+                      kopf={kopf}
+                      eingeklappt={eingeklappt.has(s.phase.key)}
+                      onToggle={() => toggle(s.phase.key)}
+                      pflicht={brauchtDialog(dropRegel(s.phase.key))}
+                      anzahl={s.leads.length}
+                      karte={karte}
+                      schluessel={(j) => s.leads[j]?.id ?? String(j)}
+                      cursorIndex={
+                        cursor.spalte === s.phase.key && cursor.leadId
+                          ? s.leads.findIndex((l) => l.id === cursor.leadId)
+                          : -1
                       }
-                      cursor={cursor.leadId === l.id}
-                      heute={heute}
-                      feiertage={settings?.feiertage}
-                      aktion={aktionFuer(l)}
-                      onClick={() => {
-                        setCursorState({ spalte: s.phase.key, leadId: l.id })
-                        oeffnePeek(l.id)
-                      }}
                     />
-                  ))}
-                </Spalte>
-              )
-            })}
+                  )
+                })}
           </div>
           <DragOverlay>
             {aktiv ? (

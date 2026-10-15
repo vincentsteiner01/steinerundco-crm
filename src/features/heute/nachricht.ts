@@ -2,7 +2,7 @@
 // lib/platzhalter.ts (`fuellen`, `tokens`); hier steht nur, welche Vorlage eine Karte bekommt und was daraus wird.
 import { fuellen, tokens, type FuellErgebnis, type PlatzhalterKontext, type PlatzhalterLead } from '@/lib/platzhalter'
 import { OPENER_NACH_ROLLE, phase2Vorlage, VORLAGE, type VorlageKey } from '@/lib/vorlagenKeys'
-import type { LeadMitBezug, LeadStage, Member, QueueItem, ReplyLabel, Template } from '@/types/domain'
+import type { LeadMitBezug, Member, QueueItem, ReplyLabel, Template } from '@/types/domain'
 import type { KartenZustand } from './kartenStore'
 
 export type KartenArt = 'linkedin' | 'telefon' | 'email' | 'antworten' | 'meeting' | 'wiedervorlage' | 'aufgabe'
@@ -34,35 +34,33 @@ export const nachId = (templates: readonly Template[] | undefined, id: string | 
 
 export type AntwortInfo = { label: ReplyLabel | null; note: string | null; occurredAt: string | null }
 
+/** Titel der Sheet-Wiedervorlage aus dem Import (Migration 3, Abschnitt 14: Phase ohne Sequenz, „Nächster Follow-Up am“ gesetzt). */
+const SHEET_FOLLOW_UP = /^follow-up \(aus sheet\)/i
+const KURZFRISTIG: readonly VorlageKey[] = [VORLAGE.li_fu_kurz_1, VORLAGE.li_fu_kurz_2, VORLAGE.li_fu_kurz_3]
+
 /**
- * Vorlage einer Karte: gewechselte Vorlage (⌘⇧E) → Antworten-Karte nach `PHASE2_VORLAGE_NACH_LABEL` → Opener nach Rolle
- * (`OPENER_NACH_ROLLE`) → Vorlage des Schritts/der Aufgabe aus der View.
+ * Runde 3 (echte Daten, Mikes Heute): Wiedervorlagen ohne Vorlage zeigten „Keine Vorlage hinterlegt“ und sperrten Kopieren.
+ * Standard: „Follow-up (aus Sheet)“ → der nächste Kurzfristig-Schritt nach dem Nachfass-Zähler des Leads (0 → Kurzfristig 1,
+ * 1 → 2, 2 → 3, ab 3 → Langfristig 1); jede andere Wiedervorlage → Langfristig 1 (Stale-Regel „Wiedervorlage reif“, § 5.4).
+ * Über „ändern“ (⌘⇧E) bleibt die Vorlage wählbar.
  */
-/**
- * Runde 2 (echte Daten): Wiedervorlagen aus dem Sheet-Import („Follow-up (aus Sheet)“) haben keine Vorlage – die Karte zeigte
- * „Keine Vorlage hinterlegt“ und sperrte Kopieren. Standard nach Phase: im LinkedIn-Gespräch Kurzfristig 1, langfristig
- * Langfristig 1 (wie „Langfristig nachfassen“). Ab Erstgespräch gibt es keine passende DM-Vorlage – dann bleibt die Wahl offen.
- */
-export function wiedervorlageStandard(stage: LeadStage | null | undefined): VorlageKey | null {
-  switch (stage) {
-    case 'vernetzt':
-    case 'gespraech_eroeffnet':
-    case 'dm_follow_up':
-    case 'dm_beantwortet':
-    case 'bedarfsermittlung':
-    case 'pitch':
-      return 'li_fu_kurz_1'
-    case 'langfristig':
-      return 'li_fu_lang_1'
-    default:
-      return null
-  }
+export function wiedervorlageStandard(
+  item: Pick<QueueItem, 'title' | 'follow_up_count'>,
+  followUps?: number | null,
+): VorlageKey {
+  if (!SHEET_FOLLOW_UP.test(item.title?.trim() ?? '')) return VORLAGE.li_fu_lang_1
+  const n = Math.max(0, followUps ?? item.follow_up_count ?? 0)
+  return KURZFRISTIG[n] ?? VORLAGE.li_fu_lang_1
 }
 
+/**
+ * Vorlage einer Karte: gewechselte Vorlage (⌘⇧E) → Antworten-Karte nach `PHASE2_VORLAGE_NACH_LABEL` → Opener nach Rolle
+ * (`OPENER_NACH_ROLLE`) → Wiedervorlage ohne Vorlage: Standard (`wiedervorlageStandard`) → Vorlage des Schritts/der Aufgabe aus der View.
+ */
 export function vorlageFuerKarte(
   item: QueueItem,
   art: KartenArt,
-  lead: (Pick<LeadMitBezug, 'role'> & { stage?: LeadStage | null }) | null | undefined,
+  lead: (Pick<LeadMitBezug, 'role'> & { follow_up_count?: number | null }) | null | undefined,
   templates: readonly Template[] | undefined,
   zustand: Pick<KartenZustand, 'vorlageId'>,
   antwort: AntwortInfo | null,
@@ -75,7 +73,8 @@ export function vorlageFuerKarte(
     const rolle = OPENER_NACH_ROLLE(lead.role)
     if (rolle) return nachKey(templates, rolle)
   }
-  if (art === 'wiedervorlage' && !item.template_id) return nachKey(templates, wiedervorlageStandard(lead?.stage))
+  if (art === 'wiedervorlage' && !item.template_id)
+    return nachKey(templates, wiedervorlageStandard(item, lead?.follow_up_count))
   return nachId(templates, item.template_id)
 }
 

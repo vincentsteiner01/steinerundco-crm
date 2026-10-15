@@ -82,7 +82,7 @@ describe('Skript', () => {
     expect(screen.getByTitle('Anrufer – offen')).toHaveClass('text-overdue')
   })
 
-  it('bricht die 9 Phasen-Tabs um statt sie quer zu verstecken (Runde 2: Pitch … Datenschutz waren unsichtbar)', () => {
+  it('9 Phasen als Raster 3 × 3 statt quer scrollender Leiste (Runde 2/3: Pitch … Datenschutz waren unsichtbar, dann 4/4/1)', () => {
     render(
       <Skript
         templates={TEMPLATES}
@@ -97,6 +97,20 @@ describe('Skript', () => {
     const leiste = screen.getByRole('tablist', { name: 'Skript-Phase' })
     expect(leiste).toHaveClass('flex-wrap')
     expect(leiste).not.toHaveClass('overflow-auto')
+    const raster = screen.getByTestId('skript-phasen')
+    expect(raster).toContainElement(leiste)
+    expect(raster).toHaveClass('[&>[role=tablist]]:grid', '[&>[role=tablist]]:grid-cols-3')
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual([
+      'Zentrale',
+      'Einstieg',
+      'Problem',
+      'Qualifizierung',
+      'Pitch',
+      'Einwände',
+      'Abschluss',
+      'Mailbox',
+      'Datenschutz',
+    ])
   })
 
   it('lange Vorlagennamen: Auswahl als Select über die volle Breite', () => {
@@ -112,6 +126,8 @@ describe('Skript', () => {
         onVorlage={() => {}}
       />,
     )
-    expect(screen.getByRole('combobox', { name: 'Vorlage' })).toHaveClass('w-full')
+    const auswahl = screen.getByRole('combobox', { name: 'Vorlage' })
+    expect(auswahl).toHaveClass('w-full')
+    expect(auswahl).toHaveAttribute('title', 'Sehr lange Vorlage für den Einstieg Nummer 1') // abgeschnittener Name per Hover
   })
 })

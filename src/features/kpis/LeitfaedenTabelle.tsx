@@ -7,7 +7,7 @@ import { Glyph } from '@/components/ui/Glyph'
 import { DataTable, spaltenHelper, type DataTableSpalte } from '@/components/tabelle'
 import type { ActivityZeitraum } from '@/data/activities'
 import type { useSequencesIndex } from '@/data/sequences'
-import { fmtProzent, fmtZahl } from '@/lib/format'
+import { fmtAnteil, fmtZahl } from '@/lib/format'
 import { KANAL_LABEL } from '@/texte/de'
 import type { Channel, TemplatePerformance } from '@/types/domain'
 import { FunnelBalken } from './charts/FunnelBalken'
@@ -90,7 +90,7 @@ export function LeitfaedenTabelle({
         meta: { rechts: true, mono: true, breite: '12%' },
         cell: ({ getValue }) => {
           const q = getValue()
-          return q === null ? '–' : fmtProzent(q)
+          return q === null ? '–' : fmtAnteil(q)
         },
       }),
       h.display({
@@ -217,17 +217,11 @@ export function LeitfaedenTabelle({
                     <td className="tnum text-ink text-right font-mono">{fmtZahl(v.gesamt)}</td>
                     <td className="tnum text-ink text-right font-mono">
                       {fmtZahl(v.angenommen)}
-                      <span className="text-ink-3">
-                        {' '}
-                        · {v.annahmeQuote === null ? '–' : fmtProzent(v.annahmeQuote)}
-                      </span>
+                      <span className="text-ink-3"> · {v.annahmeQuote === null ? '–' : fmtAnteil(v.annahmeQuote)}</span>
                     </td>
                     <td className="tnum text-ink text-right font-mono">
                       {fmtZahl(v.antworten)}
-                      <span className="text-ink-3">
-                        {' '}
-                        · {v.antwortQuote === null ? '–' : fmtProzent(v.antwortQuote)}
-                      </span>
+                      <span className="text-ink-3"> · {v.antwortQuote === null ? '–' : fmtAnteil(v.antwortQuote)}</span>
                     </td>
                   </tr>
                 ))}

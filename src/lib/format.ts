@@ -77,6 +77,16 @@ export function fmtProzent(x: number): string {
   return `${fmtZahl(Math.round(p))}${SCHMAL}%`
 }
 
+/**
+ * Verhältnis → Prozent, IMMER ×100 (`fmtAnteil(1.25)` → `125 %`). Runde 3 (Wunsch leads-pipeline Nr. 4): `fmtProzent` liest Werte
+ * über 1 als fertige Prozentzahl – eine Quote über 100 % (z. B. Annahmen ÷ Anfragen der letzten 7 Tage, die Annahmen stammen von
+ * älteren Anfragen) wurde dort zu „1 %“. Für Quoten, die über 1 gehen können, diese Funktion nehmen.
+ */
+export function fmtAnteil(anteil: number): string {
+  if (!Number.isFinite(anteil)) return `–${SCHMAL}%`
+  return `${fmtZahl(Math.round(anteil * 100))}${SCHMAL}%`
+}
+
 /** `+17` / `−2` / `±0` – Vorzeichen immer, Minus als U+2212. */
 export function fmtDelta(n: number): string {
   const r = Math.round(n)

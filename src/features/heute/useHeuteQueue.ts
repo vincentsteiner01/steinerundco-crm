@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
-import { useQueue } from '@/data/queue'
+import { useQueue, zaehleQueue } from '@/data/queue'
 import { useAndere } from '@/data/members'
 import { useSequencesIndex } from '@/data/sequences'
 import { useSettings } from '@/data/settings'
@@ -21,7 +21,6 @@ import {
   SEKTIONEN,
   sektionenAbleiten,
   stabileReihenfolge,
-  zaehleFaellig,
   type BatchChip,
   type BatchFilter,
   type Sektionen,
@@ -224,7 +223,12 @@ export function useHeuteQueue(memberId: string | null, opts: HeuteQueueOptionen 
     return { art: 'schritt', stepIds: gleich.length ? gleich.sort() : [startSchritt] }
   }, [batchGewaehlt, startSchritt, stepsById])
   const sektionen = useMemo(() => filtereSektionen(berechnet.alleSektionen, batch), [berechnet.alleSektionen, batch])
-  const zaehler = useMemo(() => zaehleFaellig(berechnet.alleSektionen), [berechnet.alleSektionen])
+  // Runde 3: Kopfzahlen aus derselben Funktion wie Sidebar und Team (`zaehleQueue`, src/data/queue.ts) – eine Quelle statt zwei
+  // Zählweisen (Team zeigte „63 überfällig“, Heute „60“). Der Paritätstest in useHeuteQueue.test.ts hält sie mit den Sektionen gleich.
+  const zaehler = useMemo(() => {
+    const z = zaehleQueue(items ?? [], (id) => !!(id && stepsById?.get(id)?.is_opener))
+    return { faellig: z.faellig, ueberfaellig: z.ueberfaelligSektion }
+  }, [items, stepsById])
 
   const neuSortieren = useCallback(() => store.setState({ reihenfolge: null }), [store])
   const ansEnde = useCallback(

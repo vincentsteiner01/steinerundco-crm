@@ -103,7 +103,9 @@ export function Button(props: ButtonProps) {
         // min-w-0/max-w-full: im 4er-Raster (Peek-Sheet 390 px) ragte „Kopieren“ (87 px) sonst 10 px in „Gesendet“ (Runde 2);
         // ein Button mit w-full zieht den Wrapper mit auf die volle Zellenbreite
         className={
-          mitGrund ? cn('min-w-0', /\bw-full\b/.test(className ?? '') ? 'flex w-full' : 'inline-flex max-w-full') : 'contents'
+          mitGrund
+            ? cn('min-w-0', /\bw-full\b/.test(className ?? '') ? 'flex w-full' : 'inline-flex max-w-full')
+            : 'contents'
         }
         tabIndex={mitGrund ? 0 : undefined}
         aria-label={mitGrund ? disabledGrund : undefined}

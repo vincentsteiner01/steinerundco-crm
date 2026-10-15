@@ -23,6 +23,8 @@ export const PFADE = {
   team: '/team',
   hilfe: (thema?: string) => (thema ? `/hilfe/${thema}` : '/hilfe'),
   feedback: '/feedback',
-  einstellungen: (bereich: 'profil' | 'passcode' | 'ziele' | 'sequenzen' | 'sperrliste' | 'export' = 'profil') =>
-    `/einstellungen/${bereich}`,
+  // Runde 3: 'verbindungen' (LinkedIn-Brücke, Eingang – Wunsch verbindungen.md Nr. 2)
+  einstellungen: (
+    bereich: 'profil' | 'passcode' | 'ziele' | 'sequenzen' | 'sperrliste' | 'export' | 'verbindungen' = 'profil',
+  ) => `/einstellungen/${bereich}`,
 } as const

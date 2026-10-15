@@ -19,7 +19,7 @@ const CommandPalette = lazy(() => import('./CommandPalette').then((m) => ({ defa
 const ShortcutHilfe = lazy(() => import('./ShortcutHilfe').then((m) => ({ default: m.ShortcutHilfe })))
 // Phone-Topbar (Radix-Dropdown ≈ 10 kB gzip) nur unter 768 px laden – auf dem Desktop bleibt sie aus dem initialen Bundle.
 const PhoneTopbar = lazy(() => import('./PhoneTopbar').then((m) => ({ default: m.PhoneTopbar })))
-// Feedback-Knopf (⌥F) und Onboarding-Tour: nachgeladen, nicht im Start-Bundle (E22)
+// Feedback-Steuerung (⌥F, Dialog, Antwort-Toasts – kein sichtbarer Knopf) und Onboarding-Tour: nachgeladen, nicht im Start-Bundle (E22)
 const FeedbackKnopf = lazy(() => import('@/features/feedback/public').then((m) => ({ default: m.FeedbackKnopf })))
 const OnboardingTour = lazy(() => import('@/features/hilfe/public').then((m) => ({ default: m.OnboardingTour })))
 
@@ -80,7 +80,8 @@ export function AppShell() {
         <main
           id="main"
           tabIndex={-1}
-          // Unten Luft für Tab-Leiste und schwebenden Feedback-Knopf (Telefon 40 px über der Leiste) – das Seitenende liegt nie darunter
+          // Unten Luft für die Tab-Leiste – das Seitenende liegt nie darunter. Einen schwebenden Feedback-Knopf gibt es nicht mehr
+          // (er lag über Inhalten); Feedback steht in Sidebar, Icon-Rail und Phone-Topbar, dazu ⌥F.
           className="px-gutter min-w-0 pb-12 outline-none max-md:pb-[calc(var(--spacing-tabbar)+24px+env(safe-area-inset-bottom))]"
         >
           <div key={location.pathname} className="max-w-content animate-screen-in">

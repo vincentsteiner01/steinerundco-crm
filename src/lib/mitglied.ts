@@ -22,18 +22,19 @@ export function istKuerzel(s: string | null | undefined): boolean {
 }
 
 /**
- * Vorname zum Anzeigen: short_name, sofern es kein Kürzel ist („Mike“) → erstes Wort von display_name („Vincent“) → Register
- * (E-Mail) → Ersatz. Ein Kürzel wie „VS“ erscheint nie als Name.
+ * Vorname zum Anzeigen. Regel (Runde 3): Name = `display_name` (erstes Wort: „Vincent“, „Mike“) → Register (E-Mail) →
+ * `short_name` nur, wenn er länger als 3 Zeichen ist (dann ist er ein Name, kein Kürzel) → Ersatz. Ein Kürzel wie „VS“ oder „vs“
+ * erscheint nie als Name; Kürzel gehören an Avatar und kompakte Badges (`kuerzel` in components/ui/Avatar.tsx).
  */
 export function anzeigeName(m: NamensMitglied | null | undefined, ersatz = ''): string {
   if (!m) return ersatz
-  const s = m.short_name?.trim()
-  if (s && !istKuerzel(s)) return s
   const d = m.display_name?.trim().split(/\s+/)[0]
   if (d) return d
   const p = registerPerson(m)
   if (p) return p.name
-  return s || ersatz
+  const s = m.short_name?.trim()
+  if (s && s.length > 3 && !istKuerzel(s)) return s
+  return ersatz
 }
 
 /** Slug für `?person=` (vincent | mike); unbekannte Personen: Vorname klein. */

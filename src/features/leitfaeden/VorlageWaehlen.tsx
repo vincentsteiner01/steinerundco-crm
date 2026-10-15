@@ -7,7 +7,7 @@ import { Check, Search } from 'lucide-react'
 import { useMemo, useState, type ReactNode } from 'react'
 import { cn } from '@/components/ui/cn'
 import { useTemplatePerformance, useTemplates } from '@/data/templates'
-import { fmtProzent } from '@/lib/format'
+import { fmtAnteil } from '@/lib/format'
 import type { Channel, Template, TemplatePhase } from '@/types/domain'
 import { sortiert } from './helfer'
 import { labelTeile, phasenFuer } from './phasen'
@@ -151,7 +151,7 @@ export function VorlageWaehlen({
                           <span className="min-w-0 flex-1 truncate">{t.name}</span>
                           {quote !== undefined ? (
                             <span className="text-ink-3 tnum font-mono text-[12px]">
-                              {quote === null ? '–' : fmtProzent(quote)}
+                              {quote === null ? '–' : fmtAnteil(quote)}
                             </span>
                           ) : null}
                           {aktuell ? <Check size={14} strokeWidth={1.75} aria-hidden className="text-signal" /> : null}

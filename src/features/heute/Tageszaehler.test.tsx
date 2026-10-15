@@ -1,7 +1,7 @@
 // Tageszaehler.test.tsx (BAUPLAN § 3.2 Unit-Tests, H-11/H-12): Direkteingabe 40 bei 12 getrackten → manueller Anteil 28;
 // Heute noch möglich = max(0, min(Tagesziel − heute, Wochenbudget − Woche)); Warnschwelle (90 %) in Amber; bei 0 der Hinweis
 // „Wochenbudget erreicht – weitere Anfragen auf eigenes Risiko“; +1/+5 als Delta; Kanalzeile mit denselben Zahlen.
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/data/supabase', async () => (await import('./_testHilfe')).supabaseAntworten())
@@ -19,6 +19,8 @@ import { BUDGET_ERREICHT_TEXT, Tageszaehler } from './Tageszaehler'
 import { useTageszaehler } from './useTageszaehler'
 
 const HEUTE = heuteBerlin()
+/** Feld im Tageszähler rechts (die Kanalzeile hat seit Runde 3 ein eigenes für unter 1180 px). */
+const railFeld = () => within(screen.getByTestId('rail')).getByLabelText('Zähler setzen')
 /** Fußzeilen des Tageszählers (Text über mehrere Spans – getByText sieht nur direkte Textknoten). */
 const fuss = () => document.querySelector('[data-tageszaehler-fuss]') as HTMLElement
 const fussZeile = (re: RegExp) =>
@@ -30,7 +32,9 @@ function Pruefling() {
   return (
     <>
       <Kanalzeile daten={tz} linkedin telefon={false} onListeEinfuegen={vi.fn()} onCallBlock={vi.fn()} />
-      <Tageszaehler daten={tz} onListeEinfuegen={vi.fn()} />
+      <div data-testid="rail">
+        <Tageszaehler daten={tz} onListeEinfuegen={vi.fn()} />
+      </div>
     </>
   )
 }
@@ -74,7 +78,7 @@ describe('Tageszähler', () => {
     }
     rendern(<Pruefling />)
     await waitFor(() => expect(fuss()).toHaveTextContent('12 davon mit Profil erfasst'))
-    const feld = screen.getByLabelText('Zähler setzen')
+    const feld = railFeld()
     await waitFor(() => expect(feld).toHaveValue('12'))
     fireEvent.change(feld, { target: { value: '40' } })
     fireEvent.blur(feld)
@@ -83,7 +87,7 @@ describe('Tageszähler', () => {
       'set_counter',
       { p_metric: 'vernetzungen_versendet', p_value: 28, p_date: HEUTE, p_member_id: MEMBER_V, p_delta: true },
     ])
-    await waitFor(() => expect(screen.getByLabelText('Zähler setzen')).toHaveValue('40'))
+    await waitFor(() => expect(railFeld()).toHaveValue('40'))
     expect(fuss()).toHaveTextContent('12 davon mit Profil erfasst · 28 manuell')
   })
 
@@ -91,7 +95,7 @@ describe('Tageszähler', () => {
     tage(20, 0)
     getrackt(12)
     rendern(<Pruefling />)
-    const feld = await screen.findByLabelText('Zähler setzen')
+    const feld = await waitFor(railFeld)
     await waitFor(() => expect(feld).toHaveValue('20'))
     fireEvent.change(feld, { target: { value: '5' } })
     fireEvent.blur(feld)

@@ -70,6 +70,7 @@ export const RPC_PARAMS = {
   import_templates: ['p_rows'],
   ping: [],
   log_outbound: ['p_lead_id', 'p_channel', 'p_template_id', 'p_kind', 'p_note', 'p_occurred_at'],
+  set_reply_label: ['p_activity_id', 'p_label', 'p_note'],
 } as const
 export type RpcName = keyof typeof RPC_PARAMS
 
@@ -272,6 +273,14 @@ export const rpc = {
       p_note: p.note,
       p_occurred_at: p.occurredAt,
     }),
+
+  /**
+   * Reaktion an einer schon erfassten Antwort nachtragen (Migration 7, 7.4) – z. B. wenn die Antwort über den Gmail-Eingang kam
+   * und danach `A` gedrückt wird: keine zweite `nachricht_erhalten`. Folgeaktionen wie log_reply (widerspruch, nicht_icp → beendet).
+   * Die Notiz wird nur gesetzt, wenn die Aktivität noch keinen Text hat. Rückgabe = Aktivitäts-ID.
+   */
+  setReplyLabel: (p: { activityId: number; label: ReplyLabel; note?: string | null }) =>
+    aufruf<number>('set_reply_label', { p_activity_id: p.activityId, p_label: p.label, p_note: p.note }),
 }
 
 export type Rpc = typeof rpc

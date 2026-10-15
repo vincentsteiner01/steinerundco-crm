@@ -7,6 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/data/supabase', async () => (await import('./_testHilfe')).supabaseAntworten())
 vi.mock('@/components/toast', async () => (await import('./_testHilfe')).toastMock())
+// Eingang-Badge (eigener Daten-Hook/Realtime-Kanal) als Platzhalter – hier zählt nur, wo er steht
+vi.mock('@/features/eingang/public', () => ({
+  EingangBadge: () => <a data-testid="eingang-badge">Eingang 2 zuordnen</a>,
+}))
 
 import { useUiStore } from '@/app/uiStore'
 import { toast, toastUndo } from '@/components/toast'
@@ -236,6 +240,10 @@ describe('HeuteSeite', () => {
     taste('j')
     await waitFor(() => expect(scroll).toHaveBeenCalled())
     expect(aktiveKarte()?.className).toContain('scroll-mt-[calc(var(--head-h,0px)+16px)]')
+    // Runde 3: scrollIntoView läuft auf dem [data-key]-Wrapper – die scroll-margin muss dort sitzen, sonst landet der Kopf unter dem Sticky-Kopf
+    const ziel = scroll.mock.contexts.at(-1) as HTMLElement
+    expect(ziel).toHaveAttribute('data-key')
+    expect(ziel.className).toContain('scroll-mt-[calc(var(--head-h,0px)+16px)]')
     scroll.mockRestore()
   })
 
@@ -345,6 +353,20 @@ describe('HeuteSeite', () => {
 
   it('H-13: Annahme prüfen – E setzt mark_accepted, die Zeile verschwindet, Erledigt +1', async () => {
     entferntBeiRpc('mark_accepted')
+    // Server-Trigger: mark_accepted schreibt `vernetzung_angenommen` – Erledigt zählt seit Runde 3 diese Aktivität (dauerhaft,
+    // wie Team), keinen Sitzungszähler mehr
+    const entfernen = ANTWORTEN.rpc.mark_accepted as (a: Record<string, unknown>) => { data: unknown; error: unknown }
+    ANTWORTEN.rpc.mark_accepted = (args) => {
+      ANTWORTEN.activities.push({
+        id: 990,
+        lead_id: args.p_lead_id as string,
+        member_id: ICH.user_id,
+        type: 'vernetzung_angenommen',
+        channel: 'linkedin',
+        occurred_at: new Date().toISOString(),
+      })
+      return entfernen(args)
+    }
     rendern(<HeuteSeite />)
     await waitFor(() => expect(sektion('annahme_pruefen')).toBeTruthy())
     fireEvent.click(within(sektion('annahme_pruefen')).getByText('Max Muster5'))
@@ -513,6 +535,18 @@ describe('HeuteSeite', () => {
     await waitFor(() => expect(screen.getByTestId('ort')).toHaveTextContent(/^\/heute$/))
   })
 
+  it('Runde 3: Eingang-Badge („Eingang n zuordnen“) im Kopf der eigenen Heute-Liste, nicht bei der anderen Person', async () => {
+    rendern(<HeuteSeite />)
+    const badge = await screen.findByTestId('eingang-badge')
+    expect(badge.closest('[data-seitenkopf]')).toBeTruthy()
+  })
+
+  it('Runde 3: kein Eingang-Badge auf Mikes Heute', async () => {
+    rendern(<HeuteSeite />, { pfad: '/heute?person=mike' })
+    expect(await screen.findByText('Du siehst Mikes Heute.')).toBeInTheDocument()
+    expect(screen.queryByTestId('eingang-badge')).not.toBeInTheDocument()
+  })
+
   it('Segment Vincent · Mike wechselt die Queue über ?person=', async () => {
     rendern(<HeuteSeite />)
     const seg = await screen.findByRole('group', { name: 'Heute von' })
@@ -526,6 +560,9 @@ describe('HeuteSeite', () => {
     await waitFor(() => expect(document.querySelector('[data-kanalzeile]')).toBeTruthy())
     expect(document.querySelector('[data-kanalzeile]')).toHaveTextContent(/Anfragen heute\s*0\s*\/\s*30/)
     expect(document.querySelector('[data-tageszaehler]')).toBeTruthy()
+    // Runde 3: nur eine Stelle – Tageszähler rechts ab 1180 px, darunter die Kanalzeile (der Tageszähler fällt dort weg)
+    expect(document.querySelector('[data-tageszaehler]')).toHaveClass('max-wide:hidden')
+    expect(document.querySelector('[data-kanal-linkedin]')).toHaveClass('wide:hidden')
     expect(screen.getByText('Noch kein Backup – jetzt sichern')).toBeInTheDocument()
   })
 })

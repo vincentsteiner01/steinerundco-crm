@@ -1,9 +1,9 @@
 // BAUPLAN § 3.7 Baum.tsx – Kanal → Phase → Leitfaden. Phasenkopf 34 px (Mono-Ziffer + Label, darunter `beschreibung` small ink-3,
-// § 1.5 Nr. 41), Einträge 34 px mit Nutzung rechts (v_template_performance), Chips „Standard für Schritt n“ und „inaktiv“.
+// § 1.5 Nr. 41), Einträge 34 px; darunter Chip „Standard für Schritt n“ und die Nutzung im Klartext (v_template_performance).
 import { useEffect, useRef } from 'react'
 import { Chip } from '@/components/ui/Chip'
 import { cn } from '@/components/ui/cn'
-import { fmtProzent, fmtZahl } from '@/lib/format'
+import { fmtAnteil, fmtZahl } from '@/lib/format'
 import type { Channel, Template, TemplatePerformance, TemplatePhase } from '@/types/domain'
 import { baumGruppen, nutzung, nutzungText, standardChip } from './helfer'
 import { labelTeile } from './phasen'
@@ -46,14 +46,11 @@ export function Baum({ kanal, vorlagen, perf, verwendungen, q, phase, cursorId, 
               <span className="text-ui text-ink flex items-center gap-2 font-medium">
                 {ziffer ? <span className="text-ink-3 tnum w-4 font-mono text-[12.5px]">{ziffer}</span> : null}
                 <span className="min-w-0 truncate">{text}</span>
-                {eintraege.length ? (
-                  <span
-                    className="text-ink-3 tnum ml-auto shrink-0 font-mono text-[11.5px]"
-                    title={`${eintraege.length} ${eintraege.length === 1 ? 'Leitfaden' : 'Leitfäden'}`}
-                  >
-                    {eintraege.length}
-                  </span>
-                ) : null}
+                {/* Runde 3: die unbeschriftete Anzahl rechts im Phasenkopf („2“, „4“, „8“) wirkte verirrt – die Einträge stehen
+                    ohnehin darunter; nur noch für Screenreader */}
+                <span className="sr-only">
+                  , {eintraege.length} {eintraege.length === 1 ? 'Leitfaden' : 'Leitfäden'}
+                </span>
               </span>
               {def.beschreibung ? (
                 <span className="text-small text-ink-3 truncate-1 block" title={def.beschreibung}>
@@ -93,24 +90,28 @@ export function Baum({ kanal, vorlagen, perf, verwendungen, q, phase, cursorId, 
                       {t.name}
                     </span>
                     {!t.active ? <Chip ton="ended">inaktiv</Chip> : null}
-                    {/* Runde 2: unbeschriftete Werte („–“, „148 · 5 %“) wirkten wie verirrte Zeichen – ohne Nutzung nichts,
-                        sonst mit Klartext im title/aria-label */}
-                    {n && n.gesendet > 0 ? (
-                      <span
-                        className="text-ink-3 tnum shrink-0 font-mono text-[12px] whitespace-nowrap"
-                        title={nutzungText(n)}
-                        aria-label={nutzungText(n)}
-                      >
-                        {fmtZahl(n.gesendet)} · {n.quote === null ? '–' : fmtProzent(n.quote)}
-                      </span>
-                    ) : null}
                   </span>
-                  {/* Standard-Chip in eigener Zeile: in 280 px bliebe neben Name + Nutzung sonst kein Platz (echte Daten: bis zu 4 Sequenzen) */}
-                  {chip ? (
-                    <span className="flex min-w-0">
-                      <Chip ton="muted" title={chip.titel} className="max-w-full overflow-hidden text-ellipsis">
-                        {chip.text}
-                      </Chip>
+                  {/* Zweite Zeile: Standard-Chip und Nutzung mit Klartext („148 gesendet · 5 % Antwort“). Runde 3: unbeschriftete
+                      Werte rechts („148 · 5 %“) wirkten wie verirrte Zeichen; ohne Nutzung steht nichts da. */}
+                  {chip || (n && n.gesendet > 0) ? (
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+                      {chip ? (
+                        <Chip ton="muted" title={chip.titel} className="max-w-full overflow-hidden text-ellipsis">
+                          {chip.text}
+                        </Chip>
+                      ) : null}
+                      {n && n.gesendet > 0 ? (
+                        <span className="text-small text-ink-3 whitespace-nowrap" title={nutzungText(n)} data-nutzung>
+                          <span className="tnum font-mono">{fmtZahl(n.gesendet)}</span> gesendet ·{' '}
+                          {n.quote === null ? (
+                            'Antwortquote –'
+                          ) : (
+                            <>
+                              <span className="tnum font-mono">{fmtAnteil(n.quote)}</span> Antwort
+                            </>
+                          )}
+                        </span>
+                      ) : null}
                     </span>
                   ) : null}
                 </div>

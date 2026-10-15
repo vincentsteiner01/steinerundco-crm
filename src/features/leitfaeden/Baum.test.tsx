@@ -51,25 +51,30 @@ describe('Baum', () => {
     ).toBeInTheDocument()
     expect(within(gruppen[4] as HTMLElement).getByText('Nicht-Antworter erneut aktivieren')).toBeInTheDocument()
     expect(within(gruppen[1] as HTMLElement).getByText('1')).toHaveClass('font-mono')
-    // Runde 2: leere Phase ohne „–“ (wirkte wie ein verirrtes Zeichen); Zähler mit Klartext im title
+    // Runde 2: leere Phase ohne „–“ (wirkte wie ein verirrtes Zeichen). Runde 3: keine nackte Anzahl mehr im Phasenkopf
+    // (Vincent: „stray“), nur noch als Screenreader-Text
     expect(within(gruppen[0] as HTMLElement).queryByText('–')).toBeNull()
-    expect(within(gruppen[2] as HTMLElement).getByTitle('9 Leitfäden')).toHaveTextContent('9')
-    expect(within(gruppen[2] as HTMLElement).getByText('9')).toBeInTheDocument() // 8 aktive + 1 inaktive
+    expect(within(gruppen[2] as HTMLElement).queryByText('9')).toBeNull()
+    const anzahl = within(gruppen[2] as HTMLElement).getByText(/9 Leitfäden/) // 8 aktive + 1 inaktive
+    expect(anzahl).toHaveClass('sr-only')
   })
 
-  it('Einträge: Nutzung Mono rechts, Chips „Standard für Schritt 2“ und „inaktiv“, Cursor markiert', () => {
+  it('Einträge: Nutzung im Klartext unter dem Namen, Chips „Standard für Schritt 2“ und „inaktiv“, Cursor markiert', () => {
     rendern()
     const jaV1 = screen.getByRole('treeitem', { name: /Ja \(V1\)/ })
     expect(jaV1).toHaveAttribute('aria-selected', 'true')
     expect(jaV1).toHaveAttribute('data-cursor', 'true')
     expect(within(jaV1).getByText('Standard für Schritt 2')).toBeInTheDocument()
-    const nutzung = within(jaV1).getByLabelText(/^12 gesendet · 25\s% Antwort$/)
-    expect(nutzung).toHaveTextContent(/12 · 25\s%/)
-    expect(nutzung).toHaveAttribute('title', nutzung.getAttribute('aria-label'))
+    // Runde 3: sichtbar beschriftet („12 gesendet · 25 % Antwort“) statt „12 · 25 %“
+    const nutzung = jaV1.querySelector('[data-nutzung]') as HTMLElement
+    expect(nutzung).toHaveTextContent(/^12 gesendet · 25\s% Antwort$/)
+    expect(nutzung).toHaveAttribute('title', nutzung.textContent)
+    expect(within(nutzung).getByText('12')).toHaveClass('font-mono')
     const v2 = screen.getByRole('treeitem', { name: /Gesprächseröffnung \(V2\)/ })
     expect(within(v2).getByText('inaktiv')).toBeInTheDocument()
     // ohne Nutzung: kein Wert, kein „–“
-    expect(within(v2).queryByLabelText(/gesendet/)).toBeNull()
+    expect(v2.querySelector('[data-nutzung]')).toBeNull()
+    expect(within(v2).queryByText(/gesendet|–/)).toBeNull()
     expect(v2).toHaveAttribute('aria-selected', 'false')
   })
 

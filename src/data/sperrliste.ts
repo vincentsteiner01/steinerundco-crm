@@ -1,5 +1,7 @@
 // BAUPLAN § 3.1.6 sperrliste.ts: useSperrliste(), useSperrlisteEintrag(), useSperrlisteEntfernen() (§ 8.4).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
+import { sperrlistenEintraege } from '@/lib/gates'
 import type { Database } from '@/types/database'
 import type { SperrlisteEintrag } from '@/types/domain'
 import { pruefe } from './_helfer'
@@ -16,6 +18,37 @@ export async function ladeSperrliste(): Promise<SperrlisteEintrag[]> {
 
 export function useSperrliste() {
   return useQuery({ queryKey: qk.sperrliste, queryFn: ladeSperrliste })
+}
+
+/** Felder eines Leads, über die die Sperrliste trifft (Lead-ID, Telefon, E-Mail, LinkedIn-URL). */
+export type SperrlistenPerson = Parameters<typeof sperrlistenEintraege>[1]
+export type SperrlistenStatus = { eintraege: SperrlisteEintrag[]; gesperrt: boolean }
+
+/**
+ * Sperrlisten-Treffer genau dieser Person (QA Runde 3: der rote Chip „Sperrliste“ stand an jedem Lead, weil ein leeres
+ * Treffer-Array als wahr galt). `gesperrt` ist nur bei mindestens einem Treffer wahr – Komponenten prüfen `gesperrt`, nie das Array.
+ * Solange die Liste lädt: keine Treffer.
+ */
+export function sperrlistenStatus(
+  liste: readonly SperrlisteEintrag[] | null | undefined,
+  person: SperrlistenPerson | null | undefined,
+): SperrlistenStatus {
+  const eintraege = person ? sperrlistenEintraege(liste, person) : []
+  return { eintraege, gesperrt: eintraege.length > 0 }
+}
+
+/** Hook zu `sperrlistenStatus` (teilt den Cache mit `useSperrliste`; Ergebnis stabil, solange Liste und Person-Felder gleich bleiben). */
+export function useSperrlistenTreffer(person: SperrlistenPerson | null | undefined) {
+  const { data } = useSperrliste()
+  const hatPerson = !!person
+  const id = person?.id
+  const tel = person?.phone_e164
+  const mail = person?.email
+  const url = person?.linkedin_url_norm
+  return useMemo(
+    () => sperrlistenStatus(data, hatPerson ? { id, phone_e164: tel, email: mail, linkedin_url_norm: url } : null),
+    [data, hatPerson, id, tel, mail, url],
+  )
 }
 
 export function useSperrlisteEintrag() {

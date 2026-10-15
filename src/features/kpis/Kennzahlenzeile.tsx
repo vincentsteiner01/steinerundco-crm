@@ -1,7 +1,7 @@
 // DESIGN-SYSTEM § 5.15 Kennzahlenzeile: eine Haarlinien-Zeile, 4–6 Spalten, Zahl display 40 + label + Delta Mono ink-2 +
 // Lime-Punkt bei erreichtem Ziel; Trenner vertikale Haarlinien; keine Boxen, keine Icons. Mobil zweispaltig.
 import { cn } from '@/components/ui/cn'
-import { fmtProzent } from '@/lib/format'
+import { fmtAnteil } from '@/lib/format'
 import { formatWert, kachelDelta, kachelVergleich, kachelZiel, type Kachel } from './kennzahlen'
 import { SheetBadge, ZaehlerHinweis, Ziffer, ZielPunkt } from './_Teile'
 
@@ -47,7 +47,7 @@ export function Kennzahlenzeile({ kacheln, vorLabel, ariaLabel, className }: Ken
                 </Ziffer>
                 {k.quote !== null ? (
                   <span className="tnum text-ink-2 font-mono text-[14px]" data-quote>
-                    {fmtProzent(k.quote)}
+                    {fmtAnteil(k.quote)}
                   </span>
                 ) : null}
                 {k.fussnote === 'zaehler' ? <ZaehlerHinweis /> : null}

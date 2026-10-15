@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
 import { ErlaubnisErfassen } from '@/features/email/public'
 import { heuteBerlin } from '@/lib/format'
+import { istEingabe } from '@/lib/keyboard'
 import { DIALOG, GRUND_LABEL } from '@/texte/de'
 import type { Channel, EndedReason, ReachedPerson } from '@/types/domain'
 import { ScopeFormular } from '@/components/ui/ScopeFormular'
@@ -31,6 +32,12 @@ const UMFANG: { key: string; label: string; kanaele: Channel[] }[] = [
   { key: 'email', label: 'nur E-Mail', kanaele: ['email'] },
   { key: 'alle', label: 'alle Kanäle', kanaele: ['linkedin', 'telefon', 'email'] },
 ]
+
+/** Hat der Nutzer schon selbst ein Feld oder ein Popover/einen Dialog fokussiert? Dann bleibt der Fokus dort. */
+function fokusBelegt(el: Element | null): boolean {
+  if (!el || el === document.body) return false
+  return istEingabe(el) || !!el.closest('[role=dialog],[data-radix-popper-content-wrapper]')
+}
 
 const GRUENDE_K: EndedReason[] = ['kein_interesse', 'kein_bedarf', 'sonstiges']
 const GRUENDE_Q: EndedReason[] = ['nicht_icp', 'nicht_qualifiziert']
@@ -78,9 +85,14 @@ export function WrapUp({
   const heute = heuteBerlin()
   const widerspruch = def.outcome === 'do_not_call'
 
-  // 20-s-Fokus (ux § 2.5 Schritt 3): erstes Pflichtfeld bekommt den Fokus, Weiter bleibt per Enter erreichbar
+  // 20-s-Fokus (ux § 2.5 Schritt 3): erstes Pflichtfeld bekommt den Fokus, Weiter bleibt per Enter erreichbar.
+  // Nie wegnehmen, wenn schon ein Feld oder eine Auswahl (Datum-Popover, Dialog) den Fokus hat – sonst schließt der
+  // verspätete Fokus das gerade geöffnete Datum-Popover und der Klick auf „Morgen“ geht ins Leere (Runde 3, T-08 flackerte).
   useEffect(() => {
-    const t = window.setTimeout(() => erstesFeld.current?.focus(), 50)
+    const t = window.setTimeout(() => {
+      if (fokusBelegt(document.activeElement)) return
+      erstesFeld.current?.focus()
+    }, 50)
     return () => window.clearTimeout(t)
   }, [def.taste])
 

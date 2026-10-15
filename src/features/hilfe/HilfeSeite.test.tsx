@@ -64,15 +64,55 @@ describe('Hilfe', () => {
     expect(touren).toEqual(['onboarding'])
   })
 
-  it('Thema LinkedIn: Text, „geplant“-Hinweis, „Zeig’s mir“ startet die Mini-Tour', () => {
+  it('Thema LinkedIn (Runde 3): Gmail-Brücke, Seitenleiste, was manuell bleibt; „Zeig’s mir“ startet die Mini-Tour', () => {
     rendern('/hilfe/linkedin')
     expect(screen.getByRole('heading', { level: 2, name: /LinkedIn: was automatisch geht/ })).toBeInTheDocument()
     expect(screen.getByText(/berührt das CRM LinkedIn nie/)).toBeInTheDocument()
-    expect(document.querySelectorAll('[data-geplant]').length).toBeGreaterThanOrEqual(1)
+    const zwischentitel = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+    expect(zwischentitel).toEqual(
+      expect.arrayContaining([
+        'Automatisch: LinkedIn-Mails aus deinem Gmail',
+        'Mit einem Klick: die Chrome-Erweiterung',
+        'Bleibt bei dir',
+      ]),
+    )
+    // (a) Gmail: 5-Minuten-Takt, nur LinkedIn-Mails, Grenze ungelesene Nachrichten, Link zu Verbindungen
+    expect(screen.getByText(/alle 5 Minuten/)).toBeInTheDocument()
+    expect(screen.getByText(/nur diese LinkedIn-Mails/)).toBeInTheDocument()
+    expect(screen.getByText(/nicht schon in LinkedIn gelesen hast/)).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Einstellungen → Verbindungen' })[0]).toHaveAttribute(
+      'href',
+      '/einstellungen/verbindungen?tab=eingang',
+    )
+    expect(screen.getByRole('link', { name: 'Verbindungen einrichten' })).toHaveAttribute('href', '/hilfe/verbindungen')
+    // (b) Seitenleiste: Kopieren → Gesendet, Angenommen, Antwort erhalten, Als Lead anlegen; nie auf LinkedIn handeln
+    for (const k of ['Kopieren', 'Gesendet', 'Angenommen', 'Antwort erhalten', 'Als Lead anlegen'])
+      expect(screen.getAllByText(k, { selector: 'strong, b' }).length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText(/klickt, tippt und sendet nie in LinkedIn/)).toBeInTheDocument()
+    // der alte „geplant“-Hinweis zur Gmail-Erkennung ist weg, Connections.csv bleibt geplant
+    const geplant = [...document.querySelectorAll('[data-geplant]')].map((e) => e.textContent)
+    expect(geplant).toHaveLength(1)
+    expect(geplant[0]).toMatch(/Connections\.csv/)
     fireEvent.click(screen.getByRole('button', { name: /Zeig’s mir/ }))
     expect(touren).toEqual(['linkedin'])
     // Weiter-Navigation zum nächsten Thema
-    expect(screen.getByRole('navigation', { name: 'Weitere Themen' })).toHaveTextContent('Telefon')
+    expect(screen.getByRole('navigation', { name: 'Weitere Themen' })).toHaveTextContent('Verbindungen einrichten')
+  })
+
+  it('Thema „Verbindungen einrichten“ (Runde 3): Schritte und Link auf Einstellungen → Verbindungen', () => {
+    rendern('/hilfe/verbindungen')
+    expect(screen.getByRole('heading', { level: 2, name: 'Verbindungen einrichten' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Einstellungen → Verbindungen' })).toHaveAttribute(
+      'href',
+      '/einstellungen/verbindungen',
+    )
+    expect(screen.getByRole('link', { name: 'Eingang' })).toHaveAttribute(
+      'href',
+      '/einstellungen/verbindungen?tab=eingang',
+    )
+    expect(screen.getByText(/CRM_SCHLUESSEL/)).toBeInTheDocument()
+    expect(screen.getByText(/chrome:\/\/extensions/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Zeig’s mir/ })).toBeNull()
   })
 
   it('Suche filtert über den ganzen Text, Enter öffnet den ersten Treffer, nichts gefunden → Hinweis', () => {
@@ -84,7 +124,7 @@ describe('Hilfe', () => {
       within(liste)
         .getAllByRole('link')
         .map((a) => a.textContent),
-    ).toEqual(['07E-Mail'])
+    ).toEqual(['08E-Mail', '06Verbindungen einrichten'])
     fireEvent.keyDown(feld, { key: 'Enter' })
     expect(router.state.location.pathname).toBe('/hilfe/email')
     fireEvent.change(screen.getByRole('searchbox', { name: 'Hilfe durchsuchen' }), { target: { value: 'xyzzy' } })

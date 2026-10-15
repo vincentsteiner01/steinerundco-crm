@@ -1,6 +1,11 @@
 // „Antwort erhalten“ `A` (BAUPLAN § 3.1.10b, ux § 2.3 Schritt 3 / § 2.4): Inline-Block mit Zitat, Datum (heute),
 // Reaktions-Chips `1–9`; `⌘Enter` → rpc.logReply (ohne Auto-Park, § 1.5 Nr. 26); Toast mit Undo über die
 // `nachricht_erhalten`-Aktivität (Rückgabe von log_reply). Chip 4 „Nein (mit Grund)“ ohne Zitat ist blockiert.
+//
+// Runde 3 – Antwort schon da (Eingang aus Gmail/Erweiterung, Migration 7): Ist die jüngste eingegangene Antwort des Kanals ohne
+// Reaktion und folgte seitdem kein eigener Kontakt, trägt `A` nur die Reaktion an DIESER Antwort nach (antwortErfassen →
+// rpc.setReplyLabel) statt eine zweite Antwort anzulegen (doppelt in Timeline und Kennzahlen). Kein Rückgängig: undo_activity
+// würde die ganze Antwort löschen.
 import { useMutation } from '@tanstack/react-query'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from '@/components/toast'
@@ -10,13 +15,13 @@ import { cn } from '@/components/ui/cn'
 import { DatePicker } from '@/components/ui/DatePicker'
 import { FormField } from '@/components/ui/FormField'
 import { Textarea } from '@/components/ui/Textarea'
+import { antwortErfassen, useLastUnlabeledReply } from '@/data/antworten'
 import { mutationFehler } from '@/data/errors'
 import { useLead } from '@/data/leads'
 import { useAndere, useMeId } from '@/data/members'
-import { rpc } from '@/data/rpc'
 import { useTemplates } from '@/data/templates'
 import { useUndo } from '@/data/undo'
-import { heuteBerlin } from '@/lib/format'
+import { fmtDatumKurz, fmtZeit, heuteBerlin } from '@/lib/format'
 import { tagZuDate } from '@/lib/zeit'
 import { VORLAGE } from '@/lib/vorlagenKeys'
 import { TOAST } from '@/texte/de'
@@ -70,7 +75,13 @@ export function AntwortErhalten({
   const { anbieten } = useUndo()
   const inval = useLeadInvalidierung()
 
-  const blockiert = chipBlockiert(chip, zitat)
+  // Schon erfasste Antwort ohne Reaktion (aus der LinkedIn-Mail, Eingang) – nur solange der Block offen ist (eine Prüfung für
+  // Hinweis und Speichern: lastUnlabeledReply/antwortErfassen in src/data/antworten.ts)
+  const { data: vorhanden } = useLastUnlabeledReply(leadId, kanal, offen)
+  const nachtragen = offen && !!vorhanden
+  const vorhandenesZitat = nachtragen ? (vorhanden?.note?.trim() ?? '') : ''
+
+  const blockiert = chipBlockiert(chip, vorhandenesZitat || zitat)
   const fremd = !!lead?.owner_id && !!me && lead.owner_id !== me
 
   const zuruecksetzen = () => {
@@ -80,8 +91,10 @@ export function AntwortErhalten({
   }
 
   const speichern = useMutation({
+    // Beim Speichern frisch geprüft (die Mail kann seit dem Öffnen angekommen sein): offene Antwort ohne Reaktion →
+    // set_reply_label, sonst log_reply. Schlägt die Prüfung fehl, wird nichts gebucht (Fehler-Toast statt Doppel-Antwort).
     mutationFn: (c: ReaktionChip) =>
-      rpc.logReply({
+      antwortErfassen({
         leadId,
         channel: kanal,
         label: c.reply,
@@ -89,13 +102,24 @@ export function AntwortErhalten({
         occurredAt: tag === heute ? undefined : tagZuDate(tag, '09:00').toISOString(),
       }),
     onError: mutationFehler,
-    onSuccess: (activityId, c) => {
+    onSuccess: (r, c) => {
       inval(leadId)
       const key = vorlageFuerChip(c)
       const name = key ? (vorlagen?.find((t) => t.key === VORLAGE[key])?.name ?? VORLAGE[key]) : null
-      const text = name ? TOAST.antwortErhalten(name) : 'Antwort erhalten – Lead beendet · Nicht ICP.'
-      if (typeof activityId === 'number') anbieten(activityId, text, leadId)
-      else toast(text)
+      if (r.nachgetragen) {
+        // Kein Rückgängig: undo_activity löschte die ganze (aus der Mail verbuchte) Antwort
+        toast(
+          name
+            ? `Reaktion erfasst – Vorlage ‚${name}‘ vorgeschlagen.`
+            : c.reply === 'nicht_icp'
+              ? 'Reaktion erfasst – Lead beendet · Nicht ICP.'
+              : 'Reaktion erfasst.',
+        )
+      } else {
+        const text = name ? TOAST.antwortErhalten(name) : 'Antwort erhalten – Lead beendet · Nicht ICP.'
+        if (typeof r.activityId === 'number') anbieten(r.activityId, text, leadId)
+        else toast(text)
+      }
       onVorschlag?.(key ? VORLAGE[key] : null)
       zuruecksetzen()
       setOffen(false)
@@ -147,23 +171,41 @@ export function AntwortErhalten({
           className="border-line bg-surface-hover grid gap-3 rounded-sm border p-3 outline-none"
         >
           <ScopeFormular />
-          <FormField
-            label="Zitat"
-            fehler={blockiert ? ZITAT_PFLICHT_TEXT : undefined}
-            htmlFor={`antwort-zitat-${leadId}`}
-          >
-            <Textarea
-              id={`antwort-zitat-${leadId}`}
-              value={zitat}
-              placeholder="Was hat die Person geschrieben?"
-              onChange={(e) => setZitat(e.target.value)}
+          {nachtragen && vorhanden ? (
+            <p className="text-small text-ink-2" data-nachtragen>
+              Die Antwort vom{' '}
+              <span className="tnum font-mono">
+                {fmtDatumKurz(vorhanden.occurred_at)} {fmtZeit(vorhanden.occurred_at)}
+              </span>{' '}
+              kam schon über die LinkedIn-Mail ins CRM – du trägst nur die Reaktion nach.
+            </p>
+          ) : null}
+          {vorhandenesZitat ? (
+            <div className="grid gap-1.5">
+              <span className="label">Zitat</span>
+              <p className="text-table text-ink-2 line-clamp-4 max-w-[64ch]">‚{vorhandenesZitat}‘</p>
+            </div>
+          ) : (
+            <FormField
+              label="Zitat"
               fehler={blockiert ? ZITAT_PFLICHT_TEXT : undefined}
-              onSubmit={absenden}
-            />
-          </FormField>
-          <FormField label="Datum" htmlFor={`antwort-datum-${leadId}`}>
-            <DatePicker id={`antwort-datum-${leadId}`} wert={tag} onChange={setDatum} presets={['heute', 'morgen']} />
-          </FormField>
+              htmlFor={`antwort-zitat-${leadId}`}
+            >
+              <Textarea
+                id={`antwort-zitat-${leadId}`}
+                value={zitat}
+                placeholder="Was hat die Person geschrieben?"
+                onChange={(e) => setZitat(e.target.value)}
+                fehler={blockiert ? ZITAT_PFLICHT_TEXT : undefined}
+                onSubmit={absenden}
+              />
+            </FormField>
+          )}
+          {nachtragen ? null : (
+            <FormField label="Datum" htmlFor={`antwort-datum-${leadId}`}>
+              <DatePicker id={`antwort-datum-${leadId}`} wert={tag} onChange={setDatum} presets={['heute', 'morgen']} />
+            </FormField>
+          )}
           <div className="grid gap-1.5">
             <span className="label">Reaktion</span>
             <div className="flex flex-wrap gap-1.5" role="group" aria-label="Reaktion">
@@ -199,7 +241,7 @@ export function AntwortErhalten({
               disabled={!chip || blockiert}
               disabledGrund={!chip ? TOAST.erstReaktion : ZITAT_PFLICHT_TEXT}
             >
-              Speichern
+              {nachtragen ? 'Reaktion speichern' : 'Speichern'}
             </Button>
           </div>
         </div>

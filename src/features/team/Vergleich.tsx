@@ -201,7 +201,12 @@ function PersonKopf({
             fällig
           </span>
           <span className="whitespace-nowrap">
-            <b className={cn('text-[15px] font-medium', queue.data?.ueberfaelligSektion ? 'text-overdue' : 'text-ink-bright')}>
+            <b
+              className={cn(
+                'text-[15px] font-medium',
+                queue.data?.ueberfaelligSektion ? 'text-overdue' : 'text-ink-bright',
+              )}
+            >
               {zahl(queue.data?.ueberfaelligSektion)}
             </b>{' '}
             überfällig

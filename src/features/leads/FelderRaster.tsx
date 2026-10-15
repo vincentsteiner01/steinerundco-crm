@@ -72,7 +72,7 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
 
   const name = (id: string | null | undefined) => {
     const m = id ? members.find((x) => x.id === id) : null
-    return (anzeigeName(m) || null)
+    return anzeigeName(m) || null
   }
   const angenommen = (lead.linkedin_connections ?? []).find((c) => c.status === 'angenommen' && c.accepted_at)
   const enrollment = (lead.enrollments ?? []).find((e) => e.status === 'aktiv' && e.channel === 'linkedin')

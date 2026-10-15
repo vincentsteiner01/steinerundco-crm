@@ -13,7 +13,8 @@ export function useNavZaehler(): NavZaehler {
   const leads = p?.reduce((acc, z) => acc + (z.stage === 'beendet' ? 0 : (z.leads ?? 0)), 0) ?? 0
   return {
     heute: q?.faellig ?? 0,
-    heuteUeberfaellig: q?.ueberfaellig ?? 0,
+    // wie der Heute-Kopf und Team (Sektion Überfällig ohne Rückrufe/Opener) – Runde 3: eine Zählweise
+    heuteUeberfaellig: q?.ueberfaelligSektion ?? 0,
     leads,
     telefon: q?.telefon ?? 0,
     email: q?.email ?? 0,

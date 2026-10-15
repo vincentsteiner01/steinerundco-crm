@@ -48,6 +48,7 @@ const EINGEFROREN: Record<RpcName, readonly string[]> = {
   import_templates: ['p_rows'],
   ping: [],
   log_outbound: ['p_lead_id', 'p_channel', 'p_template_id', 'p_kind', 'p_note', 'p_occurred_at'],
+  set_reply_label: ['p_activity_id', 'p_label', 'p_note'],
 }
 
 const ID = '00000000-0000-4000-8000-000000000001'
@@ -99,6 +100,7 @@ const VOLL: Record<RpcName, () => Promise<unknown>> = {
   ping: () => rpc.ping(),
   log_outbound: () =>
     rpc.logOutbound({ leadId: ID, channel: 'linkedin', templateId: ID, kind: 'pitch', note: 'n', occurredAt: T }),
+  set_reply_label: () => rpc.setReplyLabel({ activityId: 7, label: 'interessiert', note: 'n' }),
 }
 
 describe('rpc.ts – Parameternamen', () => {

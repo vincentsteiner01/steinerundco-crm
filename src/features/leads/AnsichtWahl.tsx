@@ -1,4 +1,4 @@
-// Ansicht-Dropdown + Favoriten-Segment (ux § 3.2.1/§ 3.2.3): 15 System-Ansichten, Stern = Favorit (max. 6, localStorage);
+// Ansicht-Dropdown + Favoriten-Segment (ux § 3.2.1/§ 3.2.3): 16 System-Ansichten, Stern = Favorit (max. 6, localStorage);
 // Spaltenwähler (Popover mit Checkboxen, persistiert je Ansicht über ansichtSpeicher.ts, LE-01).
 import { ChevronDown, Columns3, Star } from 'lucide-react'
 import { Button } from '@/components/ui/Button'

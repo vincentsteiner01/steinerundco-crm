@@ -64,7 +64,12 @@ export type VariantenProps = { item: QueueItem; onAktion: (a: QueueAktion) => vo
 
 export function QueueKarte({ item, aktiv, onAktion, kontext = 'heute' }: QueueKarteProps) {
   const h = useHeuteKontext()
-  if (!aktiv) return <KollabierteKarte item={item} heute={h.heute} vorbereitet={vorbereitetText(item)} />
+  if (!aktiv) {
+    const zu = <KollabierteKarte item={item} heute={h.heute} vorbereitet={vorbereitetText(item)} />
+    // Runde 3 (Wunsch leads-pipeline Nr. 1): auch die zugeklappte Karte (Lead-Vollseite, `aktiv={false}`) eingebettet – Name und
+    // Firma stehen schon in der H1, keine Box in der Box
+    return kontext === 'peek' ? <KarteEingebettet.Provider value>{zu}</KarteEingebettet.Provider> : zu
+  }
   const karte = (() => {
     switch (kartenArt(item)) {
       case 'telefon':

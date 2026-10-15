@@ -3,17 +3,22 @@
 // Leer: gestrichelte Fläche „Keine Leads“ (ux § 4.1).
 // Runde 2 (echte Daten, 184 Karten in „Eröffnet“): Kopf steht fest, die Kartenliste scrollt in der Spalte (`data-karten`), das Board
 // hat die Fensterhöhe (useBoardHoehe) – so bleiben Köpfe und die horizontale Scrollleiste immer sichtbar.
+// Runde 3: lange Spalten (> VIRTUELL_AB Karten) rendern nur die sichtbaren Karten (@tanstack/react-virtual, Höhe gemessen) –
+// 184 Karten mit je einem dnd-kit-Draggable machten das Board träge. Der Tastatur-Cursor (J/K) scrollt per Index in Sicht.
 import { useDroppable } from '@dnd-kit/core'
-import type { ReactNode } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '@/components/ui/cn'
-import { fmtProzent } from '@/lib/format'
 import type { Phase } from '@/lib/stufen'
 import { LEER } from '@/texte/de'
+import { KARTE_SCHAETZUNG, konversionText, VIRTUELL_AB } from './logik'
 
 export type SpaltenKopf = {
   zaehler: number
-  /** Konversion zur Vorstufe aus dem Bestand (0…1) oder null (erste Spalte / Vorstufe leer) */
+  /** Konversion zur Vorstufe aus dem Bestand (0…1, kann > 1 sein) oder null (erste Spalte / Vorstufe leer) */
   konversion: number | null
+  /** Zähler der Vorstufe (für den title „184 von 2“) */
+  vorstufe?: number
   /** Ø Tage in Phase aus v_pipeline_counts */
   tage: number | null
 }
@@ -24,8 +29,10 @@ export function Spalte({
   eingeklappt,
   onToggle,
   pflicht,
-  children,
-  leer,
+  anzahl,
+  karte,
+  schluessel,
+  cursorIndex = -1,
 }: {
   phase: Phase
   kopf: SpaltenKopf
@@ -33,8 +40,14 @@ export function Spalte({
   onToggle: () => void
   /** Drop verlangt Pflichtangabe (Kalender/Grund-Icon beim Hover) */
   pflicht: boolean
-  children: ReactNode
-  leer: boolean
+  /** Anzahl Karten in der Spalte */
+  anzahl: number
+  /** Karte an Position i */
+  karte: (i: number) => ReactNode
+  /** Stabiler Schlüssel der Karte an Position i (Lead-ID) */
+  schluessel: (i: number) => string
+  /** Position der Cursor-Karte in dieser Spalte (−1 = keine) – wird in Sicht gescrollt */
+  cursorIndex?: number
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: phase.key })
   if (eingeklappt) {
@@ -82,8 +95,11 @@ export function Spalte({
         </span>
         <span className="text-ink tnum shrink-0 font-mono text-[13px]">{kopf.zaehler}</span>
         {kopf.konversion !== null ? (
-          <span className="mono-sm text-ink-3 shrink-0" title="Konversion zur Vorstufe (Bestand)">
-            {fmtProzent(kopf.konversion)}
+          <span
+            className="mono-sm text-ink-3 shrink-0"
+            title={`Konversion zur Vorstufe (Bestand)${kopf.vorstufe !== undefined ? ` · ${kopf.zaehler} von ${kopf.vorstufe}` : ''}`}
+          >
+            {konversionText(kopf.konversion)}
           </span>
         ) : null}
         {kopf.tage !== null ? (
@@ -97,15 +113,70 @@ export function Spalte({
           </span>
         ) : null}
       </button>
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain" data-karten>
-        {leer ? (
+      {anzahl === 0 ? (
+        <div className="min-h-0 flex-1" data-karten>
           <div className="border-line text-ink-3 rounded-md border border-dashed px-3 py-6 text-center text-[12.5px]">
             {LEER.pipelineSpalte.titel}
           </div>
-        ) : (
-          children
-        )}
-      </div>
+        </div>
+      ) : (
+        <KartenListe anzahl={anzahl} karte={karte} schluessel={schluessel} cursorIndex={cursorIndex} />
+      )}
+    </div>
+  )
+}
+
+function KartenListe({
+  anzahl,
+  karte,
+  schluessel,
+  cursorIndex,
+}: {
+  anzahl: number
+  karte: (i: number) => ReactNode
+  schluessel: (i: number) => string
+  cursorIndex: number
+}) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const virtuell = anzahl > VIRTUELL_AB
+  // React Compiler memoisiert diese Komponente bewusst nicht (useVirtualizer liefert pro Render neue Funktionen) – gewollt
+  // oxlint-disable-next-line react/incompatible-library
+  const v = useVirtualizer({
+    count: virtuell ? anzahl : 0,
+    getScrollElement: () => ref.current,
+    estimateSize: () => KARTE_SCHAETZUNG,
+    overscan: 6,
+    getItemKey: schluessel,
+  })
+  useEffect(() => {
+    if (virtuell && cursorIndex >= 0 && cursorIndex < anzahl) v.scrollToIndex(cursorIndex, { align: 'auto' })
+  }, [virtuell, cursorIndex, anzahl, v])
+
+  return (
+    <div
+      ref={ref}
+      className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain"
+      data-karten
+      data-virtuell={virtuell || undefined}
+    >
+      {virtuell ? (
+        <div className="relative w-full" style={{ height: v.getTotalSize() }}>
+          {v.getVirtualItems().map((it) => (
+            <div
+              key={it.key}
+              data-index={it.index}
+              ref={v.measureElement}
+              // flow-root: der mb-2 der Karte zählt zur gemessenen Höhe
+              className="absolute top-0 left-0 flow-root w-full"
+              style={{ transform: `translateY(${it.start}px)` }}
+            >
+              {karte(it.index)}
+            </div>
+          ))}
+        </div>
+      ) : (
+        Array.from({ length: anzahl }, (_, i) => karte(i))
+      )}
     </div>
   )
 }

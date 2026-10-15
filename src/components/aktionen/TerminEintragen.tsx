@@ -173,8 +173,7 @@ export function TerminEintragen({
                   .filter((m) => !!m.id)
                   .map((m) => ({
                     value: m.id as string,
-                    label:
-                      m.id === me ? `${anzeigeName(m)} (ich)` : (anzeigeName(m, '')),
+                    label: m.id === me ? `${anzeigeName(m)} (ich)` : anzeigeName(m, ''),
                   }))}
               />
             </FormField>

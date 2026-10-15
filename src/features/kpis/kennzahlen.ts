@@ -2,7 +2,7 @@
 // null statt Division durch 0 → „–“), Kacheln je Kanal mit Delta/Prozentpunkten/Ziel, Funnel-Zeilen, die drei Hook-Kacheln
 // (Ø Gesprächsdauer, E-Mail beantwortet, Widersprüche) und „Geantwortet nach Schritt“ (§ 7.3). Reine Funktionen.
 import type { ActivityZeitraum } from '@/data/activities'
-import { fmtDauer, fmtDelta, fmtPp, fmtProzent, fmtZahl, MINUS } from '@/lib/format'
+import { fmtAnteil, fmtDauer, fmtDelta, fmtPp, fmtZahl, MINUS } from '@/lib/format'
 import { tagPlus, tageDifferenz, type Tag } from '@/lib/zeit'
 import type {
   Antwortzeit,
@@ -345,7 +345,7 @@ export function formatWert(art: KachelArt, w: number | null): string {
     case 'zahl':
       return fmtZahl(w)
     case 'prozent':
-      return fmtProzent(w)
+      return fmtAnteil(w)
     case 'dauer':
       return fmtDauer(w)
     case 'dezimal':
@@ -367,14 +367,14 @@ export function kachelDelta(k: Kachel): string | null {
 /** „vs. Sept. 288“ · „vs. Sept. 19 %“ */
 export function kachelVergleich(k: Kachel, vorLabel: string): string | null {
   if (k.vorWert === null) return null
-  const v = k.art === 'zahl' && k.vorQuote !== null ? fmtProzent(k.vorQuote) : formatWert(k.art, k.vorWert)
+  const v = k.art === 'zahl' && k.vorQuote !== null ? fmtAnteil(k.vorQuote) : formatWert(k.art, k.vorWert)
   return `vs. ${vorLabel} ${v}`
 }
 
 /** „Ziel ≥ 25 %“ · „Ziel ≤ 1,0“ */
 export function kachelZiel(k: Kachel): string | null {
   if (k.ziel === null) return null
-  const z = k.art === 'zahl' || k.art === 'prozent' ? fmtProzent(k.ziel) : dezimal(k.ziel)
+  const z = k.art === 'zahl' || k.art === 'prozent' ? fmtAnteil(k.ziel) : dezimal(k.ziel)
   return `Ziel ${k.zielArt === 'max' ? '≤' : '≥'} ${z}`
 }
 
