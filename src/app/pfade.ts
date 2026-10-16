@@ -2,6 +2,7 @@
 export const PFADE = {
   anmelden: '/anmelden',
   heute: '/heute',
+  auftrag: '/auftrag',
   leads: '/leads',
   leadNeu: '/leads/neu',
   papierkorb: '/leads/papierkorb',

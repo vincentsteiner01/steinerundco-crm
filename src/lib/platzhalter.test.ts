@@ -2,7 +2,14 @@
 import { describe, expect, it } from 'vitest'
 import { vollerLead } from '@/test/fixtures/leads'
 import { VORLAGEN } from '@/test/fixtures/vorlagen'
-import { PLATZHALTER, fuellen, istBekannterPlatzhalter, platzhalterWert, tokens } from './platzhalter'
+import {
+  PLATZHALTER,
+  fuellen,
+  istBekannterPlatzhalter,
+  platzhalterWert,
+  signaturAlsAbsender,
+  tokens,
+} from './platzhalter'
 
 const frau = vollerLead(3, {
   first_name: 'Anna',
@@ -156,5 +163,25 @@ describe('PLATZHALTER', () => {
     expect(istBekannterPlatzhalter('Vorname')).toBe(true)
     expect(istBekannterPlatzhalter('Foo')).toBe(false)
     expect(platzhalterWert('Foo', frau)).toBeNull()
+  })
+})
+
+describe('Unterschrift unter der Grußzeile', () => {
+  const lead = { first_name: 'Gabriel', last_name: 'Beispiel', salutation: 'herr' as const }
+  const ctx = { me: { display_name: 'Vincent' } }
+
+  it('[Vorname] unter „Beste Grüße“ ist der Absender, nicht der Lead (live-Fund 16.10.2026)', () => {
+    const r = fuellen('Hallo Herr [Nachname], schön.\n\nBeste Grüße\n[Vorname]', lead, ctx)
+    expect(r.text).toBe('Hallo Herr Beispiel, schön.\n\nBeste Grüße\nVincent')
+    expect(r.offen).toEqual([])
+  })
+
+  it('in der Anrede bleibt [Vorname] der Lead, in der Unterschrift der Absender', () => {
+    const r = fuellen('Hallo [Vorname], wie geht es?\n\nViele Grüße\n[Vorname]', lead, ctx)
+    expect(r.text).toBe('Hallo Gabriel, wie geht es?\n\nViele Grüße\nVincent')
+  })
+
+  it('ohne Grußzeile ändert sich nichts', () => {
+    expect(signaturAlsAbsender('Hallo [Vorname]\n[Vorname]')).toBe('Hallo [Vorname]\n[Vorname]')
   })
 })

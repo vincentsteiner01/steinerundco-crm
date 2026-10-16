@@ -21,6 +21,7 @@ export function GlobaleTasten() {
         else ui.setPaletteOffen(true)
       },
       'g h': () => navigate(PFADE.heute),
+      'g u': () => navigate(PFADE.auftrag),
       'g l': () => navigate(PFADE.leads),
       'g p': () => navigate(PFADE.pipeline),
       'g t': () => navigate(PFADE.telefon),

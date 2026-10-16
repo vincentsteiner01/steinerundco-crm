@@ -4,6 +4,7 @@ import {
   BookOpen,
   Columns3,
   LifeBuoy,
+  ListChecks,
   Mail,
   MessageSquareWarning,
   Phone,
@@ -26,6 +27,7 @@ export type NavElement = NavEintrag | 'trenner'
 
 export const NAV: NavElement[] = [
   { pfad: '/heute', label: 'Heute', icon: Sun, akkord: 'G H', zaehler: 'heute' },
+  { pfad: '/auftrag', label: 'Auftrag', icon: ListChecks, akkord: 'G U' },
   { pfad: '/leads', label: 'Leads', icon: Users, akkord: 'G L', zaehler: 'leads' },
   { pfad: '/pipeline', label: 'Pipeline', icon: Columns3, akkord: 'G P' },
   { pfad: '/telefon', label: 'Telefon', icon: Phone, akkord: 'G T', zaehler: 'telefon' },

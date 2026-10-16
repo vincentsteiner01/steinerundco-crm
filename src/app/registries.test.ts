@@ -88,7 +88,7 @@ describe('Tastenliste: Gehe-zu-Akkorde (Runde 2)', () => {
   it('eine Zeile je Ziel mit genau einem Akkord – nicht zehn Einzeltasten in einer Zeile', async () => {
     const { GLOBALE_TASTEN } = await import('./tasten')
     const gehe = GLOBALE_TASTEN.flatMap((g) => g.eintraege).filter((e) => e.beschreibung.startsWith('Gehe zu '))
-    expect(gehe.length).toBe(12)
+    expect(gehe.length).toBe(13) // + G U Auftrag (ChatGPT-Agent)
     for (const e of gehe) expect(e.tasten).toHaveLength(1)
     expect(gehe.find((e) => e.beschreibung === 'Gehe zu Pipeline')?.tasten).toEqual(['G P'])
   })

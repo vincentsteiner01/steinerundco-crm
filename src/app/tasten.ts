@@ -27,6 +27,7 @@ export const GLOBALE_TASTEN: TastenGruppe[] = [
       ...(
         [
           ['G H', 'Gehe zu Heute'],
+          ['G U', 'Gehe zu Auftrag (ChatGPT)'],
           ['G L', 'Gehe zu Leads'],
           ['G P', 'Gehe zu Pipeline'],
           ['G T', 'Gehe zu Telefon'],

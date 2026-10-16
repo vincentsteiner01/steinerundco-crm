@@ -147,11 +147,23 @@ export function platzhalterWert(name: string, lead: PlatzhalterLead, ctx: Platzh
   }
 }
 
+/**
+ * In den Leitfäden steht `[Vorname]` zweimal mit verschiedener Bedeutung: in der Anrede („Hallo [Vorname]“) ist es der Lead,
+ * als Unterschrift unter einer Grußzeile („Beste Grüße“ ⏎ „[Vorname]“) der Absender. Live gefunden am 16.10.2026:
+ * Der Opener endete mit „Beste Grüße ⏎ Gabor“ an Gabor. Die Unterschrift wird deshalb zu `[Absender Vorname]`.
+ */
+const SIGNATUR_VORNAME_RE =
+  /((?:^|\n)[^\n]*\b(?:Grüße|Grüßen|Gruß|LG|VG|Cheers|Best regards|Regards)\b[^\n]*\n[ \t]*)\[Vorname\](?=[ \t]*(?:\n|$))/g
+
+export function signaturAlsAbsender(body: string): string {
+  return body.replace(SIGNATUR_VORNAME_RE, '$1[Absender Vorname]')
+}
+
 /** § 3.1.9a – füllt `[Name]`-Platzhalter, listet offene; Herr/Frau-Literal → `[Anrede] [Nachname]`. */
 export function fuellen(body: string, lead: PlatzhalterLead, ctx: PlatzhalterKontext = {}): FuellErgebnis {
   const gefuellt: Record<string, string> = {}
   const offen: string[] = []
-  const norm = body.replace(LITERAL_ANREDE_RE, '[Anrede] [Nachname]')
+  const norm = signaturAlsAbsender(body).replace(LITERAL_ANREDE_RE, '[Anrede] [Nachname]')
   const text = norm.replace(TOKEN_RE, (ganz, roh: string) => {
     const name = roh.trim()
     const wert = platzhalterWert(name, lead, ctx)
