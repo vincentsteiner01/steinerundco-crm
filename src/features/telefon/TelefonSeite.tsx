@@ -587,8 +587,8 @@ type RowGemeinsam = {
   onAnrufen: () => void
 }
 
-// Mobil (ux § 7.5): Zeile wird Karte, „Anrufen“ groß und volle Breite. Der Button öffnet den Anruf-Screen (dort `tel:` + Timer +
-// Ergebnis-Pflicht) statt direkt `tel:` – BAUPLAN § 8.2 Nr. 3 (Ergebnis-Pflicht je Versuch) geht vor ux § 7.5 („tel:“ je Karte).
+// Mobil (ux § 7.5): Zeile wird Karte, „Anrufen“ groß und volle Breite. Der Button öffnet den Anruf-Screen (dort Timer +
+// Ergebnis-Pflicht); gewählt wird am eigenen Telefon, es gibt kein `tel:` (16.10.2026).
 const ZEILE = 'text-table flex items-center gap-3 px-3 max-md:h-auto max-md:flex-wrap max-md:gap-y-2 max-md:py-3'
 const AKTIONEN = 'flex flex-none items-center gap-1.5 max-md:w-full'
 /** Name-Block: wächst, schrumpft nie unter 8,5rem (sonst Breite 0 bei 1024 px, Sichtprüfung), auf Mobil eigene Zeile. */

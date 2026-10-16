@@ -71,7 +71,7 @@ const MIKE_TAG: readonly Block[] = [
     art: 'schritte',
     punkte: [
       '[Telefon](/telefon) öffnen ({G T}). Oben stehen fällige Rückrufe, darunter die Anrufliste: Wiederholungen vor frischen Leads.',
-      '„Call-Block starten“ ({↵}) öffnet den ersten Lead im Anruf-Screen: links Kontext und Anrufgrund, in der Mitte „Anrufen“, Timer und Notiz, rechts das Skript.',
+      '„Call-Block starten“ ({↵}) öffnet den ersten Lead im Anruf-Screen: links Kontext und Anrufgrund, in der Mitte Nummer, „Timer starten“ und Notiz, rechts das Skript. Gewählt wird am eigenen Telefon.',
       'Nach dem Gespräch ein Ergebnis wählen – Pflicht, eine Taste je Ergebnis. Das CRM plant den nächsten Versuch, den Rückruf oder die Wiedervorlage selbst.',
       '{↵} lädt den nächsten Lead. „Block beenden“ zeigt die Bilanz: Anrufe, erreicht, Entscheider, Termine.',
     ],
@@ -410,7 +410,7 @@ export const THEMEN: readonly Thema[] = [
         art: 'liste',
         punkte: [
           'Links der Kontext: Rolle, Unternehmen, Anrufgrund, letzte Versuche, LinkedIn-Verlauf, Notizen.',
-          'Mitte: „Anrufen“ öffnet die Nummer auf deinem Gerät, der Timer läuft, die Notiz speichert sich selbst.',
+          'Mitte: die Nummer (mit „Kopieren“) – gewählt wird am eigenen Telefon. „Timer starten“ ({↵}) misst nur die Dauer, die Notiz speichert sich selbst.',
           'Rechts das Skript in Phasen, {Tab} blättert weiter.',
           'Unten 15 Ergebnisse mit je einer Taste. Ohne Ergebnis gibt es keinen nächsten Lead.',
         ],

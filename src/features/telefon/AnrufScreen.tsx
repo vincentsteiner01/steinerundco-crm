@@ -92,7 +92,7 @@ export function Component() {
     [lead, sperrliste],
   )
   const gateGrund = gate.erlaubt ? null : gate.grund ? telefonGrundLabel(gate.grund) : 'Nicht anrufbar'
-  const anrufenLink = useRef<HTMLAnchorElement | null>(null)
+  const anrufenLink = useRef<HTMLButtonElement | null>(null)
   const maxVersuche = settings?.telefon.max_attempts ?? 5
   const enrollment = useMemo(
     () =>
@@ -302,7 +302,7 @@ export function Component() {
         if (istEingabe(e.target as Element | null)) return
         if (nach) naechster()
         else if (!gate.erlaubt) return
-        // Enter wählt wie der Klick: `tel:`-Link + Timer + 2-s-Hinweis „Kein Telefon verbunden?“ (Review: vorher nur der Timer)
+        // Enter startet den Timer wie der Klick (kein `tel:` mehr – gewählt wird am eigenen Telefon)
         else if (!anruf.laeuft) anrufenLink.current?.click()
         else if (def) void weiter(false)
       },

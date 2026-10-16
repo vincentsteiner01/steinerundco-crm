@@ -108,7 +108,7 @@ describe('AnrufMitte', () => {
       />,
     )
     expect(screen.getByText(/Impressumsdaten nicht für Werbung/)).toBeInTheDocument()
-    expect(screen.getByTestId('anrufen')).toHaveTextContent('Erneut anrufen')
+    expect(screen.getByTestId('anrufen')).toHaveTextContent('Timer läuft')
     fireEvent.click(screen.getByTestId('timer'))
     const feld = screen.getByLabelText('Dauer korrigieren (mm:ss)')
     expect(feld).toHaveValue('01:15')

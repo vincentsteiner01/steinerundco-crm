@@ -20,8 +20,8 @@ import { useSettings } from '@/data/settings'
 import { useTaskErstellen } from '@/data/tasks'
 import { AnrufButton } from '@/features/telefon/public'
 import { fmtDatumKurz, fmtDatumZeit, fmtZeit, heuteBerlin } from '@/lib/format'
-import { type SperrlistenTreffer, telefonGate } from '@/lib/gates'
-import { fmtTelefon, nachE164, telHref } from '@/lib/telefon'
+import type { SperrlistenTreffer } from '@/lib/gates'
+import { fmtTelefon, nachE164 } from '@/lib/telefon'
 import { tagZuDate } from '@/lib/zeit'
 import { ALLGEMEIN, ANRUFGRUND_LABEL, ERGEBNIS_LABEL, GATE_GRUND_LABEL } from '@/texte/de'
 import type { Json } from '@/types/database'
@@ -68,7 +68,6 @@ export function TelefonKarte({
   const task = useTaskErstellen()
   const max = settings?.telefon.max_attempts ?? 5
   const z = telefonZustand(lead, calls ?? [], max, sperrliste)
-  const gate = telefonGate(lead, sperrliste)
   const custom = (lead.custom ?? {}) as Record<string, unknown>
   const [feld, setFeld] = useState<'nummer' | 'erreichbarkeit' | 'zentrale' | null>(null)
   const [text, setText] = useState('')
@@ -376,11 +375,6 @@ export function TelefonKarte({
       </KarteFelder>
       <KarteAktionen>
         <AnrufButton leadId={lead.id} groesse="S" />
-        {lead.phone_e164 && gate.erlaubt ? (
-          <a className="text-ink-3 hover:text-ink mono-sm" href={telHref(lead.phone_e164)}>
-            tel:
-          </a>
-        ) : null}
         <Popover
           offen={rueckrufOffen}
           onOpenChange={setRueckrufOffen}

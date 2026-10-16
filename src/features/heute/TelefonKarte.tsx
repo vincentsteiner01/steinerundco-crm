@@ -102,9 +102,7 @@ export function TelefonKarte({ item, onAktion }: VariantenProps) {
       <KartenSub>
         {sub.length ? `${sub.join(' · ')} · ` : null}
         {nummer ? (
-          <a href={`tel:${nummer}`} className="text-ink hover:text-ink-bright font-mono text-[12px]">
-            {fmtTelefon(nummer)}
-          </a>
+          <span className="text-ink font-mono text-[12px] select-all">{fmtTelefon(nummer)}</span>
         ) : (
           <span className="text-overdue">keine Nummer</span>
         )}

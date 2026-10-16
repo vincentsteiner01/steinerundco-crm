@@ -1,4 +1,4 @@
-// AnrufScreen: Kontext/Nummer/Skript/15 Tasten, tel:-Link + Timer (T-03), Ergebnis-Pflicht (T-04), 7 → Rückruf (T-07),
+// AnrufScreen: Kontext/Nummer/Skript/15 Tasten, Timer ohne tel: (T-03), Ergebnis-Pflicht (T-04), 7 → Rückruf (T-07),
 // 0 ohne Zitat (T-15), p_task_id aus dem Rückruf-Task (T-19), Esc-Dialog, Mobil-Ergebnis-Modus (MO-04)
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -62,12 +62,17 @@ describe('AnrufScreen', () => {
     stand.calls = [call(LEAD_A.id, 'voicemail', { started_at: '2026-10-09T08:00:00.000Z', duration_sec: 20 })]
   })
 
-  it('rendert Kontext, Nummer mit tel:-Link, Timer 00:00, Skript-Tabs und 15 Ergebnis-Tasten; Scope anruf', async () => {
+  it('rendert Kontext, Nummer mit „Kopieren“, Timer-Knopf ohne tel:, Timer 00:00, Skript-Tabs und 15 Ergebnis-Tasten; Scope anruf', async () => {
     rendern(<AnrufScreen />, PFAD, ROUTE)
     await waitFor(() => expect(screen.getByRole('heading', { name: 'Lukas Feldhaus' })).toBeInTheDocument())
     expect(useUiStore.getState().hotkeyScope).toBe('anruf')
     expect(screen.getByTestId('nummer')).toHaveTextContent('+49 4131 220418')
-    expect(screen.getByTestId('anrufen')).toHaveAttribute('href', 'tel:+494131220418')
+    // 16.10.2026: kein tel: mehr (System-Popup) – der Knopf startet nur den Timer, gewählt wird am eigenen Telefon
+    expect(screen.getByTestId('anrufen').tagName).toBe('BUTTON')
+    expect(screen.getByTestId('anrufen')).not.toHaveAttribute('href')
+    expect(screen.getByTestId('anrufen')).toHaveTextContent('Timer starten')
+    expect(screen.getByRole('button', { name: 'Kopieren' })).toBeInTheDocument()
+    expect(document.querySelector('a[href^="tel:"]')).toBeNull()
     expect(screen.getByTestId('timer')).toHaveTextContent('00:00')
     expect(screen.getByText('Anrufgrund · LinkedIn vernetzt + Antwort')).toBeInTheDocument()
     expect(screen.getByRole('tab', { name: 'Zentrale' })).toHaveAttribute('aria-selected', 'true') // Nummerntyp Zentrale
@@ -267,7 +272,7 @@ describe('AnrufScreen', () => {
     }))
     const { router } = rendern(<AnrufScreen />, PFAD, ROUTE)
     const anrufen = await screen.findByTestId('anrufen', {}, BIS)
-    await waitFor(() => expect(anrufen).toHaveAttribute('href', 'tel:+494131220418'), BIS) // Gate offen, Lead geladen
+    await waitFor(() => expect(anrufen).not.toBeDisabled(), BIS) // Gate offen, Lead geladen
     taste('Enter')
     await waitFor(() => expect(localStorage.getItem(ANRUF_KEY)).not.toBeNull(), BIS)
     taste('9')
@@ -314,12 +319,11 @@ describe('AnrufScreen', () => {
     expect(wrap).toHaveAttribute('data-ergebnis', '1')
   })
 
-  it('ohne Anrufgrund wählbar (Cold Calling): Anrufen mit tel:-Link, Ergebnis-Tasten aktiv', async () => {
+  it('ohne Anrufgrund wählbar (Cold Calling): Timer-Knopf aktiv, Ergebnis-Tasten aktiv', async () => {
     stand.lead = leadMitBezug({ ...LEAD_A, call_basis: null })
     rendern(<AnrufScreen />, PFAD, ROUTE)
     await waitFor(() => expect(screen.getByTestId('anrufen')).toBeInTheDocument())
-    expect(screen.getByTestId('anrufen')).not.toBeDisabled()
-    expect(screen.getByTestId('anrufen')).toHaveAttribute('href', expect.stringMatching(/^tel:/))
+    await waitFor(() => expect(screen.getByTestId('anrufen')).not.toBeDisabled())
   })
 
   it('echte Sperre bleibt: Widerspruch am Telefon sperrt Anrufen und Ergebnisse (§ 8.2)', async () => {
@@ -335,11 +339,11 @@ describe('AnrufScreen', () => {
     expect(vi.mocked(supabase.rpc)).not.toHaveBeenCalled()
   })
 
-  it('Enter wählt wie der Klick: tel:-Link wird ausgelöst, nach 2 s „Kein Telefon verbunden? Nummer kopieren“ (Review)', async () => {
+  it('Enter startet den Timer wie der Klick – kein tel:, kein „Kein Telefon verbunden?“-Hinweis (16.10.2026)', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     rendern(<AnrufScreen />, PFAD, ROUTE)
-    await waitFor(() => expect(screen.getByTestId('anrufen')).toBeInTheDocument())
-    const klick = vi.fn((e: Event) => e.preventDefault()) // jsdom navigiert nicht zu tel:
+    await waitFor(() => expect(screen.getByTestId('anrufen')).not.toBeDisabled())
+    const klick = vi.fn()
     screen.getByTestId('anrufen').addEventListener('click', klick)
     taste('Enter')
     expect(klick).toHaveBeenCalledTimes(1)
@@ -347,7 +351,9 @@ describe('AnrufScreen', () => {
     act(() => {
       vi.advanceTimersByTime(2100)
     })
-    expect(screen.getByText('Kein Telefon verbunden? Nummer kopieren')).toBeInTheDocument()
+    expect(screen.getByTestId('anrufen')).toHaveTextContent('Timer läuft')
+    expect(screen.getByTestId('anrufen')).toBeDisabled()
+    expect(screen.queryByText(/Kein Telefon verbunden/)).toBeNull()
     vi.useRealTimers()
   })
 

@@ -1,8 +1,9 @@
 // M3 – Mittlere Spalte des Anruf-Screens (BAUPLAN § 3.4 AnrufMitte.tsx, DESIGN-SYSTEM § 5.13): Nummer Mono 20 px + Typ,
-// Button Anrufen L (`tel:`, Enter), Timer display 40 (Klick = Korrektur), Notizfeld (Autosave 2 s), Qualifizierung (4 Segmente →
+// Button „Timer starten“ L (Enter), Timer display 40 (Klick = Korrektur), Notizfeld (Autosave 2 s), Qualifizierung (4 Segmente →
 // leads.qualification), Datenschutz-Zeile „Hinweis genannt“ (Aktivität einwilligung, metadata.kind = 'datenschutz_hinweis').
-import { Phone } from 'lucide-react'
-import { useEffect, useRef, useState, type Ref } from 'react'
+// 16.10.2026 (Vincent): kein `tel:` mehr – gewählt wird am eigenen Telefon, der Knopf startet nur den Timer (kein System-Popup).
+import { Copy, Timer } from 'lucide-react'
+import { useState, type Ref } from 'react'
 import { useAktivitaetErstellen } from '@/data/activities'
 import { useLeadUpdate } from '@/data/leads'
 import { toast } from '@/components/toast'
@@ -12,7 +13,7 @@ import { Input } from '@/components/ui/Input'
 import { Segment } from '@/components/ui/Segment'
 import { Textarea } from '@/components/ui/Textarea'
 import { fmtDatum, fmtDauer } from '@/lib/format'
-import { fmtTelefon, telHref } from '@/lib/telefon'
+import { fmtTelefon } from '@/lib/telefon'
 import { kopieren } from '@/lib/zwischenablage'
 import { TOAST } from '@/texte/de'
 import type { Json } from '@/types/database'
@@ -45,10 +46,10 @@ export type AnrufMitteProps = {
   datenschutzText: string | null
   privacyVersion: string
   gross?: boolean
-  /** Telefon-Gate zu (§ 8.2 Nr. 2): Grund als Tooltip, Anrufen ohne `tel:` und deaktiviert (Review) */
+  /** Telefon-Gate zu (§ 8.2 Nr. 2): Grund als Tooltip, Timer-Knopf deaktiviert (Review) */
   gesperrtGrund?: string | null
-  /** Der Anrufen-Link – `Enter` im Screen klickt ihn, damit Tastatur und Maus denselben Weg nehmen (tel: + 2-s-Hinweis) */
-  anrufenRef?: Ref<HTMLAnchorElement>
+  /** Der Timer-Knopf – `Enter` im Screen klickt ihn, damit Tastatur und Maus denselben Weg nehmen */
+  anrufenRef?: Ref<HTMLButtonElement>
   className?: string
 }
 
@@ -64,27 +65,11 @@ export function AnrufMitte({
   className,
 }: AnrufMitteProps) {
   const [korrektur, setKorrektur] = useState<string | null>(null)
-  const [hinweisKopieren, setHinweisKopieren] = useState(false)
   const [kopiert, setKopiert] = useState(false)
   const update = useLeadUpdate()
   const aktivitaet = useAktivitaetErstellen()
-  const hinweisTimer = useRef<number | null>(null)
   const nummer = lead.phone_e164 ?? ''
   const qual = qualifikation(lead)
-
-  useEffect(
-    () => () => {
-      if (hinweisTimer.current) window.clearTimeout(hinweisTimer.current)
-    },
-    [],
-  )
-
-  const anrufen = () => {
-    anruf.anrufen()
-    // ux § 4.3: Desktop ohne Continuity → nach 2 s „Kein Telefon verbunden? Nummer kopieren“
-    if (hinweisTimer.current) window.clearTimeout(hinweisTimer.current)
-    hinweisTimer.current = window.setTimeout(() => setHinweisKopieren(true), 2000)
-  }
 
   const nummerKopieren = async () => {
     const r = await kopieren(nummer)
@@ -135,6 +120,18 @@ export function AnrufMitte({
         <span className="text-ink-bright tnum font-mono text-[20px]" data-testid="nummer">
           {fmtTelefon(nummer) || '–'}
         </span>
+        {nummer ? (
+          <Button
+            variante="quiet"
+            groesse="S"
+            icon={Copy}
+            copied={kopiert}
+            onClick={() => void nummerKopieren()}
+            className="self-center"
+          >
+            Kopieren
+          </Button>
+        ) : null}
         <span className="text-small text-ink-3">
           {TYP_LABEL[lead.phone_type ?? 'unbekannt']}
           {lead.phone_source ? ` · Quelle: ${QUELLE_LABEL[lead.phone_source]}` : ''}
@@ -143,37 +140,21 @@ export function AnrufMitte({
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
-        {gesperrtGrund ? (
-          <Button
-            variante="primary"
-            groesse="L"
-            icon={Phone}
-            kbd={gross ? undefined : '↵'}
-            disabled
-            disabledGrund={gesperrtGrund}
-            data-testid="anrufen"
-            className={gross ? 'h-14 w-full text-[16px]' : undefined}
-          >
-            Anrufen
-          </Button>
-        ) : (
-          <a
-            ref={anrufenRef}
-            href={nummer ? telHref(nummer) : undefined}
-            onClick={anrufen}
-            aria-disabled={!nummer || undefined}
-            data-testid="anrufen"
-            className={cn(
-              'bg-signal text-signal-ink ease-brand hover:bg-signal/90 inline-flex items-center justify-center gap-2 rounded-sm px-4 font-semibold whitespace-nowrap transition-[background] duration-[var(--t-1)] active:translate-y-[0.5px]',
-              gross ? 'h-14 w-full text-[16px]' : 'h-11 text-[15px]',
-              !nummer && 'pointer-events-none opacity-45',
-            )}
-          >
-            <Phone size={20} strokeWidth={1.75} aria-hidden />
-            {anruf.laeuft ? 'Erneut anrufen' : 'Anrufen'}{' '}
-            {gross ? null : <kbd className="kbd border-signal-ink/35 text-inherit opacity-60">↵</kbd>}
-          </a>
-        )}
+        {/* Nur Timer, kein Wählen: Vincent und Mike wählen am eigenen Telefon (16.10.2026) */}
+        <Button
+          ref={anrufenRef}
+          variante={anruf.laeuft ? 'secondary' : 'primary'}
+          groesse="L"
+          icon={Timer}
+          kbd={gross || anruf.laeuft ? undefined : '↵'}
+          disabled={!!gesperrtGrund || !nummer || anruf.laeuft}
+          disabledGrund={gesperrtGrund ?? (!nummer ? 'Keine Nummer' : undefined)}
+          onClick={() => anruf.anrufen()}
+          data-testid="anrufen"
+          className={gross ? 'h-14 w-full text-[16px]' : undefined}
+        >
+          {anruf.laeuft ? 'Timer läuft' : 'Timer starten'}
+        </Button>
         {korrektur === null ? (
           <button
             type="button"
@@ -201,21 +182,9 @@ export function AnrufMitte({
           />
         )}
         <span className="text-small text-ink-3">
-          {anruf.laeuft ? 'Timer läuft' : 'Timer startet beim Klick'} · <kbd className="kbd">Esc</kbd> Abbrechen
+          {anruf.laeuft ? 'Gespräch läuft' : 'Wählen am eigenen Telefon'} · <kbd className="kbd">Esc</kbd> Abbrechen
         </span>
       </div>
-
-      {hinweisKopieren ? (
-        <div role="note" className="border-line-strong text-ui flex items-center gap-3 rounded-md border px-3.5 py-2.5">
-          <span className="flex-1">Kein Telefon verbunden? Nummer kopieren</span>
-          <Button variante="secondary" groesse="S" copied={kopiert} onClick={() => void nummerKopieren()}>
-            Nummer kopieren
-          </Button>
-          <Button variante="icon" aria-label="Ausblenden" onClick={() => setHinweisKopieren(false)} className="h-7 w-7">
-            ×
-          </Button>
-        </div>
-      ) : null}
 
       <div className="grid gap-1.5">
         <label className="label block" htmlFor={`notiz-${lead.id}`}>
