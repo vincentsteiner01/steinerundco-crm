@@ -4,10 +4,11 @@ import { QueryClient } from '@tanstack/react-query'
 type FehlerArtig = { code?: string; status?: number; message?: string; name?: string }
 const f = (e: unknown): FehlerArtig => (e && typeof e === 'object' ? (e as FehlerArtig) : {})
 
-/** Netzwerkfehler (fetch wirft `TypeError: Failed to fetch`). Mapping im Detail: src/lib/errors.ts. */
+/** Netzwerkfehler (fetch wirft `TypeError: Failed to fetch`) oder Zeitlimit (wiederholen.ts). Mapping: src/data/errors.ts. */
 export const istNetzwerkfehler = (e: unknown): boolean => {
   const x = f(e)
   return (
+    x.name === 'TimeoutError' ||
     (x.name === 'TypeError' && /fetch/i.test(x.message ?? '')) ||
     /Failed to fetch|NetworkError|Load failed/i.test(x.message ?? '')
   )

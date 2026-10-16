@@ -77,6 +77,7 @@ export function chatgptPrompt(url: string = AUFTRAG_URL, maxNachrichten = 25): s
     '2. Neue Annahmen: Öffne auf LinkedIn „Mein Netzwerk“ → „Kontakte“ und sortiere nach „Kürzlich hinzugefügt“. Nimm alle Personen, die in den letzten 3 Tagen hinzugekommen sind. Trage sie im CRM im Feld „Neue Annahmen eintragen“ ein, eine Person pro Zeile, in diesem Format:',
     '   Herr Vorname Nachname | Firma | https://www.linkedin.com/in/profil',
     '   (statt „Herr“ „Frau“, wenn es eine Frau ist; ist die Firma unbekannt, lass das Feld leer). Klicke dann „Eintragen“. Personen, die das CRM schon kennt, erkennt es selbst.',
+    '   Warte, bis unter dem Feld die Ergebniszeile erscheint („… als angenommen eingetragen …“) – bei vielen Personen kann das eine Minute dauern. Merke dir ihren Wortlaut. Steht dort, dass Annahmen nicht gespeichert wurden, klicke noch einmal „Eintragen“.',
     '',
     '3. Falls es den Abschnitt „Annahmen prüfen“ gibt: Prüfe für jede Person dort auf LinkedIn, ob ihr inzwischen vernetzt seid. Wenn ja, klicke im CRM „Angenommen“. Wenn nein, lass die Zeile stehen.',
     '',
@@ -93,8 +94,10 @@ export function chatgptPrompt(url: string = AUFTRAG_URL, maxNachrichten = 25): s
     '   – Ändere keine Texte und beantworte keine Antworten – das macht Vincent selbst.',
     `   – Höchstens ${maxNachrichten} Nachrichten pro Durchgang, mit etwas Abstand zwischen den Nachrichten.`,
     '   – Ist eine Zeile gesperrt, ein Knopf ausgegraut oder sieht eine Seite anders aus als beschrieben: diese Aufgabe überspringen und am Ende melden.',
+    '   – Erscheint „Offline“ oder „nicht gespeichert“ oder lädt die Seite länger als eine Minute: 30 Sekunden warten, die Auftragsseite neu laden und den letzten Schritt wiederholen. Das CRM erkennt Doppeltes, es wird nichts doppelt gezählt. Klappt es nach drei Versuchen nicht, abbrechen und melden.',
+    '   – Ohne Häkchen „Gesendet“ im CRM keine weitere LinkedIn-Nachricht senden.',
     '',
-    '6. Melde mir am Ende: wie viele Annahmen du eingetragen hast, wie viele Nachrichten gesendet wurden, wer schon geantwortet hatte und was nicht geklappt hat.',
+    '6. Melde mir am Ende: den Wortlaut der Ergebniszeile bei „Neue Annahmen eintragen“, wie viele Nachrichten gesendet wurden, wer schon geantwortet hatte und was nicht geklappt hat.',
   ].join('\n')
 }
 
@@ -103,10 +106,15 @@ export type AnnahmenErgebnis = {
   bekannt: number
   angenommen: number
   uebersprungen: string[]
+  /** Annahmen, die auch nach Wiederholung nicht gespeichert wurden (Verbindung) */
+  fehlgeschlagen: number
 }
 
 export function annahmenText(e: AnnahmenErgebnis): string {
   const teile = [`${e.angenommen} als angenommen eingetragen`, `${e.neu} neu angelegt`, `${e.bekannt} schon im CRM`]
-  const satz = `${teile.join(' · ')}.`
-  return e.uebersprungen.length ? `${satz} Übersprungen: ${e.uebersprungen.join(', ')}.` : satz
+  let satz = `${teile.join(' · ')}.`
+  if (e.uebersprungen.length) satz += ` Übersprungen: ${e.uebersprungen.join(', ')}.`
+  if (e.fehlgeschlagen)
+    satz += ` ${e.fehlgeschlagen} ${e.fehlgeschlagen === 1 ? 'Annahme' : 'Annahmen'} nicht gespeichert (Verbindung). Die Liste steht noch im Feld – einfach noch einmal „Eintragen“ klicken, doppelt wird nichts gezählt.`
+  return satz
 }

@@ -76,6 +76,8 @@ describe('chatgptPrompt', () => {
       '„Hat geantwortet“',
       '„War schon gesendet“',
       'Höchstens 25 Nachrichten',
+      'Ergebniszeile',
+      'Auftragsseite neu laden',
     ])
       expect(p).toContain(teil)
     expect(p).not.toMatch(/!/)
@@ -84,11 +86,24 @@ describe('chatgptPrompt', () => {
 
 describe('annahmenText', () => {
   it('fasst das Ergebnis in einem Satz zusammen', () => {
-    expect(annahmenText({ neu: 2, bekannt: 1, angenommen: 3, uebersprungen: [] })).toBe(
+    expect(annahmenText({ neu: 2, bekannt: 1, angenommen: 3, uebersprungen: [], fehlgeschlagen: 0 })).toBe(
       '3 als angenommen eingetragen · 2 neu angelegt · 1 schon im CRM.',
     )
-    expect(annahmenText({ neu: 0, bekannt: 0, angenommen: 0, uebersprungen: ['Max Beispiel (gesperrt)'] })).toContain(
-      'Übersprungen: Max Beispiel (gesperrt)',
-    )
+    expect(
+      annahmenText({
+        neu: 0,
+        bekannt: 0,
+        angenommen: 0,
+        uebersprungen: ['Max Beispiel (gesperrt)'],
+        fehlgeschlagen: 0,
+      }),
+    ).toContain('Übersprungen: Max Beispiel (gesperrt)')
+  })
+
+  it('nennt nicht gespeicherte Annahmen und wie es weitergeht (16.10.2026: Abbruch nach 18 von 37)', () => {
+    const s = annahmenText({ neu: 36, bekannt: 1, angenommen: 18, uebersprungen: [], fehlgeschlagen: 19 })
+    expect(s).toContain('18 als angenommen eingetragen')
+    expect(s).toContain('19 Annahmen nicht gespeichert')
+    expect(s).toContain('noch einmal „Eintragen“')
   })
 })

@@ -13,6 +13,7 @@ import { qk } from './queryKeys'
 import {
   _toastBegrenzerZuruecksetzen,
   invalidiere,
+  invalidierungsBuendler,
   invalidierungsKeys,
   realtimeToast,
   REALTIME_TABELLEN,
@@ -75,6 +76,49 @@ describe('invalidierungsKeys – Tabelle § 3.1.6 wörtlich', () => {
   })
 })
 
+describe('invalidierungsBuendler', () => {
+  afterEach(() => vi.useRealTimers())
+
+  it('37 Annahmen à 7 Ereignisse → jeder Key einmal, nach der Ruhezeit', () => {
+    vi.useFakeTimers()
+    const qc = new QueryClient()
+    const spy = vi.spyOn(qc, 'invalidateQueries')
+    const b = invalidierungsBuendler(qc, 400, 2000)
+    for (let i = 0; i < 37; i++) {
+      const lead = `lead-${i % 3}`
+      b.add({ tabelle: 'linkedin_connections', eventType: 'INSERT', neu: { id: `c${i}`, lead_id: lead }, alt: {} })
+      for (let a = 0; a < 3; a++)
+        b.add({ tabelle: 'activities', eventType: 'INSERT', neu: { id: `a${i}${a}`, lead_id: lead }, alt: {} })
+      b.add({ tabelle: 'leads', eventType: 'UPDATE', neu: { id: lead }, alt: {} })
+      b.add({ tabelle: 'enrollments', eventType: 'INSERT', neu: { id: `e${i}`, lead_id: lead }, alt: {} })
+      b.add({ tabelle: 'tasks', eventType: 'INSERT', neu: { id: `t${i}`, lead_id: lead }, alt: {} })
+    }
+    expect(spy).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(400)
+    const keys = spy.mock.calls.map((c) => JSON.stringify(c[0]?.queryKey))
+    expect(new Set(keys).size).toBe(keys.length) // keine Doppelten
+    expect(keys.filter((k) => k === JSON.stringify(qk.queue.all))).toHaveLength(1)
+    expect(keys.filter((k) => k === JSON.stringify(qk.kpis.all))).toHaveLength(1)
+  })
+
+  it('Dauerfeuer: spätestens nach maxMs wird geladen; stop() verwirft Offenes', () => {
+    vi.useFakeTimers()
+    const qc = new QueryClient()
+    const spy = vi.spyOn(qc, 'invalidateQueries')
+    const b = invalidierungsBuendler(qc, 400, 2000)
+    for (let t = 0; t < 2000; t += 200) {
+      b.add({ tabelle: 'tasks', eventType: 'INSERT', neu: { id: `t${t}`, lead_id: L }, alt: {} })
+      vi.advanceTimersByTime(200)
+    }
+    expect(spy).toHaveBeenCalled()
+    spy.mockClear()
+    b.add({ tabelle: 'settings', eventType: 'UPDATE', neu: {}, alt: {} })
+    b.stop()
+    vi.advanceTimersByTime(5000)
+    expect(spy).not.toHaveBeenCalled()
+  })
+})
+
 describe('useRealtimeSync – Kanal', () => {
   it('abonniert crm:sync mit postgres_changes auf allen 11 Tabellen und setzt den Status', async () => {
     const { renderHook } = await import('@testing-library/react')
@@ -103,12 +147,16 @@ describe('useRealtimeSync – Kanal', () => {
     k.handler
       .find((h) => h.filter.table === 'tasks')!
       .cb({ eventType: 'UPDATE', new: { id: 't', lead_id: L }, old: {} })
-    expect(spy.mock.calls.map((c) => c[0]?.queryKey)).toEqual([
-      qk.tasks.lead(L),
-      ['tasks', 'faellig'],
-      qk.queue.all,
-      qk.nav,
-    ])
+    // gebündelt: erst nach der Ruhezeit
+    expect(spy).not.toHaveBeenCalled()
+    await vi.waitFor(() =>
+      expect(spy.mock.calls.map((c) => c[0]?.queryKey)).toEqual([
+        qk.tasks.lead(L),
+        ['tasks', 'faellig'],
+        qk.queue.all,
+        qk.nav,
+      ]),
+    )
     unmount()
     expect(supabase.removeChannel).toHaveBeenCalled()
     expect(useUiStore.getState().realtime).toBe('getrennt')

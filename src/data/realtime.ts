@@ -102,6 +102,43 @@ export function invalidiere(qc: QueryClient, e: RealtimeEreignis): void {
   for (const queryKey of invalidierungsKeys(e.tabelle, zeile)) void qc.invalidateQueries({ queryKey })
 }
 
+/** Ruhe nach dem letzten Ereignis, bevor neu geladen wird – und Obergrenze bei Dauerfeuer. */
+export const BUENDEL_RUHE_MS = 400
+export const BUENDEL_MAX_MS = 2000
+
+/**
+ * Bündelt Invalidierungen (16.10.2026): Eine Annahme erzeugt ~7 Ereignisse (Verbindung, 3 Aktivitäten, Lead, Sequenz,
+ * Aufgabe); 37 Annahmen über die Auftragsseite lösten so je Tab Hunderte Neuladungen von Queue/KPIs aus. Jetzt wird
+ * jeder Key pro Welle einmal invalidiert – nach 400 ms Ruhe, bei Dauerfeuer spätestens alle 2 s.
+ */
+export function invalidierungsBuendler(qc: QueryClient, ruheMs = BUENDEL_RUHE_MS, maxMs = BUENDEL_MAX_MS) {
+  const offen = new Map<string, QueryKey>()
+  let ruhe: ReturnType<typeof setTimeout> | null = null
+  let spaetestens: ReturnType<typeof setTimeout> | null = null
+  const leeren = () => {
+    if (ruhe) clearTimeout(ruhe)
+    if (spaetestens) clearTimeout(spaetestens)
+    ruhe = spaetestens = null
+    const keys = [...offen.values()]
+    offen.clear()
+    for (const queryKey of keys) void qc.invalidateQueries({ queryKey })
+  }
+  return {
+    add(e: RealtimeEreignis): void {
+      for (const k of invalidierungsKeys(e.tabelle, { ...e.alt, ...e.neu })) offen.set(JSON.stringify(k), k)
+      if (ruhe) clearTimeout(ruhe)
+      ruhe = setTimeout(leeren, ruheMs)
+      spaetestens ??= setTimeout(leeren, maxMs)
+    },
+    stop(): void {
+      if (ruhe) clearTimeout(ruhe)
+      if (spaetestens) clearTimeout(spaetestens)
+      ruhe = spaetestens = null
+      offen.clear()
+    },
+  }
+}
+
 // ── Realtime-Toasts ──────────────────────────────────────────────────────────
 const toastZeiten: number[] = []
 /** Nur für Tests: Begrenzer zurücksetzen. */
@@ -184,6 +221,7 @@ export function useRealtimeSync(): void {
       setRealtime('getrennt')
       return
     }
+    const buendler = invalidierungsBuendler(qc)
     let kanal = supabase.channel(REALTIME_KANAL)
     for (const tabelle of REALTIME_TABELLEN) {
       kanal = kanal.on(
@@ -191,13 +229,14 @@ export function useRealtimeSync(): void {
         { event: '*', schema: 'crm', table: tabelle },
         (p: RealtimePostgresChangesPayload<Zeile>) => {
           const e = zuEreignis(tabelle, p)
-          invalidiere(qc, e)
+          buendler.add(e)
           void realtimeToast(qc, e, me)
         },
       )
     }
     kanal.subscribe((s) => setRealtime(s === 'SUBSCRIBED' ? 'live' : 'getrennt'))
     return () => {
+      buendler.stop()
       setRealtime('getrennt')
       void supabase.removeChannel(kanal)
     }
