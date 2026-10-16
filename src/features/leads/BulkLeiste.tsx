@@ -154,13 +154,9 @@ export function BulkLeiste({ ausgewaehlt, csvSpalten, ansichtKey, menuOffen, onM
     onMenuOffen(false)
   }
 
-  // „Zur Anrufliste“ (ux § 3.2.4): die Anrufliste (M3) rechnet sich aus Nummer + Anrufgrund ohne Sperre – es gibt keine Auswahl-Liste.
-  // Fehlt bei Leads mit Nummer der Anrufgrund, setzt man ihn zuerst (Dialog); sonst geht es mit der Zahl der anrufbaren Leads nach /telefon.
+  // „Zur Anrufliste“ (ux § 3.2.4): die Anrufliste (M3) rechnet sich aus Nummer ohne Sperre – es gibt keine Auswahl-Liste.
+  // Cold Calling (16.10.2026): ein fehlender Anrufgrund hält niemanden mehr auf; festhalten geht über „Anrufgrund setzen“.
   const zurAnrufliste = () => {
-    if (ausgewaehlt.some((l) => l.phone_e164 && !l.call_basis)) {
-      oeffne('anrufgrund')
-      return
-    }
     const bereit = ausgewaehlt.filter((l) => telefonGate(l, l.sperrliste).erlaubt).length
     onMenuOffen(false)
     toast(`${bereit} von ${n} ${n === 1 ? 'Lead' : 'Leads'} in der Anrufliste.`)

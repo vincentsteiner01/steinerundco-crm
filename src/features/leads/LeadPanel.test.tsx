@@ -125,17 +125,17 @@ describe('LeadPanel', () => {
     expect(within(li).getByRole('button', { name: /Nachricht gesendet/ })).toBeDisabled()
   })
 
-  it('Telefon-Karte: Anrufen nur mit Nummer und Anrufgrund (LD-03), INFO-Regel ab Erstgespräch', async () => {
+  it('Telefon-Karte: mit Nummer anrufbar, auch ohne Anrufgrund (Cold Calling); INFO-Regel ab Erstgespräch', async () => {
     DB.details = [leadMitBezug(1, { phone_e164: '+4940123456', call_basis: null, stage: 'erstgespraech_vereinbart' })]
     panel()
     await screen.findByRole('heading', { name: 'Test Person 01' })
     const kopf = screen.getByRole('toolbar', { name: 'Lead-Aktionen' })
-    expect(within(kopf).getByLabelText(GATE_GRUND_LABEL.kein_anrufgrund)).toBeInTheDocument()
+    expect(within(kopf).queryByLabelText(GATE_GRUND_LABEL.kein_anrufgrund)).toBeNull()
     fireEvent.click(
       within(document.querySelector('[data-kanal="telefon"]') as HTMLElement).getAllByRole('button')[0] as HTMLElement,
     )
     const karte = document.querySelector('[data-kanal="telefon"]') as HTMLElement
-    expect(within(karte).getByText('Nummer ohne Anrufgrund')).toBeInTheDocument()
+    expect(within(karte).getByText('Bereit · ohne Anrufgrund')).toBeInTheDocument()
     expect(karte).toHaveTextContent('INFO-Regel: Follow-ups bevorzugt telefonisch – Anrufgrund setzen')
   })
 

@@ -49,7 +49,7 @@ export function nichtSatz(z: NichtZaehlung): string {
 
 /** Erklärung unter der Zählung – warum die Liste leer ist und wann sie sich füllt. */
 export const NICHT_ERKLAERUNG =
-  'Die Anrufliste füllt sich, sobald ein Lead eine Telefonnummer und einen Anrufgrund hat.'
+  'Die Anrufliste füllt sich, sobald ein Lead eine Telefonnummer hat – auch ohne Vorgeschichte (Cold Calling).'
 
 /** Primärknopf im Leerzustand je Hauptgrund. */
 export const NICHT_AKTION: Record<NichtGruppe, string> = {

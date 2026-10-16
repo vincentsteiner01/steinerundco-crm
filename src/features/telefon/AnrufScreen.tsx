@@ -461,10 +461,21 @@ export function Component() {
         >
           <Chip ton="danger">{gateGrund}</Chip>
           <span className="text-ink-2 flex-1">
-            Dieser Lead ist nicht anrufbar – Anrufen und Ergebnisse sind gesperrt
-            {gate.grund === 'kein_anrufgrund' ? ', bis ein Anrufgrund gesetzt ist' : ''}.
+            Dieser Lead ist nicht anrufbar – Anrufen und Ergebnisse sind gesperrt.
           </span>
-          {gate.grund === 'kein_anrufgrund' ? <AnrufgrundSetzen lead={lead} /> : null}
+        </div>
+      ) : null}
+
+      {gate.erlaubt && gate.hinweis === 'kein_anrufgrund' ? (
+        // Cold Calling (16.10.2026): kein Anrufgrund sperrt nicht mehr – ruhiger Hinweis, festhalten bleibt möglich
+        <div
+          className="border-line text-small mb-4 flex flex-wrap items-center gap-3 rounded-md border px-3.5 py-2"
+          data-hinweis="kein_anrufgrund"
+        >
+          <span className="text-ink-3 flex-1">
+            Kein Anrufgrund festgehalten. Anrufen geht trotzdem – wer einen Grund notiert, hat ihn später als Beleg.
+          </span>
+          <AnrufgrundSetzen lead={lead} />
         </div>
       ) : null}
 

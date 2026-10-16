@@ -79,9 +79,11 @@ export type AnruflisteEingabe = {
 }
 
 /** Phasen, in denen ein Erstanruf sinnvoll ist: Vernetzt … Sales Follow-up (nicht Angefragt, Kunde, Wiedervorlage, Beendet). */
+/** Cold Calling (16.10.2026): jede aktive Phase von „Neu“ bis Strategiegespräch – auch ohne LinkedIn-Vorgeschichte. */
 export function istAnrufKandidat(stage: LeadStage): boolean {
-  const r = stageRank(stage)
-  return r >= stageRank('vernetzt') && r <= stageRank('sales_follow_up')
+  // Wiedervorlage (geparkt, Rang 5), Beendet und Kunde bleiben draußen
+  if (stage === 'langfristig' || stage === 'beendet' || stage === 'kunde') return false
+  return stageRank(stage) <= stageRank('sales_follow_up')
 }
 
 export function anrufliste(e: AnruflisteEingabe): Anrufliste {

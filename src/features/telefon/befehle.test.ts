@@ -50,11 +50,10 @@ describe('BEFEHLE (Telefon)', () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/telefon/anruf/l1'))
   })
 
-  it('Anrufen ⌘⇧K ohne Anrufgrund oder mit Sperrlisten-Treffer: Grund als Toast, kein Anruf-Screen (Review)', async () => {
+  it('Anrufen ⌘⇧K: ohne Anrufgrund öffnet den Anruf-Screen (Cold Calling), mit Sperrlisten-Treffer Grund als Toast', async () => {
     queryClient.setQueryData(qk.leads.detail('l1'), leadMitBezug({ ...LEAD_A, id: 'l1', call_basis: null }))
     const ohne = ausfuehren('telefon:anrufen', 'l1')
-    await waitFor(() => expect(toast).toHaveBeenCalledWith('Nummer ohne Anrufgrund'))
-    expect(ohne.navigate).not.toHaveBeenCalled()
+    await waitFor(() => expect(ohne.navigate).toHaveBeenCalledWith('/telefon/anruf/l1'))
 
     queryClient.setQueryData(qk.leads.detail('l2'), leadMitBezug({ ...LEAD_A, id: 'l2' }))
     queryClient.setQueryData(qk.sperrliste, [{ id: 's1', phone_e164: LEAD_A.phone_e164, channels: ['telefon'] }])

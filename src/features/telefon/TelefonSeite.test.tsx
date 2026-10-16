@@ -80,25 +80,26 @@ describe('TelefonSeite', () => {
     expect(rueckrufe[0]).toHaveTextContent('Lukas Feldhaus')
     expect(rueckrufe[0]).toHaveTextContent('mit Zentrale')
     const liste = within(screen.getByRole('listbox', { name: 'Anrufliste' })).getAllByRole('option')
+    // Cold Calling (16.10.2026): Niklas Behrend hat keinen Anrufgrund und steht trotzdem auf der Liste
     expect(liste.map((o) => o.textContent)).toEqual([
       expect.stringContaining('Timo Kranich'),
       expect.stringContaining('Lena Hartwig'),
+      expect.stringContaining('Niklas Behrend'),
     ])
     expect(liste[0]).toHaveTextContent('Versuch 2/5 · Slot B 14:00–16:00')
     expect(liste[1]).toHaveTextContent('Versuch 1/5 · Slot A 09:30–11:30')
     expect(liste[1]).toHaveTextContent('Bestandskontakt')
     const kopf = screen.getByRole('banner')
-    expect(kopf).toHaveTextContent('3 in der Liste')
+    expect(kopf).toHaveTextContent('4 in der Liste')
     expect(kopf).toHaveTextContent('1 Versuche fällig')
-    // eingeklappte Sektion mit Zähler 2, Gründe nach dem Aufklappen
+    // eingeklappte Sektion mit Zähler 1 (nur noch „Keine Nummer“), Grund nach dem Aufklappen
     const nicht = screen.getByRole('button', { name: /Noch nicht anrufbar/ })
-    expect(nicht).toHaveTextContent('2')
+    expect(nicht).toHaveTextContent('1')
     expect(nicht).toHaveAttribute('aria-expanded', 'false')
     fireEvent.click(nicht)
     const nichtListe = screen.getByRole('list', { name: 'Noch nicht anrufbar' })
     const gesperrt = within(nichtListe).getAllByRole('listitem')
-    expect(gesperrt.map((g) => g.getAttribute('data-grund')).sort()).toEqual(['kein_anrufgrund', 'keine_nummer'])
-    expect(within(nichtListe).getByText('Nummer ohne Anrufgrund')).toBeInTheDocument()
+    expect(gesperrt.map((g) => g.getAttribute('data-grund'))).toEqual(['keine_nummer'])
     expect(within(nichtListe).getByText('Keine Nummer')).toBeInTheDocument()
     expect(within(nichtListe).getByRole('button', { name: 'Nummer ergänzen' })).toBeInTheDocument()
     // Filter nach Grund über der Liste (Runde 3)
@@ -106,8 +107,9 @@ describe('TelefonSeite', () => {
       within(screen.getByRole('group', { name: 'Grund' }))
         .getAllByRole('button')
         .map((b) => b.textContent),
-    ).toEqual(['Alle2', 'Keine Nummer1', 'Ohne Anrufgrund1'])
-    expect(screen.getByRole('button', { name: /Alle mit LinkedIn-Antwort/ })).toHaveTextContent('(1)')
+    ).toEqual(['Alle1', 'Keine Nummer1'])
+    // Sammel-Beleg hängt jetzt an der Anrufliste
+    expect(screen.getByRole('button', { name: /Anrufgrund festhalten/ })).toHaveTextContent('(1)')
   })
 
   it('verpasster Rückruf zeigt „verpasst · hh:mm“ ohne Sekunden; Zeilen tragen Name · Unternehmen als title (Ellipse)', async () => {
@@ -147,7 +149,7 @@ describe('TelefonSeite', () => {
     expect(await screen.findByRole('menu', { name: 'Grund' })).toBeInTheDocument()
     taste('2')
     await waitFor(() =>
-      expect(within(screen.getByRole('listbox', { name: 'Anrufliste' })).getAllByRole('option')).toHaveLength(1),
+      expect(within(screen.getByRole('listbox', { name: 'Anrufliste' })).getAllByRole('option')).toHaveLength(2),
     )
     expect(vi.mocked(toast)).toHaveBeenCalledWith('Heute aus der Liste entfernt – Erst Nummer prüfen.')
     expect(JSON.parse(localStorage.getItem(ENTFERNT_KEY) ?? '{}')).toMatchObject({
@@ -156,7 +158,7 @@ describe('TelefonSeite', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: /Call-Block starten/ }))
     const session = JSON.parse(localStorage.getItem(BLOCK_KEY) ?? 'null') as { listeIds: string[] }
-    expect(session.listeIds).toEqual([LEAD_A.id, LEAD_C.id])
+    expect(session.listeIds).toEqual([LEAD_A.id, LEAD_C.id, LEAD_OHNE_GRUND.id])
     expect(router.state.location.pathname).toBe(`/telefon/anruf/${LEAD_A.id}`)
     expect(router.state.location.search).toContain('block=')
   })
@@ -172,22 +174,21 @@ describe('TelefonSeite', () => {
     await waitFor(() => expect(screen.getByRole('listbox', { name: 'Anrufliste' })).toBeInTheDocument())
   })
 
-  it('Leerzustand: „Niemand anzurufen.“ zählt nach Grund, erklärt die Anrufliste, Knopf nach dem Hauptgrund (Gleichstand → Anrufgrund)', async () => {
+  it('Leerzustand: ein Lead ohne Anrufgrund macht die Liste NICHT leer (Cold Calling); nur ohne Nummer bleibt sie leer', async () => {
     stand.leads = [LEAD_OHNE_GRUND, LEAD_OHNE_NUMMER]
     stand.tasks = []
     stand.enrollments = []
+    const { unmount } = rendern(<TelefonSeite />, '/telefon', '/telefon')
+    await waitFor(() => expect(screen.getByRole('listbox', { name: 'Anrufliste' })).toBeInTheDocument(), {
+      timeout: 5000,
+    })
+    expect(screen.queryByText('Niemand anzurufen.')).toBeNull()
+    unmount()
+    stand.leads = [LEAD_OHNE_NUMMER]
     rendern(<TelefonSeite />, '/telefon', '/telefon')
     await waitFor(() => expect(screen.getByText('Niemand anzurufen.')).toBeInTheDocument(), { timeout: 5000 })
-    // Runde 2/3: echte Daten hatten 119 „Keine Nummer“ + 2 „Firma gesperrt“ – „121 warten auf einen Anrufgrund“ war falsch
-    expect(screen.getByText('1 Lead ohne Anrufgrund · 1 ohne Telefonnummer.')).toBeInTheDocument()
-    expect(
-      screen.getByText(/Die Anrufliste füllt sich, sobald ein Lead eine Telefonnummer und einen Anrufgrund hat\./),
-    ).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Anrufgrund setzen' }))
-    expect(screen.getByRole('button', { name: /Noch nicht anrufbar/ })).toHaveAttribute('aria-expanded', 'true')
-    const liste = screen.getByRole('list', { name: 'Noch nicht anrufbar' })
-    expect(within(liste).getAllByRole('listitem')).toHaveLength(1)
-    expect(within(liste).getByRole('listitem')).toHaveAttribute('data-grund', 'kein_anrufgrund')
+    expect(screen.getByText('1 Lead ohne Telefonnummer.')).toBeInTheDocument()
+    expect(screen.getByText(/sobald ein Lead eine Telefonnummer hat/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Call-Block starten/ })).toBeDisabled()
   })
 
@@ -285,10 +286,10 @@ describe('TelefonSeite', () => {
     expect(ereignis?.detail).toEqual({ leadId: LEAD_B.id })
   })
 
-  it('Bulk „Alle mit LinkedIn-Antwort → ‚LinkedIn vernetzt + Antwort‘“ setzt den Anrufgrund samt Aktivität', async () => {
+  it('Sammel-Beleg „Anrufgrund festhalten: alle mit LinkedIn-Antwort“ setzt den Anrufgrund samt Aktivität', async () => {
     vi.mocked(supabase.from).mockClear()
     rendern(<TelefonSeite />, '/telefon', '/telefon')
-    const bulk = await screen.findByRole('button', { name: /Alle mit LinkedIn-Antwort/ })
+    const bulk = await screen.findByRole('button', { name: /Anrufgrund festhalten/ })
     expect(bulk).toHaveTextContent('(1)')
     fireEvent.click(bulk)
     await waitFor(() =>

@@ -258,7 +258,7 @@ const TELEFON: Tour = {
       pfad: PFADE.telefon,
       ziele: ['section[aria-labelledby="sek-nicht"]'],
       titel: 'Noch nicht anrufbar',
-      text: 'Hier fehlt eine Nummer oder ein Anrufgrund. Ohne konkreten Anlass ist ein Anruf nicht erlaubt – das CRM sperrt ihn deshalb.',
+      text: 'Hier fehlt eine Telefonnummer, oder der Lead ist gesperrt (Widerspruch, Sperrliste, Firma). Ein fehlender Anrufgrund hält niemanden auf – er ist nur ein Hinweis.',
     },
   ],
 }

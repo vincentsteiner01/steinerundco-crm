@@ -32,7 +32,7 @@ describe('anrufliste', () => {
     expect(wiederholungAusTitel('Rückruf – nicht erreicht (Wiederholung 2)')).toBe(2)
   })
 
-  it('T-01/T-17: ohne Nummer, ohne Anrufgrund, Sperrliste, Widerspruch, Firmensperre → „Noch nicht anrufbar“ mit Grund', () => {
+  it('T-01/T-17: ohne Nummer, Sperrliste, Widerspruch, Firmensperre → „Noch nicht anrufbar“; ohne Anrufgrund trotzdem anrufbar (Cold Calling)', () => {
     const gesperrt: ListenLead = { ...LEAD_C, id: 'lead-sperr', companies: { do_not_contact: true } }
     const widerspruch: ListenLead = {
       ...LEAD_C,
@@ -61,15 +61,14 @@ describe('anrufliste', () => {
       leads: [LEAD_A, LEAD_B, LEAD_OHNE_GRUND, LEAD_OHNE_NUMMER, gesperrt, widerspruch],
       sperrliste,
     })
-    expect(l.anrufliste.map((z) => z.lead.id)).toEqual([LEAD_A.id])
+    expect(l.anrufliste.map((z) => z.lead.id).sort()).toEqual([LEAD_A.id, LEAD_OHNE_GRUND.id].sort())
     expect(Object.fromEntries(l.nichtAnrufbar.map((z) => [z.lead.id, z.grund]))).toEqual({
       [LEAD_B.id]: 'sperrliste',
-      [LEAD_OHNE_GRUND.id]: 'kein_anrufgrund',
       [LEAD_OHNE_NUMMER.id]: 'keine_nummer',
       'lead-sperr': 'firma_gesperrt',
       'lead-wid': 'widerspruch',
     })
-    expect(l.zaehler).toEqual({ liste: 1, rueckrufe: 0, versuche: 0, frisch: 1, nichtAnrufbar: 5 })
+    expect(l.zaehler).toEqual({ liste: 2, rueckrufe: 0, versuche: 0, frisch: 2, nichtAnrufbar: 4 })
   })
 
   it('T-02: Rückrufe (nach Uhrzeit) → Wiederholungen (Versuch 2–5, fällig) → frische Leads (Funnel-Tiefe ↓, Anlage ↑)', () => {
@@ -155,10 +154,11 @@ describe('anrufliste', () => {
     expect(l.anrufliste).toHaveLength(0)
   })
 
-  it('Kandidaten: Vernetzt … Sales Follow-up; Angefragt, Kunde, Wiedervorlage, Beendet nicht', () => {
+  it('Kandidaten: Neu … Sales Follow-up (Cold Calling); Kunde, Wiedervorlage, Beendet nicht', () => {
+    expect(istAnrufKandidat('neu')).toBe(true)
+    expect(istAnrufKandidat('vernetzung_gesendet')).toBe(true)
     expect(istAnrufKandidat('vernetzt')).toBe(true)
     expect(istAnrufKandidat('sales_follow_up')).toBe(true)
-    expect(istAnrufKandidat('vernetzung_gesendet')).toBe(false)
     expect(istAnrufKandidat('kunde')).toBe(false)
     expect(istAnrufKandidat('langfristig')).toBe(false)
     expect(istAnrufKandidat('beendet')).toBe(false)
@@ -169,7 +169,7 @@ describe('anrufliste', () => {
         { ...LEAD_B, stage: 'neu', owner_id: MEMBER_M },
       ],
     })
-    expect(l.anrufliste).toHaveLength(0)
+    expect(l.anrufliste.map((z) => z.lead.id)).toEqual([LEAD_B.id]) // „Neu“ ohne Vorgeschichte: direkt anrufbar
     expect(l.nichtAnrufbar).toHaveLength(0)
   })
 

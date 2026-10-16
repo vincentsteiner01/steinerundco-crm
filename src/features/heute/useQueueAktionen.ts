@@ -464,7 +464,7 @@ export function useQueueAktionen() {
   )
   const schnellErgebnis = useCallback(
     (item: QueueItem, taste: keyof typeof SCHNELL_ERGEBNIS) => {
-      // Gate wie „Anrufen“ (§ 8.2 Nr. 2): ohne Anrufgrund, mit Sperrliste/Widerspruch kein Weg in den Anruf-Screen (Review)
+      // Gate wie „Anrufen“ (§ 8.2 Nr. 2): ohne Nummer, mit Sperrliste/Widerspruch/Firmensperre kein Weg in den Anruf-Screen (Review)
       if (!item.lead_id || gesperrt(item)) return
       navigate(`${PFADE.anruf(item.lead_id)}?ergebnis=${SCHNELL_ERGEBNIS[taste]}&zurueck=${zurueck}`)
     },

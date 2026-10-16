@@ -68,7 +68,7 @@ export function telefonZustand(
   if (!gate.erlaubt && (gate.grund === 'sperrliste' || gate.grund === 'widerspruch'))
     return { label: 'Gesperrt', ton: 'danger', gesperrt: true }
   if (!lead.phone_e164) return { label: 'Keine Nummer', ton: 'ended', gesperrt: true }
-  if (!lead.call_basis) return { label: 'Nummer ohne Anrufgrund', ton: 'overdue', gesperrt: true }
+  // Cold Calling (16.10.2026): fehlender Anrufgrund sperrt nicht mehr, er steht nur im Label
   const rueckruf = lead.tasks?.find((t) => t.kind === 'rueckruf' && t.status === 'offen')
   if (rueckruf)
     return {
@@ -79,7 +79,7 @@ export function telefonZustand(
   const versuche = calls.filter((c) => c.direction === 'out').length
   if (versuche >= maxVersuche) return { label: `Nicht erreichbar (nach ${maxVersuche})`, ton: 'ended', gesperrt: false }
   if (versuche > 0) return { label: `Versuch ${versuche}/${maxVersuche}`, ton: 'muted', gesperrt: false }
-  return { label: 'Bereit', ton: 'neutral', gesperrt: false }
+  return { label: lead.call_basis ? 'Bereit' : 'Bereit · ohne Anrufgrund', ton: 'neutral', gesperrt: false }
 }
 
 /** INFO-Regel (§ 1.5 Nr. 35): ab Stufe erstgespraech_vereinbart mit Nummer, solange kein Anrufgrund gesetzt ist. */

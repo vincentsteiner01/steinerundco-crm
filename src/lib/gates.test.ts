@@ -32,9 +32,11 @@ describe('telefonGate', () => {
     expect(telefonGate(frei)).toEqual({ erlaubt: true })
     expect(telefonGate(frei, [])).toEqual({ erlaubt: true })
   })
-  it('keine_nummer / kein_anrufgrund', () => {
+  it('keine_nummer sperrt; fehlender Anrufgrund ist nur ein Hinweis (Cold Calling, 16.10.2026)', () => {
     expect(telefonGate({ ...frei, phone_e164: null })).toEqual({ erlaubt: false, grund: 'keine_nummer' })
-    expect(telefonGate({ ...frei, call_basis: null })).toEqual({ erlaubt: false, grund: 'kein_anrufgrund' })
+    expect(telefonGate({ ...frei, call_basis: null })).toEqual({ erlaubt: true, hinweis: 'kein_anrufgrund' })
+    // echte Sperren gehen weiterhin vor
+    expect(telefonGate({ ...frei, call_basis: null }, true)).toEqual({ erlaubt: false, grund: 'sperrliste' })
   })
   it('sperrliste (Treffer boolean oder mit Kanal)', () => {
     expect(telefonGate(frei, true).grund).toBe('sperrliste')

@@ -204,34 +204,16 @@ describe('QueueKarte', () => {
     )
   })
 
-  it('Telefon-Karte ohne Anrufgrund: Anrufen gesperrt (auch über die Seitentaste ↵)', async () => {
-    leadsSetzen(leadMitBezug(5, { phone_e164: '+4940123456', call_basis: null }))
-    const item = zeile('heute', 5, { channel: 'telefon', template_id: T_TEL.id })
-    mitKontext(
-      <>
-        <QueueKarte item={item} aktiv onAktion={vi.fn()} />
-        <SeitenTaste item={item} art="anrufen" />
-      </>,
-    )
-    expect(await screen.findByText('Kein Anrufgrund')).toBeInTheDocument()
-    await waitFor(() => expect(kartenZustand(item.item_id!).gesperrt).toBe('Nummer ohne Anrufgrund'))
-    fireEvent.click(screen.getByRole('button', { name: 'Seitentaste anrufen' }))
-    expect(screen.getByTestId('ort')).toHaveTextContent('/heute')
-    expect(toast).toHaveBeenCalledWith('Nummer ohne Anrufgrund.')
-  })
-
-  it('Telefon-Karte ohne Anrufgrund: Schnell-Ergebnis-Knöpfe und 1/2/3/7 gesperrt – kein Weg in den Anruf-Screen (Review)', async () => {
+  it('Telefon-Karte ohne Anrufgrund: anrufbar (Cold Calling, 16.10.2026) – nur ruhiger Hinweis-Chip', async () => {
     leadsSetzen(leadMitBezug(5, { phone_e164: '+4940123456', call_basis: null }))
     const item = zeile('heute', 5, { channel: 'telefon', template_id: T_TEL.id })
     mitKontext(<QueueKarte item={item} aktiv onAktion={vi.fn()} />)
-    expect(await screen.findByText('Kein Anrufgrund')).toBeInTheDocument()
+    expect(await screen.findByText('Ohne Anrufgrund')).toBeInTheDocument()
+    await waitFor(() => expect(kartenZustand(item.item_id!).gesperrt).toBeFalsy())
     const gruppe = await screen.findByRole('group', { name: 'Schnell-Ergebnis' })
     await waitFor(() => {
-      for (const b of gruppe.querySelectorAll('button')) expect(b).toBeDisabled()
+      for (const b of gruppe.querySelectorAll('button')) expect(b).not.toBeDisabled()
     })
-    taste('1')
-    taste('7')
-    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/heute$/)
   })
 
   it('Runde 3: zugeklappt im Peek/auf der Vollseite – eingebettet, ohne Name/Firma, Label mit title, „… vorbereitet“ bleibt', async () => {

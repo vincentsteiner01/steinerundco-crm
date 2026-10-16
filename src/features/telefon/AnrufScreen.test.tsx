@@ -214,11 +214,12 @@ describe('AnrufScreen', () => {
     }
   })
 
-  it('Gate: ohne Anrufgrund zeigt der Screen den Grund und „Anrufgrund setzen“', async () => {
+  it('ohne Anrufgrund: ruhiger Hinweis mit „Anrufgrund setzen“, keine Sperre (Cold Calling, 16.10.2026)', async () => {
     stand.lead = leadMitBezug({ ...LEAD_A, call_basis: null })
     rendern(<AnrufScreen />, PFAD, ROUTE)
-    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Nummer ohne Anrufgrund'))
+    await waitFor(() => expect(screen.getByText(/Kein Anrufgrund festgehalten/)).toBeInTheDocument())
     expect(screen.getByRole('button', { name: 'Anrufgrund setzen' })).toBeInTheDocument()
+    expect(screen.queryAllByRole('alert').some((a) => /gesperrt/.test(a.textContent ?? ''))).toBe(false)
   })
 
   it('D: Esc im Widerspruch-Dialog nimmt das Ergebnis zurück, der Anruf bleibt offen', async () => {
@@ -313,22 +314,24 @@ describe('AnrufScreen', () => {
     expect(wrap).toHaveAttribute('data-ergebnis', '1')
   })
 
-  it('§ 8.2 Nr. 2: ohne Anrufgrund kein Wählen – Anrufen deaktiviert ohne tel:, Enter und Ergebnis-Tasten wirkungslos', async () => {
+  it('ohne Anrufgrund wählbar (Cold Calling): Anrufen mit tel:-Link, Ergebnis-Tasten aktiv', async () => {
     stand.lead = leadMitBezug({ ...LEAD_A, call_basis: null })
+    rendern(<AnrufScreen />, PFAD, ROUTE)
+    await waitFor(() => expect(screen.getByTestId('anrufen')).toBeInTheDocument())
+    expect(screen.getByTestId('anrufen')).not.toBeDisabled()
+    expect(screen.getByTestId('anrufen')).toHaveAttribute('href', expect.stringMatching(/^tel:/))
+  })
+
+  it('echte Sperre bleibt: Widerspruch am Telefon sperrt Anrufen und Ergebnisse (§ 8.2)', async () => {
+    stand.lead = leadMitBezug({ ...LEAD_A, do_not_contact: true, do_not_contact_channels: ['telefon'] })
     rendern(<AnrufScreen />, `${PFAD}?ergebnis=no_answer`, ROUTE)
     await waitFor(() => expect(screen.getByTestId('anrufen')).toBeInTheDocument())
     expect(screen.getByTestId('anrufen')).toBeDisabled()
-    expect(screen.getByTestId('anrufen')).not.toHaveAttribute('href')
-    expect(screen.getByLabelText('Nummer ohne Anrufgrund')).toBeInTheDocument()
     expect(
       screen.getAllByRole('alert').some((a) => /Anrufen und Ergebnisse sind gesperrt/.test(a.textContent ?? '')),
     ).toBe(true)
     taste('Enter')
     expect(localStorage.getItem(ANRUF_KEY)).toBeNull()
-    taste('7')
-    expect(screen.queryByRole('group', { name: 'Wrap-up' })).toBeNull()
-    for (const b of within(screen.getByRole('group', { name: 'Ergebnis' })).getAllByRole('button'))
-      expect(b).toBeDisabled()
     expect(vi.mocked(supabase.rpc)).not.toHaveBeenCalled()
   })
 

@@ -111,7 +111,7 @@ export function TelefonKarte({ item, onAktion }: VariantenProps) {
         {!rueckruf && item.subtitle ? ` · ${item.subtitle}` : null}
       </KartenSub>
       <div className="mt-2.5 flex flex-wrap gap-1.5">
-        {anrufgrund ? <Chip ton="neutral">Anrufgrund · {anrufgrund}</Chip> : <Chip ton="danger">Kein Anrufgrund</Chip>}
+        {anrufgrund ? <Chip ton="neutral">Anrufgrund · {anrufgrund}</Chip> : <Chip ton="muted">Ohne Anrufgrund</Chip>}
         {(item.days_overdue ?? 0) >= 14 ? <Chip ton="overdue">lange überfällig</Chip> : null}
       </div>
       <NachrichtBlock

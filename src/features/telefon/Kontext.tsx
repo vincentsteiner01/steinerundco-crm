@@ -85,7 +85,7 @@ export function Kontext({ lead, versuch, maxVersuche, className, teil = 'alles' 
             {lead.call_basis_note ? ` – ${lead.call_basis_note}` : ''}
           </Chip>
         ) : (
-          <Chip ton="danger">Anrufgrund fehlt</Chip>
+          <Chip ton="muted">Ohne Anrufgrund</Chip>
         )}
         {settings ? <StatusChip stage={lead.stage} settings={settings} /> : null}
         {lead.companies?.do_not_contact ? <Chip ton="danger">Firma gesperrt</Chip> : null}

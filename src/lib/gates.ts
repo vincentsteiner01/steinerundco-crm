@@ -65,7 +65,8 @@ export type EmailGrund =
   'keine_grundlage' | 'widerspruch' | 'zu_viele_nachfass' | 'sperrliste' | 'keine_adresse' | 'firma_gesperrt'
 export type KontaktGrund = 'widerspruch' | 'sperrliste' | 'firma_gesperrt'
 
-export type TelefonGate = { erlaubt: boolean; grund?: TelefonGrund }
+/** `hinweis`: anrufbar, aber ohne dokumentierten Anrufgrund (§ 7 Abs. 2 Nr. 1 UWG) – nur Hinweis, keine Sperre. */
+export type TelefonGate = { erlaubt: boolean; grund?: TelefonGrund; hinweis?: 'kein_anrufgrund' }
 export type EmailGate = { erlaubt: boolean; warnung?: 'aelter_12_monate'; grund?: EmailGrund }
 export type KontaktGate = { erlaubt: boolean; grund?: KontaktGrund }
 
@@ -90,7 +91,9 @@ export function telefonGate(lead: GateLead, sperrlistenTreffer: SperrlistenTreff
   if (sperrliste(sperrlistenTreffer, 'telefon')) return { erlaubt: false, grund: 'sperrliste' }
   if (firmaGesperrt(lead)) return { erlaubt: false, grund: 'firma_gesperrt' }
   if (!lead.phone_e164) return { erlaubt: false, grund: 'keine_nummer' }
-  if (!lead.call_basis) return { erlaubt: false, grund: 'kein_anrufgrund' }
+  // Cold Calling ohne Vorgeschichte (Vincent, 16.10.2026): fehlender Anrufgrund sperrt nicht mehr, er wird nur angezeigt.
+  // Bewusste Entscheidung der Gründer; das UWG-Risiko steht in der Hilfe. BAUPLAN E12 („call_basis Pflicht“) ist damit überholt.
+  if (!lead.call_basis) return { erlaubt: true, hinweis: 'kein_anrufgrund' }
   return { erlaubt: true }
 }
 

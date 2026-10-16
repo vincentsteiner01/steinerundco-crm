@@ -388,13 +388,13 @@ export const THEMEN: readonly Thema[] = [
   {
     key: 'telefon',
     titel: 'Telefon',
-    kurz: 'Anrufliste, Call-Block, Anruf-Screen – und warum ohne Anrufgrund niemand anrufbar ist.',
+    kurz: 'Anrufliste, Call-Block, Anruf-Screen – und wofür der Anrufgrund gut ist.',
     stichworte: 'anrufen call-block rückruf ergebnis skript anrufgrund uwg mailbox',
     tour: 'telefon',
     bloecke: [
       {
         art: 'absatz',
-        text: 'Angerufen wird nur, wer eine Nummer und einen **Anrufgrund** hat und nicht auf der Sperrliste steht – ein Geschäftsanruf braucht einen konkreten Anlass (§ 7 UWG). Alle anderen stehen unten unter „Noch nicht anrufbar“, mit dem, was fehlt.',
+        text: 'In der Anrufliste steht jeder mit Telefonnummer, der nicht gesperrt ist – auch ohne Vorgeschichte (Cold Calling). Gibt es einen konkreten Anlass, halte ihn als **Anrufgrund** fest: Bei Geschäftsanrufen verlangt § 7 UWG eine zumindest mutmaßliche Einwilligung, und der notierte Grund ist später dein Beleg. Wer keine Nummer hat oder gesperrt ist, steht unten unter „Noch nicht anrufbar“.',
       },
       { art: 'zwischentitel', text: 'Die Liste' },
       {

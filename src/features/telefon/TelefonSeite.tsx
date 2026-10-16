@@ -123,12 +123,14 @@ export function Component() {
   const zeilen = useMemo(() => [...liste.rueckrufe, ...liste.anrufliste], [liste])
   const ids = useMemo(() => zeilen.map((z) => z.lead.id), [zeilen])
   const cursorId = cursor && ids.includes(cursor) ? cursor : (ids[0] ?? null)
+  // Cold Calling (16.10.2026): Leads ohne Anrufgrund stehen jetzt in der Anrufliste – der Sammel-Beleg für alle mit
+  // LinkedIn-Antwort hängt deshalb an der Anrufliste, nicht mehr an „Noch nicht anrufbar“.
   const bulkKandidaten = useMemo(
     () =>
-      liste.nichtAnrufbar.filter(
-        (z) => z.grund === 'kein_anrufgrund' && anrufgrundVorbelegung(z.lead) === 'linkedin_vernetzt_antwort',
+      liste.anrufliste.filter(
+        (z) => !z.lead.call_basis && anrufgrundVorbelegung(z.lead) === 'linkedin_vernetzt_antwort',
       ),
-    [liste.nichtAnrufbar],
+    [liste.anrufliste],
   )
 
   // Leerzustand nach Grund (Runde 2/3: 119 „Keine Nummer“ + 2 „Firma gesperrt“ hießen „121 warten auf einen Anrufgrund“)
@@ -397,8 +399,16 @@ export function Component() {
               eingeklappt={false}
               onToggle={() => {}}
               rechts={
-                <span className="text-small text-ink-3 whitespace-nowrap max-lg:hidden">
-                  Rückrufe → Versuche 2–{maxVersuche} → Versuch 1
+                <span className="flex items-center gap-3">
+                  {bulkKandidaten.length ? (
+                    <Button variante="quiet" groesse="S" busy={bulkLaeuft} onClick={() => void bulk()}>
+                      <span className="max-md:hidden">Anrufgrund festhalten: alle mit LinkedIn-Antwort</span>
+                      <span className="md:hidden">Anrufgrund für LinkedIn-Antworten</span> ({bulkKandidaten.length})
+                    </Button>
+                  ) : null}
+                  <span className="text-small text-ink-3 whitespace-nowrap max-lg:hidden">
+                    Rückrufe → Versuche 2–{maxVersuche} → Versuch 1
+                  </span>
                 </span>
               }
             />
@@ -467,14 +477,6 @@ export function Component() {
           zaehler={liste.nichtAnrufbar.length}
           eingeklappt={!nichtOffen}
           onToggle={() => setNichtOffen((o) => !o)}
-          rechts={
-            bulkKandidaten.length ? (
-              <Button variante="quiet" groesse="S" busy={bulkLaeuft} onClick={() => void bulk()}>
-                <span className="max-md:hidden">Alle mit LinkedIn-Antwort → ‚LinkedIn vernetzt + Antwort‘</span>
-                <span className="md:hidden">Anrufgrund für LinkedIn-Antworten</span> ({bulkKandidaten.length})
-              </Button>
-            ) : null
-          }
         />
         {nichtOffen ? (
           liste.nichtAnrufbar.length ? (
