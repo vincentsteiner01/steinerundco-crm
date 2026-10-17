@@ -34,7 +34,12 @@ function ansicht(antwortOffen: LeadAnsicht['antwortOffen']): LeadAnsicht {
 }
 
 describe('LeadKarte – Reaktion nachtragen', () => {
-  const sendMessage = vi.fn(async (_n: unknown) => ({ ok: true, daten: { text: 'Reaktion erfasst.', ansicht: null, rueckgabe: null } }))
+  const sendMessage = vi.fn(async (n: unknown) =>
+    (n as { typ?: string }).typ === 'verlauf'
+      ? { ok: true, daten: { eintraege: [], weiter: null } }
+      : { ok: true, daten: { text: 'Reaktion erfasst.', ansicht: null, rueckgabe: null } },
+  )
+  const aktionen = () => sendMessage.mock.calls.map((c) => c[0] as { typ: string }).filter((n) => n.typ !== 'verlauf')
   beforeEach(() => {
     sendMessage.mockClear()
     ;(globalThis as unknown as { chrome: unknown }).chrome = { runtime: { sendMessage }, tabs: { create: vi.fn(async () => ({})) } }
@@ -58,8 +63,8 @@ describe('LeadKarte – Reaktion nachtragen', () => {
     expect(screen.queryByPlaceholderText(/Was hat die Person geschrieben/)).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /Ja/ }))
     fireEvent.click(screen.getByRole('button', { name: /Reaktion speichern/ }))
-    await waitFor(() => expect(sendMessage).toHaveBeenCalled())
-    expect(sendMessage.mock.calls[0]?.[0]).toEqual({ typ: 'antwortErhalten', leadId: 'l-1', label: 'interessiert', zitat: null })
+    await waitFor(() => expect(aktionen().length).toBeGreaterThan(0))
+    expect(aktionen()[0]).toEqual({ typ: 'antwortErhalten', leadId: 'l-1', label: 'interessiert', zitat: null })
     await waitFor(() => expect(onErledigt).toHaveBeenCalled())
   })
 

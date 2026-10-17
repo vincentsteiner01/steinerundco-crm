@@ -8,6 +8,7 @@ import type { Req, Res, Typ } from '../../shared/protokoll'
 import { fehlerText, oeffne, senden } from '../api'
 import { Avatar, Chip, istEingabe, Knopf, ZeitChipAnzeige } from '../teile'
 import { NaechsteNachricht } from './NaechsteNachricht'
+import { Verlauf } from './Verlauf'
 
 const ANTWORT_CHIPS: { label: AntwortLabel; taste: string }[] = [
   { label: 'interessiert', taste: '1' },
@@ -420,6 +421,8 @@ export function LeadKarte({
           </p>
         ) : null}
       </section>
+
+      <Verlauf leadId={lead.id} stand={ansicht} />
     </div>
   )
 }

@@ -756,3 +756,116 @@ input.ph-offen::placeholder {
   font-size: 12.5px;
   color: var(--ink-3);
 }
+
+/* ── Verlauf (17.10.2026) – wie die Timeline im CRM: Zeit · Punkt mit Linie · Inhalt ─────────── */
+.klein-segment {
+  height: 26px;
+}
+.klein-segment button {
+  padding: 0 9px;
+  font-size: 12px;
+}
+.verlauf {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.verlauf-eintrag {
+  position: relative;
+  display: grid;
+  grid-template-columns: 66px 12px minmax(0, 1fr);
+  column-gap: 8px;
+  padding-bottom: 12px;
+}
+.verlauf-eintrag:last-child {
+  padding-bottom: 0;
+}
+.verlauf-zeit {
+  color: var(--ink-3);
+  padding-top: 1px;
+  display: grid;
+  align-content: start;
+}
+.verlauf-tag {
+  color: var(--ink-2);
+  font-weight: 500;
+}
+.verlauf-punkt {
+  position: relative;
+  display: grid;
+  justify-items: center;
+}
+.verlauf-punkt::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: var(--ink);
+  z-index: 1;
+}
+.verlauf-eintrag:not(:last-child) .verlauf-punkt::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  bottom: -12px;
+  width: 1px;
+  background: var(--line);
+}
+.verlauf-eintrag[data-eingehend] .verlauf-punkt::before {
+  background: var(--signal);
+}
+.verlauf-inhalt {
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+.verlauf-kopf {
+  display: inline-flex;
+  gap: 6px;
+  margin-right: 6px;
+  vertical-align: baseline;
+}
+.verlauf-kanal {
+  color: var(--ink-3);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  padding: 0 4px;
+  font-size: 10.5px;
+}
+.verlauf-wer {
+  color: var(--ink-3);
+  font-size: 10.5px;
+}
+.verlauf-wer.eingehend {
+  color: var(--signal);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+}
+.verlauf-auf {
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 12px;
+  margin-left: 6px;
+  padding: 0;
+  cursor: pointer;
+}
+.verlauf-auf:hover {
+  color: var(--ink);
+}
+.verlauf-block {
+  display: block;
+  margin-top: 4px;
+}
+.verlauf-details {
+  display: block;
+  margin-top: 6px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: var(--surface-hover);
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}

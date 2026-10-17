@@ -16,6 +16,10 @@ Du pflegst nichts doppelt – was du auf LinkedIn tust, bestätigst du mit einem
     **Als Lead anlegen** – vorbefülltes Formular (Anrede, Vorname, Nachname, Unternehmen, Rolle, Ort), zuständig bist du,
     optional „Vernetzungsanfrage gerade gesendet“. Angelegt wird über denselben Weg wie der Schnellimport (`crm.import_leads`,
     Quelle Schnellimport, Batch „Erweiterung · Datum“); Rückgängig nimmt Anfrage und Lead wieder heraus.
+  - **Verlauf** (seit 1.2.0): wie die Timeline im CRM – wer was wann über welchen Kanal gesagt hat (LinkedIn `in`, Telefon
+    `Tel`, E-Mail `Mail`). Antworten der Person stehen mit ihrem Vornamen in Lime; gesendete Nachrichten und Anrufnotizen
+    klappen mit „anzeigen“ auf, Notizen stehen direkt da. „Gespräche“ (Standard) zeigt Nachrichten, Anrufe, E-Mails, Notizen
+    und Termine, „Alles“ auch Stufenwechsel, Sequenzen und Import. Lädt nach jeder Aktion in der Leiste neu.
 - **Unterhaltung** (`linkedin.com/messaging/thread/…`): erkennt den Gesprächspartner über den Profil-Link im Kopf und füllt
   „Antwort erhalten“ mit der letzten Nachricht der anderen Person (oder mit deinem markierten Text). Immer editierbar.
 - **Popup** (Klick auf das S&-Symbol): Anmeldung, deine Zahlen für heute (fällige LinkedIn-Schritte, offene Antworten),

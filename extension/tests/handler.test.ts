@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { erstelleHandler, fehlerText, namensMuster } from '../src/background/handler'
 import type { Antwort, Nachricht } from '../src/shared/protokoll'
-import type { Angelegt, EingangEinstellungen, EingangListe, Erledigt, HeuteZahlen, Sitzung, SuchErgebnis } from '../src/shared/typen'
+import type { Angelegt, EingangEinstellungen, EingangListe, Erledigt, HeuteZahlen, Sitzung, SuchErgebnis, VerlaufSeite } from '../src/shared/typen'
 import { erstelleMock, hat, op, type Abfrage, type DbAntwort } from './dbMock'
 import { ENROLLMENT, ICH, LEAD, MIKE, MITGLIEDER, NORM, SCHRITTE, VORLAGEN } from './daten'
 
@@ -20,6 +20,8 @@ type Welt = {
   eingang?: Record<string, unknown>[]
   schluessel?: Record<string, unknown>[]
   profil?: Record<string, unknown> | null
+  verlauf?: Record<string, unknown>[]
+  angelegt?: Record<string, unknown>[]
 }
 
 function antworter(w: Welt) {
@@ -56,6 +58,8 @@ function antworter(w: Welt) {
       }
       case 'activities':
         if (op(a, 'insert')) return ok({ id: 501 })
+        if (hat(a, 'select', '*, templates(name)')) return ok(w.verlauf ?? [])
+        if (hat(a, 'eq', 'type', 'angelegt')) return ok(w.angelegt ?? [])
         if (hat(a, 'eq', 'type', 'nachricht_erhalten')) return ok(w.letzteAntwort ?? null)
         return ok(w.aktivitaet ?? null)
       case 'v_today_queue':
@@ -544,5 +548,64 @@ describe('Eingang (LinkedIn-Mails)', () => {
     const f = aufbau()
     expect(await f.fehler({ typ: 'eingangProfil', profilUrl: 'keine adresse' })).toMatch(/nicht erkannt/)
     expect(f.log.some((a) => a.tabelle === 'member_profiles' && op(a, 'update'))).toBe(false)
+  })
+})
+
+describe('Verlauf (17.10.2026)', () => {
+  const zeile = (id: number, type: string, occurred_at: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    lead_id: LEAD.id,
+    member_id: ICH,
+    channel: 'linkedin',
+    type,
+    occurred_at,
+    template_id: null,
+    outcome: null,
+    reply_label: null,
+    note: null,
+    metadata: {},
+    source: 'app',
+    templates: null,
+    ...extra,
+  })
+
+  it('liest die Aktivitäten neueste zuerst, Texte wie im CRM, Eingang mit Vornamen, Doppel-Import ausgeblendet', async () => {
+    const { senden, log } = aufbau({
+      verlauf: [
+        zeile(5, 'nachricht_erhalten', '2026-10-16T10:00:00Z', { note: 'Klingt spannend, gern nächste Woche.', reply_label: 'interessiert' }),
+        zeile(4, 'nachricht_gesendet', '2026-10-15T09:00:00Z', { note: 'Hallo Frau Testfall …', templates: { name: 'Kurzfristig 1' } }),
+        zeile(3, 'anruf', '2026-10-14T08:00:00Z', { channel: 'telefon', outcome: 'no_answer', note: 'Mailbox' }),
+        zeile(2, 'notiz', '2026-10-13T08:00:00Z', { channel: 'sonstiges', note: 'Kennt uns von der Messe.' }),
+        zeile(1, 'import', '2026-10-12T08:00:00Z', { member_id: null, source: 'import_sheet', channel: 'sonstiges' }),
+      ],
+      angelegt: [{ type: 'angelegt', lead_id: LEAD.id, source: 'import_sheet' }],
+    })
+    const s = await senden<VerlaufSeite>({ typ: 'verlauf', leadId: LEAD.id, vor: null })
+    const abfrage = log.find((a) => a.tabelle === 'activities' && hat(a, 'select', '*, templates(name)'))
+    expect(abfrage && hat(abfrage, 'order', 'occurred_at', { ascending: false })).toBe(true)
+    expect(abfrage && hat(abfrage, 'limit', 25)).toBe(true)
+    expect(s.eintraege.map((e) => e.id)).toEqual([5, 4, 3, 2]) // „import“ neben „angelegt“ aus demselben Import entfällt
+    const [antwort, gesendet, anruf, notiz] = s.eintraege
+    expect(antwort).toMatchObject({ eingehend: true, wer: 'Tilda', kategorie: 'nachrichten', kanal: 'linkedin' })
+    expect(antwort?.text).toContain('Klingt spannend')
+    expect(gesendet).toMatchObject({ eingehend: false, wer: 'VS', details: 'Hallo Frau Testfall …' })
+    expect(gesendet?.text).toContain('Kurzfristig 1')
+    expect(anruf).toMatchObject({ kanal: 'telefon', kategorie: 'anrufe', details: 'Mailbox' })
+    expect(notiz).toMatchObject({ kategorie: 'notizen', notiz: 'Kennt uns von der Messe.', details: null })
+    expect(s.weiter).toBeNull()
+  })
+
+  it('volle Seite → Cursor auf die älteste Zeile; „vor“ wird als Keyset-Filter übergeben', async () => {
+    const volle = Array.from({ length: 25 }, (_, i) =>
+      zeile(100 - i, 'nachricht_gesendet', `2026-10-${String(16 - Math.floor(i / 2)).padStart(2, '0')}T08:00:00Z`),
+    )
+    const { senden, log } = aufbau({ verlauf: volle })
+    const s = await senden<VerlaufSeite>({ typ: 'verlauf', leadId: LEAD.id, vor: null })
+    expect(s.weiter).toEqual({ occurredAt: volle[24]?.occurred_at, id: 76 })
+    await senden<VerlaufSeite>({ typ: 'verlauf', leadId: LEAD.id, vor: { occurredAt: '2026-10-04T08:00:00Z', id: 76 } })
+    const zweite = log.filter((a) => a.tabelle === 'activities' && hat(a, 'select', '*, templates(name)'))[1]
+    expect(zweite && op(zweite, 'or')?.a[0]).toBe(
+      'occurred_at.lt.2026-10-04T08:00:00Z,and(occurred_at.eq.2026-10-04T08:00:00Z,id.lt.76)',
+    )
   })
 })

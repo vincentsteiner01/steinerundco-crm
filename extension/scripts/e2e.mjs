@@ -120,8 +120,23 @@ function rest(url, methode, body) {
     case 'templates':
       if (/[?&]id=eq\.t2(&|$)/.test(q)) return [{ id: 't2', key: 'li_fu_kurz_2', name: 'Kurzfristig 2', body: 'Hallo [Vorname], noch einmal kurz.', phase: 'follow_up' }]
       return [{ id: 't1', key: 'li_fu_kurz_1', name: 'Kurzfristig 1', body: 'Hallo [Vorname], kurz nachgefasst – passt es diese Woche bei [Unternehmen]?', phase: 'follow_up' }]
-    case 'activities':
+    case 'activities': {
+      // Verlauf (17.10.2026): erfundene Einträge, neueste zuerst
+      if (q.includes('select=*,templates(name)')) {
+        const vor = (h) => new Date(jetzt.getTime() - h * 3_600_000).toISOString()
+        const a = (id, type, h, x = {}) => ({ id, lead_id: LEAD_ID, member_id: ICH, channel: 'linkedin', type, occurred_at: vor(h), template_id: null, outcome: null, reply_label: null, note: null, metadata: {}, source: 'app', templates: null, ...x })
+        return [
+          a(906, 'nachricht_erhalten', 1, { note: 'Klingt spannend – schicken Sie mir gern zwei Termine.', reply_label: 'interessiert' }),
+          a(905, 'nachricht_gesendet', 26, { note: 'Hallo Frau Testfall, kurz nachgefasst – passt es diese Woche?', templates: { name: 'Kurzfristig 1' } }),
+          a(904, 'anruf', 50, { channel: 'telefon', outcome: 'no_answer', note: 'Mailbox, keine Nachricht hinterlassen.' }),
+          a(903, 'notiz', 74, { channel: 'sonstiges', note: 'Kennt uns von der Intersolar.' }),
+          a(902, 'stage_wechsel', 98, { channel: 'sonstiges', metadata: { from: 'vernetzt', to: 'gespraech_eroeffnet' } }),
+          a(901, 'vernetzung_angenommen', 120),
+        ]
+      }
+      if (q.includes('type=eq.angelegt')) return []
       return [{ id: 77, created_at: new Date().toISOString(), member_id: ICH }]
+    }
     case 'v_today_queue':
       return [
         { section: 'heute', item_kind: 'sequenz_schritt', channel: 'linkedin' },

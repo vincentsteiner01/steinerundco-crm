@@ -3,6 +3,8 @@ import type { PlatzhalterLead, PlatzhalterMe } from '@/lib/platzhalter'
 import type { PhaseTon } from '@/lib/stufen'
 import type { KontaktGrund } from '@/lib/gates'
 import type {
+  ActivityType,
+  Channel,
   ConnectionStatus,
   EnrollmentStatus,
   LeadRole,
@@ -213,3 +215,29 @@ export type SchluesselInfo = { erstelltAm: string; zuletztGenutzt: string | null
 export type EingangListe = { eintraege: EingangEintrag[]; schluessel: SchluesselInfo | null }
 
 export type EingangEinstellungen = { profilUrl: string | null; schluessel: SchluesselInfo | null }
+
+// ── Verlauf eines Leads (17.10.2026: „wer hat was wie und wo gesagt“, wie die Timeline im CRM) ─────────────
+
+export type VerlaufCursor = { occurredAt: string; id: number }
+
+export type VerlaufEintrag = {
+  id: number
+  /** occurred_at (ISO) */
+  zeit: string
+  typ: ActivityType
+  kanal: Channel | null
+  /** Kategorie wie der CRM-Filter: nachrichten · anrufe · emails · status · notizen · system */
+  kategorie: 'nachrichten' | 'anrufe' | 'emails' | 'status' | 'notizen' | 'system'
+  /** Wortlaut wie in der CRM-Timeline (texte/de.ts TIMELINE_TEXT) */
+  text: string
+  /** Wer: bei Eingängen die Person selbst (Vorname), sonst Kürzel von Vincent/Mike, „System“ oder leer */
+  wer: string
+  /** Eingang von der Person (Antwort, E-Mail) */
+  eingehend: boolean
+  /** Nachrichten-/Gesprächstext zum Aufklappen */
+  details: string | null
+  /** Notiz – steht direkt im Verlauf */
+  notiz: string | null
+}
+
+export type VerlaufSeite = { eintraege: VerlaufEintrag[]; weiter: VerlaufCursor | null }

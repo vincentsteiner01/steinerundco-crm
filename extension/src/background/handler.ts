@@ -4,12 +4,13 @@ import { PERSONEN } from '@/features/auth/personen'
 import { kontaktGate, sperrlistenEintraege, type SperrlistenEintragKurz } from '@/lib/gates'
 import { fmtDatum, fmtDatumKurz } from '@/lib/format'
 import type { PlatzhalterMe } from '@/lib/platzhalter'
-import { phaseVon, stageLabel } from '@/lib/stufen'
+import { phaseVon, stageLabel, stageRank, STUFEN } from '@/lib/stufen'
+import { hatAufklappText, ohneDoppelteEmailSendung, ohneDoppeltenImport, timelineKategorie } from '@/lib/verlauf'
 import { normalizeLinkedinUrl } from '@/lib/url'
 import { OPENER_NACH_ROLLE, phase2Vorlage, SEQUENZ, VORLAGE } from '@/lib/vorlagenKeys'
 import { berlinTag, tagPlus } from '@/lib/zeit'
-import { ALLGEMEIN, GATE_GRUND_LABEL, GRUND_LABEL, TOAST } from '@/texte/de'
-import type { ActivityType, Channel, ConnectionStatus, EndedReason, LeadStage, ReplyLabel, TemplatePhase } from '@/types/domain'
+import { ALLGEMEIN, GATE_GRUND_LABEL, GRUND_LABEL, TIMELINE_TEXT, TOAST } from '@/texte/de'
+import type { Activity, ActivityType, Channel, ConnectionStatus, EndedReason, LeadStage, ReplyLabel, TemplatePhase } from '@/types/domain'
 import type { Json } from '@/types/database'
 import { teileName } from '../shared/name'
 import type { Antwort, Nachricht, NachrichtVon, Res, Typ } from '../shared/protokoll'
@@ -34,6 +35,8 @@ import type {
   Sitzung,
   SuchErgebnis,
   VerbindungInfo,
+  VerlaufEintrag,
+  VerlaufSeite,
   VorlageInfo,
 } from '../shared/typen'
 import type { Db } from './supabase'
@@ -178,6 +181,7 @@ interface LoseKette extends PromiseLike<{ data: unknown; error: unknown }> {
 type LoseDb = { from: (tabelle: string) => LoseKette; rpc: (name: string, args?: Record<string, unknown>) => LoseKette }
 
 const EINGANG_OFFEN: EingangStatus[] = ['neu', 'unbekannt', 'fehler']
+export const VERLAUF_SEITE = 25
 
 export function erstelleHandler(deps: HandlerDeps) {
   const { db } = deps
@@ -477,6 +481,60 @@ export function erstelleHandler(deps: HandlerDeps) {
         call_basis_note: lead.call_basis_note,
         salutation: lead.salutation,
       },
+    }
+  }
+
+  /**
+   * Verlauf eines Leads (17.10.2026) – dieselben Zeilen und Texte wie die Timeline im CRM (Keyset-Seiten, neueste zuerst,
+   * technische Doppel-Einträge ausgeblendet). Liest nur; Notizen bearbeitet man im CRM.
+   */
+  async function verlauf(n: NachrichtVon<'verlauf'>): Promise<VerlaufSeite> {
+    let q = db.from('activities').select('*, templates(name)').eq('lead_id', n.leadId)
+    if (n.vor) q = q.or(`occurred_at.lt.${n.vor.occurredAt},and(occurred_at.eq.${n.vor.occurredAt},id.lt.${n.vor.id})`)
+    const [seiteR, angelegtR, leadR, liste] = await Promise.all([
+      q.order('occurred_at', { ascending: false }).order('id', { ascending: false }).limit(VERLAUF_SEITE),
+      // „angelegt“ aus einem Import liegt ganz unten – für das Ausblenden der doppelten „import“-Zeile schon auf Seite 1
+      db.from('activities').select('type, lead_id, source').eq('lead_id', n.leadId).eq('type', 'angelegt').limit(5),
+      db.from('leads').select('first_name, full_name').eq('id', n.leadId).maybeSingle(),
+      mitglieder(),
+    ])
+    const roh = (pruefeNull(seiteR) ?? []) as (Activity & { templates?: { name: string | null } | null })[]
+    const angelegt = (pruefeNull(angelegtR) ?? []) as Pick<Activity, 'type' | 'lead_id' | 'source'>[]
+    const lead = pruefeNull(leadR) as { first_name: string | null; full_name: string | null } | null
+    const person = lead?.first_name?.trim() || lead?.full_name?.trim().split(/\s+/)[0] || 'Lead'
+    const zeilen = ohneDoppeltenImport(ohneDoppelteEmailSendung(roh), [...roh, ...angelegt])
+    const memberVon = (id: string | null | undefined) => {
+      const m = id ? liste.find((x) => x.id === id) : null
+      return m ? memberKurz(m) : null
+    }
+    const eintraege: VerlaufEintrag[] = zeilen.map((a) => {
+      const meta = (a.metadata && typeof a.metadata === 'object' ? a.metadata : {}) as { kind?: unknown }
+      const eingehend = a.type === 'nachricht_erhalten' || a.type === 'email_erhalten'
+      const m = memberVon(a.member_id)
+      return {
+        id: a.id,
+        zeit: a.occurred_at,
+        typ: a.type,
+        kanal: a.channel,
+        kategorie: timelineKategorie(a.type),
+        text: TIMELINE_TEXT(a, {
+          vorlage: a.templates?.name ?? null,
+          stufe: (s) => stageLabel(s as LeadStage),
+          rang: (s) => ((STUFEN as readonly string[]).includes(s) ? stageRank(s as LeadStage) : 0),
+          mitglied: (id) => memberVon(id)?.kurz ?? 'die andere Person',
+          datum: (iso) => fmtDatumKurz(iso),
+        }),
+        wer: eingehend ? person : m ? m.kuerzel : a.source === 'app' ? '' : 'System',
+        eingehend,
+        details: hatAufklappText(a) ? a.note : null,
+        notiz:
+          a.type === 'notiz' && a.note && !(typeof meta.kind === 'string' && meta.kind.startsWith('auskunft')) ? a.note : null,
+      }
+    })
+    const letzte = roh[roh.length - 1]
+    return {
+      eintraege,
+      weiter: roh.length === VERLAUF_SEITE && letzte ? { occurredAt: letzte.occurred_at, id: letzte.id } : null,
     }
   }
 
@@ -913,6 +971,8 @@ export function erstelleHandler(deps: HandlerDeps) {
         return suchen(n)
       case 'lead':
         return ansicht(n.leadId)
+      case 'verlauf':
+        return verlauf(n)
       case 'anlegen':
         return anlegen(n)
       case 'verknuepfen':

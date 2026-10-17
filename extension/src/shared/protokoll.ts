@@ -13,6 +13,8 @@ import type {
   Rueckgabe,
   Sitzung,
   SuchErgebnis,
+  VerlaufCursor,
+  VerlaufSeite,
 } from './typen'
 
 export type Anfragen = {
@@ -22,6 +24,7 @@ export type Anfragen = {
   heute: { req: Record<never, never>; res: HeuteZahlen }
   suchen: { req: { norm: string | null; name: string | null }; res: SuchErgebnis }
   lead: { req: { leadId: string }; res: LeadAnsicht }
+  verlauf: { req: { leadId: string; vor: VerlaufCursor | null }; res: VerlaufSeite }
   anlegen: { req: { entwurf: LeadEntwurf; anfrageGesendet: boolean }; res: Angelegt }
   verknuepfen: { req: { leadId: string; profilUrl: string }; res: Erledigt }
   schrittGesendet: {
@@ -58,6 +61,7 @@ export const TYPEN: readonly Typ[] = [
   'heute',
   'suchen',
   'lead',
+  'verlauf',
   'anlegen',
   'verknuepfen',
   'schrittGesendet',

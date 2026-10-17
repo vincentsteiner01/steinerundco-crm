@@ -2,6 +2,7 @@
 // generische Aktivität (z. B. Anrufgrund-Beleg § 1.5 Nr. 14), useActivitiesZeitraum (§ 1.5 Nr. 40).
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/authStore'
+import { ohneDoppelteEmailSendung, ohneDoppeltenImport } from '@/lib/verlauf'
 import type { Database, Json } from '@/types/database'
 import type { Activity, ActivityType, Channel } from '@/types/domain'
 import { pruefe, pruefeNull, TIMELINE_SEITE, useAlleSeiten, zeitraumGrenzen } from './_helfer'
@@ -32,45 +33,8 @@ export type ActivityZeitraum = Pick<
 > &
   Partial<Pick<Activity, 'email_id'>> & { kanaele?: Json }
 
-type SendungsTeile = Pick<Activity, 'type' | 'lead_id' | 'enrollment_id' | 'step_id'> & { email_id?: string | null }
-
-/**
- * Doppelte `email_gesendet` einer Sequenz-Mail ausblenden: „Gesendet? Ja“ (M-06) setzt die Mail auf `sent_confirmed`
- * (`emails_after_write` loggt `email_gesendet` mit `email_id`) und ruft danach `complete_step('gesendet')`, dessen E-Mail-Zweig ein
- * zweites `email_gesendet` ohne `email_id` schreibt. Bis eine Migration den zweiten Eintrag unterdrückt, zählt nur der Eintrag mit
- * `email_id` (gleicher Lead, gleiches Enrollment, gleicher Schritt). Review-Korrektur; Server-View `v_template_performance` bleibt offen.
- */
-export function ohneDoppelteEmailSendung<A extends SendungsTeile>(zeilen: readonly A[]): A[] {
-  const schluessel = (a: SendungsTeile) => `${a.lead_id}|${a.enrollment_id}|${a.step_id}`
-  const mitMail = new Set(
-    zeilen.filter((a) => a.type === 'email_gesendet' && a.email_id && a.enrollment_id && a.step_id).map(schluessel),
-  )
-  if (mitMail.size === 0) return zeilen as A[]
-  return zeilen.filter(
-    (a) => !(a.type === 'email_gesendet' && !a.email_id && a.enrollment_id && a.step_id && mitMail.has(schluessel(a))),
-  )
-}
-
-type ImportTeile = Pick<Activity, 'type' | 'lead_id' | 'source'>
-
-/**
- * Doppelten Sheet-Import in der Timeline ausblenden (QA Runde 3: „Importiert aus CRM-Tabelle“ stand je Lead zweimal). Der Import
- * schreibt je neuem Lead „angelegt“ (Trigger `leads_after_insert`, rückdatiert auf das erste Sheet-Datum) und „import“
- * (`import_sheet_leads`, Zeitpunkt des Imports, mit den Sheet-Metadaten). Beide bleiben als Beleg in der DB; angezeigt wird nur die
- * rückdatierte „angelegt“-Zeile, wenn es sie für denselben Lead aus derselben Quelle gibt. Beim Re-Import eines bestehenden Leads
- * (kein neues „angelegt“) bleibt „import“ sichtbar. `alle` = Zeilen, in denen nach „angelegt“ gesucht wird (Timeline: alle geladenen
- * Seiten, damit die Paarung auch seitenübergreifend greift).
- */
-export function ohneDoppeltenImport<A extends ImportTeile>(
-  zeilen: readonly A[],
-  alle: readonly ImportTeile[] = zeilen,
-): A[] {
-  const angelegt = new Set(
-    alle.filter((a) => a.type === 'angelegt' && a.source !== 'app').map((a) => `${a.lead_id}|${a.source}`),
-  )
-  if (angelegt.size === 0) return zeilen as A[]
-  return zeilen.filter((a) => !(a.type === 'import' && angelegt.has(`${a.lead_id}|${a.source}`)))
-}
+// Reine Anzeige-Filter liegen in lib/verlauf.ts (auch von der Chrome-Erweiterung genutzt, 17.10.2026)
+export { ohneDoppelteEmailSendung, ohneDoppeltenImport } from '@/lib/verlauf'
 
 /**
  * Kontakt-Ereignisse („Letzte Bewegung“) – wie `crm.ist_kontakt` (Migration 8): nur sie setzen `leads.last_activity_at`.
