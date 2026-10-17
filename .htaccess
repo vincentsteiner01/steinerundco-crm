@@ -1,0 +1,57 @@
+# crm.steinerundco.de – Apache-Einstellungen für Plesk (HTTPS-Redirect und Zertifikat macht Plesk)
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+AddDefaultCharset utf-8
+
+AddType application/manifest+json .webmanifest
+AddType font/woff2 .woff2
+
+# ---------- SPA-Fallback: alles, was keine Datei/kein Ordner ist, bekommt index.html
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  # ---------- Caching
+  # Gehashte Vite-Assets (index-DkG6Xq1z.js) ändern ihren Namen bei jeder Änderung → ein Jahr, immutable
+  <FilesMatch "-[A-Za-z0-9_-]{8}\.(js|css|woff2|png|svg|webp)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  # Fonts und Icons ohne Hash: lang, aber nicht immutable
+  <FilesMatch "\.(woff2|ico|png|svg)$">
+    Header setifempty Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+  # Einstiegspunkte immer frisch prüfen (Service Worker, Manifest, HTML)
+  <FilesMatch "^(index\.html|sw\.js|workbox-.*\.js|manifest\.webmanifest|registerSW\.js)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+
+  # Hinweis: Auf dem IONOS-Plesk-Server kommen „Header always set“-Zeilen nicht beim Browser an (geprüft 15.10.2026,
+  # auch bei steinerundco.de und app.steinerundco.de); „Header set“ wirkt. Für eine statische App reicht „set“.
+
+  # ---------- Privates Werkzeug
+  Header set X-Robots-Tag "noindex, nofollow, noarchive"
+
+  # ---------- Sicherheits-Header
+  Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "no-referrer"
+  Header set X-Frame-Options "DENY"
+  Header set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+  Header set Cross-Origin-Opener-Policy "same-origin"
+  Header set Cross-Origin-Resource-Policy "same-origin"
+
+  # Content-Security-Policy – kein CDN, Fonts self-hosted, nur das Supabase-Projekt.
+  # style-src 'unsafe-inline': Radix-Popper und Sonner setzen Styles zur Laufzeit; script-src bleibt strikt.
+  # blob:/data: in img-src für Vorschau beim Import, SVG-Icons und Feedback-Screenshot; Supabase für signierte Bild-Links (Feedback); worker-src für den Service Worker.
+  Header set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob: https://ekaqkfgvisdngsskzbai.supabase.co; connect-src 'self' https://ekaqkfgvisdngsskzbai.supabase.co wss://ekaqkfgvisdngsskzbai.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json application/manifest+json image/svg+xml
+</IfModule>

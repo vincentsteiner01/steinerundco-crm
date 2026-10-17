@@ -1,0 +1,1 @@
+import{y as e}from"./index-T2Uy46-7.js";function t(){return e(`formular`),null}export{t};
