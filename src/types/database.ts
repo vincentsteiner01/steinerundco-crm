@@ -1015,6 +1015,7 @@ export type Database = {
           owner_id: string | null
           phone_collected_at: string | null
           phone_e164: string | null
+          phone_numbers: Json
           phone_source: Database['crm']['Enums']['phone_source']
           phone_source_url: string | null
           phone_type: Database['crm']['Enums']['phone_type']
@@ -1088,6 +1089,7 @@ export type Database = {
           owner_id?: string | null
           phone_collected_at?: string | null
           phone_e164?: string | null
+          phone_numbers?: Json
           phone_source?: Database['crm']['Enums']['phone_source']
           phone_source_url?: string | null
           phone_type?: Database['crm']['Enums']['phone_type']
@@ -1161,6 +1163,7 @@ export type Database = {
           owner_id?: string | null
           phone_collected_at?: string | null
           phone_e164?: string | null
+          phone_numbers?: Json
           phone_source?: Database['crm']['Enums']['phone_source']
           phone_source_url?: string | null
           phone_type?: Database['crm']['Enums']['phone_type']
@@ -2575,6 +2578,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      meeting_rang: {
+        Args: { p_type: Database['crm']['Enums']['meeting_type'] }
+        Returns: number
+      }
       member_id_by_name: { Args: { p_name: string }; Returns: string }
       next_due: {
         Args: {
@@ -2654,6 +2661,7 @@ export type Database = {
           owner_id: string | null
           phone_collected_at: string | null
           phone_e164: string | null
+          phone_numbers: Json
           phone_source: Database['crm']['Enums']['phone_source']
           phone_source_url: string | null
           phone_type: Database['crm']['Enums']['phone_type']
@@ -2894,6 +2902,7 @@ export type Database = {
           owner_id: string | null
           phone_collected_at: string | null
           phone_e164: string | null
+          phone_numbers: Json
           phone_source: Database['crm']['Enums']['phone_source']
           phone_source_url: string | null
           phone_type: Database['crm']['Enums']['phone_type']
@@ -3145,6 +3154,10 @@ export type Database = {
         | 'nachfassen'
         | 'infomail'
         | 'transaktional'
+        | 'erstgespraech'
+        | 'strategiegespraech'
+        | 'einwandbehandlung'
+        | 'angebot'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3799,6 +3812,10 @@ export const Constants = {
         'nachfassen',
         'infomail',
         'transaktional',
+        'erstgespraech',
+        'strategiegespraech',
+        'einwandbehandlung',
+        'angebot',
       ],
     },
   },

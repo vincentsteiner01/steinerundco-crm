@@ -62,6 +62,9 @@ export type WrapUpProps = {
   className?: string
 }
 
+/** Ergebnisse ohne Gespräch: der nächste Versuch darf frei terminiert werden. */
+const NOCHMAL = new Set(['no_answer', 'voicemail', 'voicemail_left', 'busy'])
+
 export function WrapUp({
   leadId,
   leadName,
@@ -205,6 +208,25 @@ export function WrapUp({
               }
             />
           </div>
+        ) : null}
+
+        {/* Feedback 886113f4: nicht erreicht → selbst festlegen, wann es weitergeht (leer = Kadenz wie in „Folgeaktion“) */}
+        {NOCHMAL.has(def.outcome) ? (
+          <FormField
+            label="Nochmal anrufen am"
+            htmlFor={`wu-nochmal-${leadId}`}
+            hinweis="optional – leer: Termin wie unter „Folgeaktion“"
+          >
+            <DatePicker
+              id={`wu-nochmal-${leadId}`}
+              wert={werte.callbackAt}
+              onChange={(v) => setze('callbackAt', v)}
+              mitUhrzeit
+              min={heute}
+              presets={['heute', 'morgen', '+3', '+7']}
+              placeholder="Datum, Uhrzeit"
+            />
+          </FormField>
         ) : null}
 
         {def.outcome === 'callback_scheduled' || def.outcome === 'send_info' ? (

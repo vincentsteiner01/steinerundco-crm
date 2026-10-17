@@ -116,6 +116,11 @@ export type TemplatePhase =
   | 'nachfassen'
   | 'infomail'
   | 'transaktional'
+  // Sales-Leitfäden (Migration 11, Feedback 9959e426)
+  | 'erstgespraech'
+  | 'strategiegespraech'
+  | 'einwandbehandlung'
+  | 'angebot'
 export type StepKind = 'nachricht' | 'anruf' | 'email' | 'aufgabe'
 export type EnrollmentStatus = 'aktiv' | 'pausiert' | 'abgeschlossen' | 'gestoppt'
 export type StopReason =
@@ -379,6 +384,9 @@ export type SchnellimportZeile = {
   linkedin_url_norm: string | null
   url_art: 'person' | 'sales_nav' | 'firmenseite' | 'keine' | 'ungueltig'
   city: string | null
+  /** Telefon/E-Mail aus der Liste (17.10.2026: vorher verworfen – Mike trug 15 Nummern von Hand nach) */
+  phone?: string | null
+  email?: string | null
   status_lokal: 'neu' | 'unvollstaendig' | 'sales_nav' | 'firmenseite' | 'dublette_liste'
   status_server?: 'neu' | 'duplikat' | 'archiv' | 'gesperrt' | 'ungueltig'
   existing?: { id: string; stage: LeadStage; owner_id: string | null }

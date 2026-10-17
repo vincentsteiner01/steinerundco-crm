@@ -80,6 +80,16 @@ describe('logCallParameter – Parameter je Ergebnis-Taste (BAUPLAN § 3.4 Tabel
     })
   })
 
+  it('Feedback 886113f4: 1–4 ohne Gespräch – „Nochmal anrufen am“ ist optional und geht als p_callback_at an log_call', () => {
+    for (const taste of ['1', '2', '3', '4']) {
+      expect(pruefeWrapUp(def(taste), werte())).toEqual([])
+      expect(logCallParameter({ ...basis, def: def(taste), werte: werte() }).callbackAt).toBeNull()
+      expect(
+        logCallParameter({ ...basis, def: def(taste), werte: werte({ callbackAt: '2026-10-21T15:00' }) }).callbackAt,
+      ).toBe('2026-10-21T13:00:00.000Z')
+    }
+  })
+
   it('5 Zentrale: reached zentrale + Name, Rückruf-Zeitpunkt, Notiz mit Durchwahl/Zeitfenster', () => {
     const p = logCallParameter({
       ...basis,

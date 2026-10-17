@@ -25,11 +25,15 @@ const ALLE_PHASEN: TemplatePhase[] = [
   'nachfassen',
   'infomail',
   'transaktional',
+  'erstgespraech',
+  'strategiegespraech',
+  'einwandbehandlung',
+  'angebot',
 ]
 
 describe('phasen', () => {
   it('Kanäle in Baum-Reihenfolge LinkedIn · Telefon · E-Mail', () => {
-    expect(KANAELE).toEqual(['linkedin', 'telefon', 'email'])
+    expect(KANAELE).toEqual(['linkedin', 'telefon', 'email', 'sonstiges'])
   })
 
   it('deckt jeden template_phase-Wert in mindestens einem Kanal ab', () => {
@@ -81,14 +85,19 @@ describe('phasen', () => {
     expect(phasenFuer('telefon')[0]?.label).toBe('Zentrale')
   })
 
-  it('E-Mail: vier Phasen; sonstiges hat keine', () => {
+  it('E-Mail: vier Phasen; Sales (Kanal sonstiges) vier Gesprächsphasen', () => {
     expect(phasenFuer('email').map((p) => p.key)).toEqual([
       'zusammenfassung',
       'nachfassen',
       'infomail',
       'transaktional',
     ])
-    expect(phasenFuer('sonstiges')).toEqual([])
+    expect(phasenFuer('sonstiges').map((p) => p.key)).toEqual([
+      'erstgespraech',
+      'strategiegespraech',
+      'einwandbehandlung',
+      'angebot',
+    ])
   })
 
   it('phaseDef, phaseRang, labelTeile, KEY_PRAEFIX', () => {
@@ -98,6 +107,6 @@ describe('phasen', () => {
     expect(phaseRang('email', 'pitch')).toBe(999)
     expect(labelTeile('1 Gesprächseröffnung')).toEqual({ ziffer: '1', text: 'Gesprächseröffnung' })
     expect(labelTeile('Zentrale')).toEqual({ ziffer: null, text: 'Zentrale' })
-    expect(KEY_PRAEFIX).toEqual({ linkedin: 'li', telefon: 'tel', email: 'em', sonstiges: 'vl' })
+    expect(KEY_PRAEFIX).toEqual({ linkedin: 'li', telefon: 'tel', email: 'em', sonstiges: 'sales' })
   })
 })

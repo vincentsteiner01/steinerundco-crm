@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/Input'
 import { Segment } from '@/components/ui/Segment'
 import { Textarea } from '@/components/ui/Textarea'
 import { fmtDatum, fmtDauer } from '@/lib/format'
-import { fmtTelefon } from '@/lib/telefon'
+import { fmtTelefon, NUMMER_TYP_LABEL, weitereNummern } from '@/lib/telefon'
 import { kopieren } from '@/lib/zwischenablage'
 import { TOAST } from '@/texte/de'
 import type { Json } from '@/types/database'
@@ -69,7 +69,18 @@ export function AnrufMitte({
   const update = useLeadUpdate()
   const aktivitaet = useAktivitaetErstellen()
   const nummer = lead.phone_e164 ?? ''
+  const weitere = weitereNummern(lead.phone_numbers)
+  const [kopiertWeitere, setKopiertWeitere] = useState<string | null>(null)
   const qual = qualifikation(lead)
+
+  const weitereKopieren = async (e164: string) => {
+    const r = await kopieren(e164)
+    if (r === 'ok') {
+      setKopiertWeitere(e164)
+      toast(TOAST.kopiert)
+      window.setTimeout(() => setKopiertWeitere(null), 2000)
+    }
+  }
 
   const nummerKopieren = async () => {
     const r = await kopieren(nummer)
@@ -138,6 +149,27 @@ export function AnrufMitte({
           {lead.phone_source === 'impressum' ? ' – Impressumsdaten nicht für Werbung' : ''}
         </span>
       </div>
+      {/* Weitere Nummern (Feedback 9f9301ea): Zentrale/Durchwahl/Mobil zum Kopieren, gewählt wird am eigenen Telefon */}
+      {weitere.length ? (
+        <ul className="-mt-3 grid gap-1" aria-label="Weitere Nummern">
+          {weitere.map((n) => (
+            <li key={n.e164} className="flex items-baseline gap-3" data-weitere-nummer={n.e164}>
+              <span className="text-small text-ink-3 w-[72px] flex-none">{NUMMER_TYP_LABEL[n.typ]}</span>
+              <span className="tnum text-ink-2 font-mono text-[14px]">{fmtTelefon(n.e164)}</span>
+              <Button
+                variante="quiet"
+                groesse="S"
+                icon={Copy}
+                copied={kopiertWeitere === n.e164}
+                onClick={() => void weitereKopieren(n.e164)}
+                aria-label={`${NUMMER_TYP_LABEL[n.typ]} kopieren`}
+              >
+                Kopieren
+              </Button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-4">
         {/* Nur Timer, kein Wählen: Vincent und Mike wählen am eigenen Telefon (16.10.2026) */}

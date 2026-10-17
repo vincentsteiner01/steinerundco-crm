@@ -13,7 +13,7 @@ import { useMeetingsMember } from '@/data/meetings'
 import { useSequencesIndex } from '@/data/sequences'
 import { useSettings } from '@/data/settings'
 import { useTemplatePerformance } from '@/data/templates'
-import type { ActivityType, Meeting } from '@/types/domain'
+import type { ActivityType, Call, CallOutcomeDef, Meeting } from '@/types/domain'
 import {
   antwortzeitSchnitt,
   ausFunnelMonat,
@@ -67,6 +67,9 @@ export type KpiDaten = {
   sequenzen: ReturnType<typeof useSequencesIndex>['data']
   naechsterTermin: Meeting | null
   settings: ReturnType<typeof useSettings>['data']
+  /** Telefon-Auswertung (17.10.2026): Anrufe des Zeitraums + Ergebnis-Definitionen */
+  anrufe: readonly Call[]
+  ergebnisDefs: readonly CallOutcomeDef[]
   /** Gar keine Ereignisse/Zähler im Zeitraum (Leerzustand ux § 4.1) */
   keineDaten: boolean
 }
@@ -190,6 +193,8 @@ export function useKpis(member: string | 'team', mitglieder: readonly string[], 
     sequenzen: sequenzen.data,
     naechsterTermin,
     settings: settings.data,
+    anrufe: calls.data,
+    ergebnisDefs: defsListe,
     keineDaten,
   }
 }

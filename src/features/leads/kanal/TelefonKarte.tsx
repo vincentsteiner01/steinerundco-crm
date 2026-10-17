@@ -21,13 +21,14 @@ import { useTaskErstellen } from '@/data/tasks'
 import { AnrufButton } from '@/features/telefon/public'
 import { fmtDatumKurz, fmtDatumZeit, fmtZeit, heuteBerlin } from '@/lib/format'
 import type { SperrlistenTreffer } from '@/lib/gates'
-import { fmtTelefon, nachE164 } from '@/lib/telefon'
+import { fmtTelefon, nachE164, type Land } from '@/lib/telefon'
 import { tagZuDate } from '@/lib/zeit'
 import { ALLGEMEIN, ANRUFGRUND_LABEL, ERGEBNIS_LABEL, GATE_GRUND_LABEL } from '@/texte/de'
 import type { Json } from '@/types/database'
 import type { CallBasis, LeadMitBezug, PhoneSource, PhoneType } from '@/types/domain'
 import { jetztIso } from '../hilfen'
 import { Akkordeon, KarteAktionen, KarteFeld, KarteFelder } from './_Akkordeon'
+import { NummerEingabe, WeitereNummern } from './Nummern'
 import { infoRegelSichtbar, telefonZustand } from './zustaende'
 
 const TYP_LABEL: Record<PhoneType, string> = {
@@ -88,14 +89,14 @@ export function TelefonKarte({
     }
   }
 
-  const nummerSpeichern = async () => {
+  const nummerSpeichern = async (eingabe: string, land: Land) => {
     setFeld(null)
-    const roh = text.trim()
+    const roh = eingabe.trim()
     if (!roh) {
       await patch({ phone_e164: null })
       return
     }
-    const e164 = nachE164(roh)
+    const e164 = nachE164(roh, land)
     if (!e164) {
       setFehler(ALLGEMEIN.nummerUnvollstaendig)
       return
@@ -202,7 +203,17 @@ export function TelefonKarte({
     mono?: boolean,
     leer = 'hinzufügen',
   ) =>
-    feld === key ? (
+    feld === key && key === 'nummer' ? (
+      <div className="grid min-w-0 gap-[3px]">
+        <span className="label">{label}</span>
+        <NummerEingabe
+          start={lead.phone_e164}
+          label={label}
+          onSpeichern={(t, land) => void nummerSpeichern(t, land)}
+          onAbbrechen={() => setFeld(null)}
+        />
+      </div>
+    ) : feld === key ? (
       <div className="grid min-w-0 gap-[3px]">
         <span className="label">{label}</span>
         <Input
@@ -214,22 +225,6 @@ export function TelefonKarte({
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault()
-              if (key === 'nummer') void nummerSpeichern()
-              else {
-                setFeld(null)
-                void patch({
-                  custom: {
-                    ...custom,
-                    [key === 'erreichbarkeit' ? 'erreichbarkeit' : 'zentrale_name']: text.trim() || null,
-                  } as Json,
-                })
-              }
-            }
-            if (e.key === 'Escape') setFeld(null)
-          }}
-          onBlur={() => {
-            if (key === 'nummer') void nummerSpeichern()
-            else {
               setFeld(null)
               void patch({
                 custom: {
@@ -238,6 +233,16 @@ export function TelefonKarte({
                 } as Json,
               })
             }
+            if (e.key === 'Escape') setFeld(null)
+          }}
+          onBlur={() => {
+            setFeld(null)
+            void patch({
+              custom: {
+                ...custom,
+                [key === 'erreichbarkeit' ? 'erreichbarkeit' : 'zentrale_name']: text.trim() || null,
+              } as Json,
+            })
           }}
         />
       </div>
@@ -308,19 +313,20 @@ export function TelefonKarte({
             </a>
           ) : null}
         </div>
+        <WeitereNummern lead={lead} patch={patch} />
         <div className="grid min-w-0 gap-[3px]">
           <span className="label">Anrufgrund</span>
           <Select
             aria-label="Anrufgrund"
             className="h-8"
             value={grundEntwurf?.basis ?? lead.call_basis ?? ''}
-            platzhalter="Pflicht vor Anruf"
+            platzhalter="optional – Beleg für den Anruf"
             onChange={(e) => grundWaehlen(e.target.value)}
             optionen={ANRUFGRUENDE.map((g) => ({ value: g, label: ANRUFGRUND_LABEL[g] }))}
           />
           {/* Amber heißt nur „überfällig“ (DESIGN-SYSTEM) – Pflichthinweis in ink-2 (Runde 2) */}
           {!lead.call_basis && !grundEntwurf ? (
-            <span className="text-small text-ink-2">fehlt – Pflicht vor Anruf</span>
+            <span className="text-small text-ink-3">nicht festgehalten – Anrufen geht trotzdem</span>
           ) : null}
           {lead.call_basis === 'linkedin_vernetzt' ? (
             <span className="text-small text-ink-3">‚nur vernetzt‘ ist die schwächere Grundlage</span>

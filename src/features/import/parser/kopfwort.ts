@@ -77,7 +77,7 @@ export function zielFeldFuerKopf(kopf: string | null | undefined): ZielFeld | nu
   if (/anrede|salutation|geschlecht|gender/.test(h)) return 'salutation'
   if (/position|rolle|role|titel|title|funktion|job|taetigkeit/.test(h)) return 'role_title'
   if (/stadt|city|standort|region|wohnort|(^|[^a-z])ort($|[^a-z])/.test(h)) return 'city'
-  if (/telefon|phone|rufnummer|mobil|handy|(^|[^a-z])tel($|[^a-z])/.test(h)) return 'phone'
+  if (/telefon|phone|rufnummer|nummer|mobil|handy|zentrale|durchwahl|(^|[^a-z])tel($|[^a-z])/.test(h)) return 'phone'
   if (/notiz|note|bemerk|kommentar/.test(h)) return 'notes'
   if (/(^|[^a-z])tags?($|[^a-z])|schlagwort|label/.test(h)) return 'tags'
   if (/(^|[^a-z])(name|person|kontakt|contact)($|[^a-z])/.test(h)) return 'name'

@@ -4,12 +4,15 @@
 import { describe, expect, it } from 'vitest'
 import { SETTINGS } from '@/test/fixtures/settings'
 import {
+  anrufErgebnisse,
   antwortzeitSchnitt,
   ausFunnelMonat,
   ausSummen,
   emailBeantwortetQuote,
+  erreichbarkeitNachStunde,
   formatWert,
   funnelZeilen,
+  funnelZeilenTelefon,
   geantwortetNachSchritt,
   gespraechsdauer,
   kachelDelta,
@@ -18,6 +21,7 @@ import {
   kachelnTelefon,
   kachelVergleich,
   kachelZiel,
+  LEERE_WERTE,
   notizVarianten,
   quotenAus,
   summeWochen,
@@ -367,5 +371,62 @@ describe('Tageswerte und Wochen (K-01, § 1.5 Nr. 30)', () => {
   it('Team summiert beide Personen je Tag', () => {
     const tage = tageswerte(DAILY as never, '2026-10-06', '2026-10-06')
     expect(tage[0]!.werte).toMatchObject({ gespraeche_eroeffnet: 4, anrufe: 12, anrufe_erreicht: 4 })
+  })
+})
+
+describe('Telefon-Auswertung (Feedback 0b376afc)', () => {
+  const defs = [
+    { outcome: 'no_answer', label: 'Nicht erreicht', group_label: 'A', sort_order: 1, is_connect: false },
+    { outcome: 'gatekeeper', label: 'Zentrale', group_label: 'B', sort_order: 6, is_connect: true },
+    { outcome: 'meeting_booked', label: 'Termin', group_label: 'C', sort_order: 10, is_connect: true },
+  ]
+  const anruf = (
+    outcome: string,
+    iso: string,
+    extra: Partial<{ corrected: boolean; direction: 'out' | 'in' }> = {},
+  ) => ({
+    outcome,
+    started_at: iso,
+    corrected: false,
+    direction: 'out' as const,
+    ...extra,
+  })
+  const calls = [
+    anruf('no_answer', '2026-10-16T07:05:00Z'), // 09:05 Berlin
+    anruf('no_answer', '2026-10-16T07:40:00Z'),
+    anruf('gatekeeper', '2026-10-16T07:50:00Z'),
+    anruf('meeting_booked', '2026-10-16T12:10:00Z'), // 14:10 Berlin
+    anruf('no_answer', '2026-10-16T12:30:00Z', { corrected: true }), // korrigiert → zählt nicht
+    anruf('no_answer', '2026-10-16T12:40:00Z', { direction: 'in' }), // eingehend → zählt nicht
+  ]
+
+  it('Funnel Telefon: Dials → Connects → Entscheider → Termine mit Konversion zur Vorstufe', () => {
+    const w = ausSummen({ anrufe: 40, anrufe_erreicht: 10, entscheider_gespraeche: 4, termine_telefon: 1 })
+    const z = funnelZeilenTelefon(w, LEERE_WERTE, undefined, new Set())
+    expect(z.map((r) => [r.label, r.wert, r.quote])).toEqual([
+      ['Dials', 40, undefined],
+      ['Connects', 10, 0.25],
+      ['Entscheider gesprochen', 4, 0.4],
+      ['Termine vereinbart', 1, 0.25],
+    ])
+    expect(z.some((r) => /Vernetzung|DM/.test(r.label))).toBe(false)
+  })
+
+  it('Ergebnisse: Anteil je Taste, nur ausgehende, unkorrigierte Anrufe', () => {
+    const e = anrufErgebnisse(calls, defs)
+    expect(e.map((r) => [r.outcome, r.n])).toEqual([
+      ['no_answer', 2],
+      ['gatekeeper', 1],
+      ['meeting_booked', 1],
+    ])
+    expect(e[0]?.anteil).toBe(0.5)
+  })
+
+  it('Erreichbarkeit: Connects je Stunde in Berliner Zeit, 8–18 Uhr immer da', () => {
+    const s = erreichbarkeitNachStunde(calls, defs)
+    expect(s.find((r) => r.stunde === 9)).toEqual({ stunde: 9, dials: 3, connects: 1, quote: 1 / 3 })
+    expect(s.find((r) => r.stunde === 14)).toEqual({ stunde: 14, dials: 1, connects: 1, quote: 1 })
+    expect(s.find((r) => r.stunde === 8)).toEqual({ stunde: 8, dials: 0, connects: 0, quote: null })
+    expect(s[0]?.stunde).toBe(8)
   })
 })

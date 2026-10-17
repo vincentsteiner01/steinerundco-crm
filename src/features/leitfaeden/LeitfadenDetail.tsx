@@ -21,7 +21,7 @@ import { cn } from '@/components/ui/cn'
 import { useSequences } from '@/data/sequences'
 import { useTemplateLoeschen, useTemplatePerformance, useTemplates, useTemplateSave } from '@/data/templates'
 import { useHotkeys } from '@/lib/keyboard'
-import { ALLGEMEIN, KANAL_LABEL } from '@/texte/de'
+import { ALLGEMEIN } from '@/texte/de'
 import type { Channel, SequenceMitSchritten, Template, TemplatePerformance, TemplatePhase } from '@/types/domain'
 import { NEU } from './befehle'
 import { Editor } from './Editor'
@@ -36,7 +36,7 @@ import {
   type Entwurf,
 } from './entwurf'
 import { kopieKey, neuerKey, schrittVerwendungen, standardChip } from './helfer'
-import { KANAELE, phaseDef, phasenFuer } from './phasen'
+import { KANAELE, phaseDef, phasenFuer, LEITFADEN_LABEL } from './phasen'
 import { Statistik } from './Statistik'
 import { Vorschau } from './Vorschau'
 
@@ -269,7 +269,7 @@ function Formular({
 
       {nurLesen ? (
         <dl className="grid grid-cols-2 gap-x-5 gap-y-3.5">
-          <Feld label="Kanal">{KANAL_LABEL[kanal]}</Feld>
+          <Feld label="Kanal">{LEITFADEN_LABEL[kanal]}</Feld>
           <Feld label="Phase">{phaseDef(kanal, entwurf.phase).label}</Feld>
           <Feld label="Wann verwenden?">{entwurf.when_to_use || '–'}</Feld>
           <Feld label="Anredeform">
@@ -294,11 +294,11 @@ function Formular({
                   schreibeEntwurf(id, null)
                   navigate(PFADE.leitfadenNeu(k), { replace: true })
                 }}
-                optionen={KANAELE.map((k) => ({ value: k, label: KANAL_LABEL[k] }))}
+                optionen={KANAELE.map((k) => ({ value: k, label: LEITFADEN_LABEL[k] }))}
               />
             ) : (
               <p id={`${uid}-kanal`} className="text-ui text-ink h-9 leading-9">
-                {KANAL_LABEL[kanal]}
+                {LEITFADEN_LABEL[kanal]}
               </p>
             )}
           </FormField>

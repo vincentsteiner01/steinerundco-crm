@@ -69,3 +69,39 @@ describe('WrapUp – 20-s-Fokus', () => {
     )
   })
 })
+
+describe('WrapUp – nicht erreicht (Feedback 886113f4)', () => {
+  it('1 Nicht erreicht: optionales „Nochmal anrufen am“, „Morgen“ setzt den Zeitpunkt', async () => {
+    const def1 = ergebnisNachTaste('1')
+    if (!def1) throw new Error('Ergebnis 1 fehlt')
+    const onWerte = vi.fn()
+    function Eins() {
+      const [werte, setWerte] = useState<WrapUpWerte>(WRAPUP_LEER)
+      return (
+        <WrapUp
+          leadId={LEAD_A.id}
+          leadName="Lukas Feldhaus"
+          def={def1}
+          werte={werte}
+          onChange={(w) => {
+            setWerte(w)
+            onWerte(w)
+          }}
+          fehlt={[]}
+          versucht={false}
+          folgeText="Versuch 2 · Mo 19.10."
+          onWeiter={() => {}}
+          onWeiterOhne={() => {}}
+        />
+      )
+    }
+    rendern(<Eins />)
+    expect(screen.getByText('optional – leer: Termin wie unter „Folgeaktion“')).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Nochmal anrufen am'))
+    await nachDemFokusTimer()
+    fireEvent.click(await screen.findByRole('button', { name: /Morgen/ }))
+    await waitFor(() => expect(onWerte).toHaveBeenCalled())
+    const zuletzt = onWerte.mock.calls.at(-1)?.[0] as WrapUpWerte
+    expect(zuletzt.callbackAt?.slice(0, 10)).toBe(tagPlus(heuteBerlin(), 1))
+  })
+})

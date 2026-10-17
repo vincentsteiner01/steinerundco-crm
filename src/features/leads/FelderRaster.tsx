@@ -7,12 +7,13 @@ import { Chip } from '@/components/ui/Chip'
 import { cn } from '@/components/ui/cn'
 import { Popover, PopoverEintrag } from '@/components/ui/Popover'
 import type { SelectOption } from '@/components/ui/Select'
+import { useCalls } from '@/data/calls'
 import { mutationFehler } from '@/data/errors'
 import { useLeadUpdate } from '@/data/leads'
 import { useSequencesIndex } from '@/data/sequences'
 import { useLeadTagEntfernen, useLeadTagSetzen, useTags } from '@/data/tags'
 import { fmtDatum, fmtDatumKurz } from '@/lib/format'
-import { fmtTelefon, nachE164 } from '@/lib/telefon'
+import { fmtTelefon, landVon, nachE164 } from '@/lib/telefon'
 import { linkedinAnzeige } from '@/lib/url'
 import { berlinTag } from '@/lib/zeit'
 import type { LeadMitBezug, LeadUpdate, Member, Settings } from '@/types/domain'
@@ -62,6 +63,9 @@ const QUELLE: Record<string, string> = {
   email_sync: 'E-Mail',
 }
 
+/** Anruf-Ergebnisse ohne Gespräch (Gruppe A bis auf „falsche Nummer“) */
+const OHNE_GESPRAECH = new Set(['no_answer', 'busy', 'voicemail', 'voicemail_left'])
+
 export function FelderRaster({ lead, members, breit, className }: FelderRasterProps) {
   const [aktiv, setAktiv] = useState<string | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
@@ -71,6 +75,10 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
   const { data: tags } = useTags()
   const tagSetzen = useLeadTagSetzen()
   const tagEntfernen = useLeadTagEntfernen()
+  // Feedback 886113f4: Follow-ups gibt es auch am Telefon – ausgehende Anrufe, davon ohne Gespräch
+  const { data: calls } = useCalls(lead.id, 50)
+  const anrufe = (calls ?? []).filter((c) => c.direction === 'out')
+  const ohneGespraech = anrufe.filter((c) => OHNE_GESPRAECH.has(c.outcome)).length
 
   const name = (id: string | null | undefined) => {
     const m = id ? members.find((x) => x.id === id) : null
@@ -105,7 +113,8 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
         wert: lead.phone_e164,
         patch: (v) => {
           if (!v) return { phone_e164: null }
-          const e164 = nachE164(v)
+          // Land der bisherigen Nummer übernehmen (Länderauswahl: Telefon-Karte), sonst DE
+          const e164 = nachE164(v, landVon(lead.phone_e164) ?? undefined)
           if (!e164) {
             setFehler(ALLGEMEIN.nummerUnvollstaendig)
             return null
@@ -177,7 +186,14 @@ export function FelderRaster({ lead, members, breit, className }: FelderRasterPr
           : null,
       leer: 'keine',
     },
-    { key: 'followups', label: 'Follow-ups', wert: `${lead.follow_up_count} von 3 kurzfristig`, mono: true },
+    {
+      key: 'followups',
+      label: 'Follow-ups',
+      wert: anrufe.length
+        ? `LinkedIn ${lead.follow_up_count}/3 · Telefon ${anrufe.length} ${anrufe.length === 1 ? 'Versuch' : 'Versuche'}${ohneGespraech ? `, ${ohneGespraech} nicht erreicht` : ''}`
+        : `${lead.follow_up_count} von 3 kurzfristig`,
+      mono: true,
+    },
     {
       key: 'naechster',
       label: 'Nächster Follow-up',

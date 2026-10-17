@@ -20,7 +20,10 @@ import { KPIS_EXPORT_EVENT } from './befehle'
 import { exportiereKpis } from './exportCsv'
 import { FunnelTabelle } from './FunnelTabelle'
 import {
+  anrufErgebnisse,
+  erreichbarkeitNachStunde,
   funnelZeilen,
+  funnelZeilenTelefon,
   kachelnEmail,
   kachelnLinkedin,
   kachelnTelefon,
@@ -34,6 +37,7 @@ import { LeitfaedenTabelle, type KanalWahl } from './LeitfaedenTabelle'
 import { NoShows } from './NoShows'
 import { OhneBewegung } from './OhneBewegung'
 import { SalesCalls } from './SalesCalls'
+import { AnrufErgebnisse, Erreichbarkeit } from './TelefonAuswertung'
 import { Tagesverlauf } from './Tagesverlauf'
 import { useKpis } from './useKpis'
 import { Wochentabelle } from './Wochentabelle'
@@ -158,10 +162,16 @@ function KpisInhalt({ wahl, personen }: { wahl: PersonWahl; personen: Person[] }
     : (metriken[0]?.key ?? 'gespraeche_eroeffnet')
 
   const ziele = d.settings?.kpi_targets
+  // Reiter Telefon: eigener Funnel (Feedback 0b376afc), sonst der LinkedIn-/Sales-Funnel
   const zeilen = useMemo(
-    () => funnelZeilen(d.werte, d.vorwerte, ziele, d.nurSheet, d.manuell),
-    [d.werte, d.vorwerte, ziele, d.nurSheet, d.manuell],
+    () =>
+      kanal === 'telefon'
+        ? funnelZeilenTelefon(d.werte, d.vorwerte, ziele, d.nurSheet)
+        : funnelZeilen(d.werte, d.vorwerte, ziele, d.nurSheet, d.manuell),
+    [kanal, d.werte, d.vorwerte, ziele, d.nurSheet, d.manuell],
   )
+  const ergebnisse = useMemo(() => anrufErgebnisse(d.anrufe, d.ergebnisDefs), [d.anrufe, d.ergebnisDefs])
+  const stunden = useMemo(() => erreichbarkeitNachStunde(d.anrufe, d.ergebnisDefs), [d.anrufe, d.ergebnisDefs])
   const linkedin = kachelnLinkedin(
     d.werte,
     d.vorwerte,
@@ -375,6 +385,13 @@ function KpisInhalt({ wahl, personen }: { wahl: PersonWahl; personen: Person[] }
             </div>
           </div>
 
+          {kanal === 'telefon' ? (
+            <div className="wide:grid-cols-2 grid items-start gap-10">
+              <AnrufErgebnisse zeilen={ergebnisse} gesamt={ergebnisse.reduce((s, z) => s + z.n, 0)} />
+              <Erreichbarkeit stunden={stunden} />
+            </div>
+          ) : null}
+
           <LeitfaedenTabelle
             templates={d.templates}
             kanal={kanal}
@@ -384,13 +401,16 @@ function KpisInhalt({ wahl, personen }: { wahl: PersonWahl; personen: Person[] }
             aktivitaeten={d.aktivitaeten}
           />
 
-          <OhneBewegung
-            leads={sichtbareLeads}
-            settings={d.settings}
-            cursorId={cursor}
-            onCursor={setCursor}
-            onOeffnen={oeffnePeek}
-          />
+          {/* „Ohne Bewegung“ heißt beantwortet/gepitcht auf LinkedIn – im Reiter Telefon fehl am Platz */}
+          {kanal !== 'telefon' ? (
+            <OhneBewegung
+              leads={sichtbareLeads}
+              settings={d.settings}
+              cursorId={cursor}
+              onCursor={setCursor}
+              onOeffnen={oeffnePeek}
+            />
+          ) : null}
         </div>
       )}
     </>

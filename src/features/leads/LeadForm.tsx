@@ -19,7 +19,8 @@ import { useLeadTagSetzen, useTags } from '@/data/tags'
 import { fmtDatumKurz } from '@/lib/format'
 import { useHotkeyScope } from '@/lib/keyboard'
 import { phaseVon, stageLabel, STUFEN } from '@/lib/stufen'
-import { nachE164, telefonTyp } from '@/lib/telefon'
+import { landVon, nachE164, STANDARD_LAND, telefonTyp, type Land } from '@/lib/telefon'
+import { LandWahl } from './kanal/Nummern'
 import { istFirmenseite, istSalesNav, normalizeLinkedinUrl } from '@/lib/url'
 import { ALLGEMEIN, GRUND_LABEL, PHASE_LABEL } from '@/texte/de'
 import type { LeadInsert, LeadRole, LeadStage, PhoneSource, Salutation } from '@/types/domain'
@@ -66,6 +67,7 @@ export function LeadForm({ vorbelegung, onGespeichert, onAbbrechen }: LeadFormPr
   const [ort, setOrt] = useState(vorbelegung?.city ?? '')
   const [url, setUrl] = useState(vorbelegung?.linkedin_url ?? '')
   const [telefon, setTelefon] = useState(vorbelegung?.phone_e164 ?? '')
+  const [land, setLand] = useState<Land>(landVon(vorbelegung?.phone_e164) ?? STANDARD_LAND)
   const [telefonQuelle, setTelefonQuelle] = useState<PhoneSource>(vorbelegung?.phone_source ?? 'unbekannt')
   const [email, setEmail] = useState(vorbelegung?.email ?? '')
   const [zustaendig, setZustaendig] = useState<string>(vorbelegung?.owner_id ?? '')
@@ -80,7 +82,7 @@ export function LeadForm({ vorbelegung, onGespeichert, onAbbrechen }: LeadFormPr
   }, [])
 
   const urlNorm = useMemo(() => normalizeLinkedinUrl(url), [url])
-  const e164 = useMemo(() => nachE164(telefon), [telefon])
+  const e164 = useMemo(() => nachE164(telefon, land), [telefon, land])
   const emailNorm = email.trim().toLowerCase()
   const { data: dubletten } = useDubletteCheck(urlNorm ?? undefined, e164 ?? undefined, emailNorm || undefined)
 
@@ -301,14 +303,19 @@ export function LeadForm({ vorbelegung, onGespeichert, onAbbrechen }: LeadFormPr
           htmlFor="lf-telefon"
           hinweis={e164 ? `gespeichert als ${e164}` : (telefonHinweis ?? undefined)}
         >
-          <Input
-            id="lf-telefon"
-            mono
-            value={telefon}
-            placeholder="+49 40 …"
-            onChange={(e) => setTelefon(e.target.value)}
-            autoComplete="off"
-          />
+          {/* Land gilt für Nummern ohne Ländervorwahl („0…“), Feedback ebfc59a0 */}
+          <div className="flex min-w-0 gap-1.5">
+            <LandWahl wert={land} onChange={setLand} className="h-9 w-[100px] font-mono text-[12.5px]" />
+            <Input
+              id="lf-telefon"
+              mono
+              value={telefon}
+              placeholder="0… oder +…"
+              onChange={(e) => setTelefon(e.target.value)}
+              autoComplete="off"
+              className="min-w-0"
+            />
+          </div>
         </FormField>
         <FormField label="Telefon-Quelle" htmlFor="lf-telefon-quelle">
           <Select

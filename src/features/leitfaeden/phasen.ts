@@ -4,8 +4,22 @@ import type { Channel, TemplatePhase } from '@/types/domain'
 
 export type PhaseDef = { key: TemplatePhase; label: string; beschreibung: string }
 
-/** Kanäle in Baum-Reihenfolge (ux § 3.8); `sonstiges` hat keine Vorlagen-Phasen. */
-export const KANAELE: readonly Channel[] = ['linkedin', 'telefon', 'email']
+/** Kanäle in Baum-Reihenfolge (ux § 3.8). `sonstiges` trägt seit 17.10.2026 die Sales-Leitfäden (Feedback 9959e426). */
+export const KANAELE: readonly Channel[] = ['linkedin', 'telefon', 'email', 'sonstiges']
+
+/** Zwei Bereiche über den Kanälen: Outreach (Kontakt aufbauen) und Sales (Gespräche führen). */
+export const BEREICHE = [
+  { key: 'outreach', label: 'Outreach', kanaele: ['linkedin', 'telefon', 'email'] },
+  { key: 'sales', label: 'Sales', kanaele: ['sonstiges'] },
+] as const satisfies readonly { key: string; label: string; kanaele: readonly Channel[] }[]
+
+/** Anzeige in den Leitfäden: der Kanal „sonstiges“ heißt hier „Sales“. */
+export const LEITFADEN_LABEL: Record<Channel, string> = {
+  linkedin: 'LinkedIn',
+  telefon: 'Telefon',
+  email: 'E-Mail',
+  sonstiges: 'Sales',
+}
 
 export const PHASEN: Record<Channel, readonly PhaseDef[]> = {
   linkedin: [
@@ -42,7 +56,16 @@ export const PHASEN: Record<Channel, readonly PhaseDef[]> = {
     { key: 'infomail', label: 'Infomail', beschreibung: 'Erbetene Kurzinfo nach Zusage' },
     { key: 'transaktional', label: 'Transaktional', beschreibung: 'Organisatorisch, keine Werbeinhalte' },
   ],
-  sonstiges: [],
+  sonstiges: [
+    { key: 'erstgespraech', label: 'Erstgespräch', beschreibung: 'Ablauf, Fragen und Ziel des 15-Minuten-Gesprächs' },
+    { key: 'strategiegespraech', label: 'Strategiegespräch', beschreibung: 'Analyse, Lösung und nächste Schritte' },
+    {
+      key: 'einwandbehandlung',
+      label: 'Einwandbehandlung',
+      beschreibung: 'Einwände im Sales-Gespräch aufnehmen und klären',
+    },
+    { key: 'angebot', label: 'Angebot & Abschluss', beschreibung: 'Angebot vorstellen, Entscheidung herbeiführen' },
+  ],
 }
 
 /** Phasen eines Kanals in Baum-Reihenfolge. */
@@ -68,4 +91,4 @@ export function labelTeile(label: string): { ziffer: string | null; text: string
 }
 
 /** Kanal-Präfix für neue Schlüssel (BAUPLAN § 3.7 „DB“): `<präfix>_<slug>`. */
-export const KEY_PRAEFIX: Record<Channel, string> = { linkedin: 'li', telefon: 'tel', email: 'em', sonstiges: 'vl' }
+export const KEY_PRAEFIX: Record<Channel, string> = { linkedin: 'li', telefon: 'tel', email: 'em', sonstiges: 'sales' }

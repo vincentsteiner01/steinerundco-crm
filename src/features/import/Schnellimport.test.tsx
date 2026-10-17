@@ -145,7 +145,9 @@ describe('Schnellimport', () => {
       role_title: 'Kundenbetreuung',
       city: 'Rostock',
     })
-    await waitFor(() => expect(router.state.location.pathname).toBe('/heute'))
+    // 17.10.2026: nach dem Import direkt die neuen Leads (Leadliste, gefiltert auf den Import)
+    await waitFor(() => expect(router.state.location.pathname).toBe('/leads'))
+    expect(router.state.location.search).toBe('?quelle=batch-1')
     expect(localStorage.getItem(ENTWURF_KEY)).toBeNull()
     expect(rpcAufrufe(rpc, 'mark_accepted')).toHaveLength(0)
   })
@@ -153,10 +155,7 @@ describe('Schnellimport', () => {
   it('I-14: Modus „bereits vernetzt“ ruft mark_accepted je angelegtem Lead', async () => {
     rendern('/import/schnell?zurueck=%2Fheute&modus=vernetzt')
     const seg = screen.getByRole('group', { name: 'Ziel-Modus' })
-    expect(within(seg).getByRole('button', { name: 'Als Leads (bereits vernetzt)' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(within(seg).getByRole('button', { name: 'Bereits vernetzt' })).toHaveAttribute('aria-pressed', 'true')
     fireEvent.change(textarea(), {
       target: { value: '1. Frau Eva Lang – Kundenbetreuung – https://www.linkedin.com/in/eva-lang/' },
     })
@@ -166,6 +165,27 @@ describe('Schnellimport', () => {
     await waitFor(() => expect(rpcAufrufe(rpc, 'mark_accepted')).toHaveLength(2), { timeout: 2000 })
     expect(rpcAufrufe(rpc, 'mark_accepted')[0]).toMatchObject({ p_lead_id: 'l1', p_member_id: MEMBER_V })
     expect(String(rpcAufrufe(rpc, 'mark_accepted')[0]?.['p_date'])).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('Telefonliste (Nummer, kein Profil): Ziel-Modus „Anrufliste“ automatisch, Nummer geht an den Server, kein mark_accepted', async () => {
+    const { router } = rendern()
+    fireEvent.change(textarea(), {
+      target: {
+        value:
+          'Anrede;Vorname;Nachname;Unternehmen;Telefon\nHerr;Max;Beispiel;Beispiel Solar GmbH;040 123456\nFrau;Anna;Muster;Muster Energie GmbH;+49 30 9876543',
+      },
+    })
+    const seg = screen.getByRole('group', { name: 'Ziel-Modus' })
+    expect(within(seg).getByRole('button', { name: 'Anrufliste' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByText(/stehen sofort in deiner Anrufliste/)).toBeInTheDocument()
+    await waitFor(() => expect(rpcAufrufe(rpc, 'import_leads')).toHaveLength(1), { timeout: 2000 })
+    await waitFor(() => expect(uebernehmen()).toBeEnabled())
+    fireEvent.click(uebernehmen())
+    await waitFor(() => expect(rpcAufrufe(rpc, 'import_leads')).toHaveLength(2), { timeout: 2000 })
+    const rows = rpcAufrufe(rpc, 'import_leads')[1]?.['p_rows'] as Row[]
+    expect(rows.map((r) => r['phone'])).toEqual(['040 123456', '+49 30 9876543'])
+    await waitFor(() => expect(router.state.location.pathname).toBe('/leads'))
+    expect(rpcAufrufe(rpc, 'mark_accepted')).toHaveLength(0)
   })
 
   it('⌫ entfernt die markierte Zeile; Esc bricht ab und behält den Entwurf', async () => {

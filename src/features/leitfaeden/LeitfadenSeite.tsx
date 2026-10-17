@@ -6,12 +6,11 @@ import { PFADE } from '@/app/pfade'
 import { Button } from '@/components/ui/Button'
 import { SeitenKopf } from '@/components/ui/SeitenKopf'
 import { useTemplate } from '@/data/templates'
-import { KANAL_LABEL } from '@/texte/de'
 import { MEDIEN, useMediaQuery } from '@/lib/useMediaQuery'
 import { NEU } from './befehle'
 import { kanalAusParam } from './helfer'
 import { LeitfadenDetail } from './LeitfadenDetail'
-import { phaseDef } from './phasen'
+import { phaseDef, LEITFADEN_LABEL } from './phasen'
 
 export function Component() {
   const { id = NEU } = useParams()
@@ -23,7 +22,9 @@ export function Component() {
   const desktop = useMediaQuery(MEDIEN.desktop)
   const { data: vorlage } = useTemplate(neu ? null : id)
   const kanal = vorlage?.channel ?? kanalNeu
-  const kontext = vorlage ? `${KANAL_LABEL[kanal]} · ${phaseDef(kanal, vorlage.phase).label}` : KANAL_LABEL[kanal]
+  const kontext = vorlage
+    ? `${LEITFADEN_LABEL[kanal]} · ${phaseDef(kanal, vorlage.phase).label}`
+    : LEITFADEN_LABEL[kanal]
 
   return (
     <>

@@ -15,13 +15,13 @@ import { fehlerMeldung } from '@/data/errors'
 import { useSequences } from '@/data/sequences'
 import { useTemplatePerformance, useTemplates } from '@/data/templates'
 import { useHotkeys } from '@/lib/keyboard'
-import { KANAL_LABEL, LEER } from '@/texte/de'
+import { LEER } from '@/texte/de'
 import type { Channel, TemplatePerformance, TemplatePhase } from '@/types/domain'
 import { MEDIEN, useMediaQuery } from '@/lib/useMediaQuery'
 import { Baum, type Verwendung } from './Baum'
 import { baumGruppen, baumReihenfolge, kanalAusParam } from './helfer'
 import { LeitfadenDetail } from './LeitfadenDetail'
-import { KANAELE, phaseDef, phasenFuer } from './phasen'
+import { BEREICHE, phaseDef, phasenFuer, LEITFADEN_LABEL } from './phasen'
 
 export function Component() {
   const navigate = useNavigate()
@@ -97,7 +97,7 @@ export function Component() {
   )
 
   const anzahl = zaehler[kanal]
-  const kontext = `${KANAL_LABEL[kanal]} · ${phasenFuer(kanal).length} Phasen · ${anzahl} ${anzahl === 1 ? 'Leitfaden' : 'Leitfäden'}`
+  const kontext = `${LEITFADEN_LABEL[kanal]} · ${phasenFuer(kanal).length} Phasen · ${anzahl} ${anzahl === 1 ? 'Leitfaden' : 'Leitfäden'}`
   const neuAnlegen = () => navigate(PFADE.leitfadenNeu(kanal))
 
   return (
@@ -107,17 +107,27 @@ export function Component() {
         kontext={kontext}
         rechts={
           <>
-            <Segment
-              ariaLabel="Kanal"
-              optionen={KANAELE.map((k) => ({ key: k, label: KANAL_LABEL[k], zaehler: zaehler[k] }))}
-              wert={kanal}
-              onChange={(k) => {
-                const p = new URLSearchParams(params)
-                p.set('kanal', k)
-                p.delete('phase')
-                setParams(p, { replace: true })
-              }}
-            />
+            {/* Feedback 9959e426: zwei Bereiche – Outreach (LinkedIn · Telefon · E-Mail) und Sales */}
+            {BEREICHE.map((b) => (
+              <span key={b.key} className="flex items-center gap-2" data-bereich={b.key}>
+                <span className="label">{b.label}</span>
+                <Segment<Channel>
+                  ariaLabel={b.label}
+                  optionen={b.kanaele.map((k) => ({
+                    key: k,
+                    label: b.kanaele.length === 1 ? 'Leitfäden' : LEITFADEN_LABEL[k],
+                    zaehler: zaehler[k],
+                  }))}
+                  wert={(b.kanaele as readonly Channel[]).includes(kanal) ? kanal : null}
+                  onChange={(k) => {
+                    const p = new URLSearchParams(params)
+                    p.set('kanal', k)
+                    p.delete('phase')
+                    setParams(p, { replace: true })
+                  }}
+                />
+              </span>
+            ))}
             <Button variante="primary" icon={Plus} onClick={neuAnlegen}>
               Leitfaden anlegen
             </Button>
@@ -134,8 +144,8 @@ export function Component() {
         />
       ) : anzahl === 0 ? (
         <EmptyState
-          titel={LEER.leitfaedenKanal(KANAL_LABEL[kanal]).titel}
-          primaer={{ label: LEER.leitfaedenKanal(KANAL_LABEL[kanal]).aktion, onClick: neuAnlegen }}
+          titel={LEER.leitfaedenKanal(LEITFADEN_LABEL[kanal]).titel}
+          primaer={{ label: LEER.leitfaedenKanal(LEITFADEN_LABEL[kanal]).aktion, onClick: neuAnlegen }}
         />
       ) : (
         // minmax(0, …): sonst wächst die Spur auf die min-content-Breite langer Namen und der Baum läuft unter das Detail

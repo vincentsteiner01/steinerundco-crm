@@ -238,3 +238,39 @@ describe('Schnellimport – Grammatik § 6.3', () => {
     expect(zeilen.map((z) => z.zeile)).toEqual([2, 3])
   })
 })
+
+describe('Schnellimport – Telefon und E-Mail (17.10.2026: Nummern gingen verloren)', () => {
+  it('CSV mit Telefon-Spalte: Nummer kommt an, Zeile ohne LinkedIn ist trotzdem „neu“', () => {
+    const { format, zeilen } = parseSchnellimport(
+      'Vorname;Nachname;Unternehmen;Position;Ort;Telefonnummer\nMax;Beispiel;Beispiel Solar GmbH;Geschäftsführer;Hamburg;040 123456-0',
+    )
+    expect(format).toBe('csv')
+    expect(zeilen[0]).toMatchObject({ first_name: 'Max', company: 'Beispiel Solar GmbH', phone: '040 123456-0' })
+    expect(zeilen[0]?.status_lokal).toBe('neu')
+  })
+
+  it('Markdown-Tabelle mit „Zentrale“ und „E-Mail“', () => {
+    const { zeilen } = parseSchnellimport(
+      '| Name | Unternehmen | Zentrale | E-Mail |\n|---|---|---|---|\n| Anna Muster | Muster Energie GmbH | +49 30 9876543 | anna@muster-energie.de |',
+    )
+    expect(zeilen[0]).toMatchObject({ phone: '+49 30 9876543', email: 'anna@muster-energie.de', status_lokal: 'neu' })
+  })
+
+  it('freie Zeile: Nummer und E-Mail als eigene Segmente, Name bleibt Name', () => {
+    const { zeilen } = parseSchnellimport(
+      '1. Herr Paul Probe | Probe PV GmbH | Tel. 0421 55 66 77 | paul@probe-pv.de\n2. Frau Eva Lang – Lang Solar KG\n   Telefon: +49 171 2345678',
+    )
+    expect(zeilen[0]).toMatchObject({
+      name: 'Paul Probe',
+      company: 'Probe PV GmbH',
+      phone: '0421 55 66 77',
+      email: 'paul@probe-pv.de',
+    })
+    expect(zeilen[1]).toMatchObject({ name: 'Eva Lang', phone: '+49 171 2345678' })
+  })
+
+  it('ohne Nummer, ohne Profil bleibt eine Zeile „unvollständig“', () => {
+    const { zeilen } = parseSchnellimport('Vorname,Nachname,Unternehmen\nMax,Beispiel,Beispiel Solar GmbH')
+    expect(zeilen[0]?.status_lokal).toBe('unvollstaendig')
+  })
+})

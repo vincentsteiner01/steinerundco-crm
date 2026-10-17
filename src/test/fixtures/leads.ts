@@ -44,6 +44,7 @@ export function vollerLead(i: number, patch: Partial<Lead> = {}): Lead {
     phone_source: 'unbekannt',
     phone_source_url: null,
     phone_collected_at: null,
+    phone_numbers: [],
     owner_id: i % 2 ? MEMBER_V : MEMBER_M,
     sales_owner_id: null,
     opened_by_id: null,

@@ -46,7 +46,11 @@ describe('LeitfaedenSeite', () => {
     expect(detail).toHaveAttribute('data-leitfaden', ERSTE_ID)
     expect(within(detail).getByLabelText('Name')).toHaveValue('Gesprächseröffnung (V1)')
     expect(within(detail).getByLabelText('Text')).toBeInTheDocument()
-    expect(screen.getByRole('group', { name: 'Kanal' })).toBeInTheDocument()
+    // Feedback 9959e426: Outreach (LinkedIn · Telefon · E-Mail) und Sales als eigene Bereiche
+    expect(screen.getByRole('group', { name: 'Outreach' })).toBeInTheDocument()
+    expect(
+      within(screen.getByRole('group', { name: 'Sales' })).getByRole('button', { name: /Leitfäden/ }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Leitfaden anlegen/ })).toBeInTheDocument()
     expect(screen.getByLabelText('Leitfaden suchen')).toHaveAttribute('data-suche')
   })
@@ -76,7 +80,7 @@ describe('LeitfaedenSeite', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Entfernen' }))
     await waitFor(() => expect(within(screen.getByRole('tree')).getAllByRole('group')).toHaveLength(10))
     expect(router.state.location.search).toBe('?kanal=telefon')
-    fireEvent.click(within(screen.getByRole('group', { name: 'Kanal' })).getByRole('button', { name: /E-Mail/ }))
+    fireEvent.click(within(screen.getByRole('group', { name: 'Outreach' })).getByRole('button', { name: /E-Mail/ }))
     await waitFor(() => expect(router.state.location.search).toBe('?kanal=email'))
     expect(screen.getAllByRole('treeitem')).toHaveLength(10)
   })

@@ -49,6 +49,8 @@ type Roh = {
   role_title?: string | null
   linkedin_url?: string | null
   city?: string | null
+  phone?: string | null
+  email?: string | null
 }
 
 const leer = (s: string | null | undefined): string | null => {
@@ -98,15 +100,19 @@ function bauen(r: Roh): SchnellimportZeile | null {
     linkedin_url_norm: url.linkedin_url_norm,
     url_art: url.url_art,
     city: leer(r.city),
+    phone: leer(r.phone),
+    email: leer(r.email),
     status_lokal: 'neu',
   }
+  // Name + Nummer (oder E-Mail) ist ein vollständiger Telefon-/Mail-Lead, auch ohne LinkedIn-Profil
+  const kontakt = !!(z.phone || z.email)
   z.status_lokal = !hatName
     ? 'unvollstaendig'
     : z.url_art === 'sales_nav'
       ? 'sales_nav'
       : z.url_art === 'firmenseite'
         ? 'firmenseite'
-        : z.url_art === 'person'
+        : z.url_art === 'person' || kontakt
           ? 'neu'
           : 'unvollstaendig'
   return z
@@ -199,7 +205,11 @@ function parseCsvBlock(zeilen: readonly string[]): SchnellimportZeile[] {
 
 // ── Freie Zeilen (nummeriert, Aufzählung, Mischform) ─────────────────────────
 const PREFIX = /^\s*(\d+[.)]|[-*•–])\s*/
-const SUBZEILE = /^\s+[-*•]?\s*(Unternehmen|Firma|Position|Rolle|LinkedIn|URL|Ort|Stadt|Anrede)\s*:\s*(.+)$/i
+const SUBZEILE =
+  /^\s+[-*•]?\s*(Unternehmen|Firma|Position|Rolle|LinkedIn|URL|Ort|Stadt|Anrede|Telefon|Tel\.?|Mobil|Nummer|E-?Mail)\s*:\s*(.+)$/i
+/** Telefonnummer als eigenes Segment: „+49 40 123456“, „040/123 45-6“, „(0)40 …“ – mindestens 6 Ziffern, sonst nur Zeichen */
+const TELEFON = /^(tel\.?|telefon|mobil|zentrale|durchwahl)?\s*:?\s*(\+?[\d\s()/.-]{6,})$/i
+const EMAIL = /^(e-?mail\s*:?\s*)?([^\s@]+@[^\s@]+\.[a-z]{2,})$/i
 const SEPARATOREN = [' – ', ' — ', ' - ', ' | ', ', '] as const
 const KLAMMER = /^(.*?)\s*\(([^()]*)\)\s*$/
 const ORT = /^(ort|stadt|city)\s*:\s*(.+)$/i
@@ -275,6 +285,16 @@ function personZeile(text: string, nr: number): Person | null {
       p.city = om[2] ?? null
       continue
     }
+    const tm = TELEFON.exec(seg)
+    if (!p.phone && tm && (tm[2] ?? '').replace(/\D/g, '').length >= 6) {
+      p.phone = (tm[2] ?? '').trim()
+      continue
+    }
+    const em = EMAIL.exec(seg)
+    if (!p.email && em) {
+      p.email = em[2] ?? null
+      continue
+    }
     if (!p.company && RECHTSFORM.test(seg)) p.company = seg
     else if (!p.role_title && ROLLENWORT.test(seg)) p.role_title = seg
     else rest2.push(seg)
@@ -297,6 +317,8 @@ function parseZeilen(zeilen: readonly string[]): SchnellimportZeile[] {
       else if (/linkedin|url/.test(schluessel)) letzte.linkedin_url = fettWeg(wert)
       else if (/ort|stadt/.test(schluessel)) letzte.city = wert
       else if (/anrede/.test(schluessel)) letzte.salutation = wert
+      else if (/mail/.test(schluessel)) letzte.email = wert
+      else if (/tel|mobil|nummer/.test(schluessel)) letzte.phone = wert
       return
     }
     const p = personZeile(text, i + 1)

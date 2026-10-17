@@ -25,13 +25,15 @@ import { parseSchnellimport } from './parser/schnellimport'
 
 export const ENTWURF_KEY = 'crm.schnellimport.entwurf'
 export const DRY_RUN_MS = 500
-export type Modus = 'anfrage' | 'vernetzt'
+// 17.10.2026 (Mike): „telefon“ – Leads für die Anrufliste, ohne LinkedIn-Frage; automatisch bei Listen mit Nummer und ohne Profil-URL
+export type Modus = 'anfrage' | 'vernetzt' | 'telefon'
+const istModus = (m: unknown): m is Modus => m === 'anfrage' || m === 'vernetzt' || m === 'telefon'
 
 /** research/linkedin.md § 6.5 – Prompt-Zusatz für ChatGPT. */
 export const PROMPT_VORLAGE =
-  'Gib die Liste ausschließlich als Markdown-Tabelle mit genau diesen Spalten aus: Vorname | Nachname | Anrede (Herr/Frau) | Position | Unternehmen | Ort | LinkedIn-URL. Nur öffentliche Profil-URLs der Form https://www.linkedin.com/in/… ohne Parameter. Wenn du keine URL sicher kennst, schreibe ‚unbekannt‘.'
+  'Gib die Liste ausschließlich als Markdown-Tabelle mit genau diesen Spalten aus: Vorname | Nachname | Anrede (Herr/Frau) | Position | Unternehmen | Ort | Telefon | LinkedIn-URL. Nur öffentliche Profil-URLs der Form https://www.linkedin.com/in/… ohne Parameter. Wenn du keine URL oder Nummer sicher kennst, lass das Feld leer.'
 
-type Entwurf = { text: string; anreden: Record<string, Salutation>; modus: Modus; entfernt: number[] }
+type Entwurf = { text: string; anreden: Record<string, Salutation>; modus: Modus | null; entfernt: number[] }
 
 function liesEntwurf(): Entwurf | null {
   try {
@@ -41,7 +43,7 @@ function liesEntwurf(): Entwurf | null {
     return {
       text: e.text ?? '',
       anreden: e.anreden ?? {},
-      modus: e.modus === 'vernetzt' ? 'vernetzt' : 'anfrage',
+      modus: istModus(e.modus) ? e.modus : null,
       entfernt: e.entfernt ?? [],
     }
   } catch {
@@ -78,13 +80,16 @@ export function Component() {
 
   const zurueck = params.get('zurueck')
   const ziel = internesZiel(zurueck, PFADE.import)
-  const modusParam: Modus = params.get('modus') === 'vernetzt' ? 'vernetzt' : 'anfrage'
+  const modusParam = params.get('modus')
 
   const entwurf = useRef<Entwurf | null>(liesEntwurf())
   const [text, setText] = useState(entwurf.current?.text ?? '')
   const [anreden, setAnreden] = useState<Record<string, Salutation>>(entwurf.current?.anreden ?? {})
   const [entfernt, setEntfernt] = useState<Set<number>>(() => new Set(entwurf.current?.entfernt ?? []))
-  const [modus, setModus] = useState<Modus>(params.has('modus') ? modusParam : (entwurf.current?.modus ?? 'anfrage'))
+  // nur eine bewusste Wahl (Klick, ?modus=, Entwurf) – sonst entscheidet die Liste (s. `modus` unten)
+  const [modusManuell, setModusManuell] = useState<Modus | null>(
+    istModus(modusParam) ? modusParam : (entwurf.current?.modus ?? null),
+  )
   const [cursor, setCursor] = useState(0)
   const [server, setServer] = useState<Record<string, Server>>({})
   const [pruefend, setPruefend] = useState(false)
@@ -100,11 +105,14 @@ export function Component() {
 
   // Entwurf sichern
   useEffect(() => {
-    schreibeEntwurf({ text, anreden, modus, entfernt: [...entfernt] })
-  }, [text, anreden, modus, entfernt])
+    schreibeEntwurf({ text, anreden, modus: modusManuell, entfernt: [...entfernt] })
+  }, [text, anreden, modusManuell, entfernt])
 
   // Dry-Run 500 ms nach Tippen-Ende (BAUPLAN § 3.8 Schnellimport-Ablauf)
   const sendZeilen = useMemo(() => zeilen.filter(sendbar), [zeilen])
+  const telefonListe =
+    sendZeilen.length > 0 && sendZeilen.some((z) => z.phone) && sendZeilen.every((z) => !z.linkedin_url)
+  const modus: Modus = modusManuell ?? (telefonListe ? 'telefon' : 'anfrage')
   const signatur = useMemo(
     () =>
       sendZeilen
@@ -245,7 +253,17 @@ export function Component() {
       else toast(text)
       schreibeEntwurf(null)
       setOffen(false)
-      navigate(zurueck && ziel !== PFADE.import ? ziel : batchId ? PFADE.importErgebnis(batchId) : PFADE.import)
+      // 17.10.2026 (Mike: „ich finde die neuen Leads nicht“): direkt die importierten Leads zeigen. „Bereits vernetzt“
+      // führt zurück (dort stehen die Opener), ohne Batch (alles Dubletten) wie bisher.
+      navigate(
+        batchId && modus !== 'vernetzt'
+          ? `${PFADE.leads}?quelle=${batchId}`
+          : zurueck && ziel !== PFADE.import
+            ? ziel
+            : batchId
+              ? PFADE.importErgebnis(batchId)
+              : PFADE.import,
+      )
     } catch (err) {
       zeigeFehler(err)
     } finally {
@@ -327,16 +345,19 @@ export function Component() {
               <Segment<Modus>
                 ariaLabel="Ziel-Modus"
                 wert={modus}
-                onChange={setModus}
+                onChange={setModusManuell}
                 optionen={[
-                  { key: 'anfrage', label: 'Als Anfrageliste' },
-                  { key: 'vernetzt', label: 'Als Leads (bereits vernetzt)' },
+                  { key: 'anfrage', label: 'Anfrageliste' },
+                  { key: 'vernetzt', label: 'Bereits vernetzt' },
+                  { key: 'telefon', label: 'Anrufliste' },
                 ]}
               />
               <p className="text-small text-ink-3">
                 {modus === 'anfrage'
-                  ? 'Leads landen in Heute → Neue Anfragen.'
-                  : 'Vernetzung „angenommen“ heute, Sequenz A startet, Opener heute fällig.'}
+                  ? 'LinkedIn: Leads landen in Heute → Neue Anfragen.'
+                  : modus === 'vernetzt'
+                    ? 'LinkedIn: Vernetzung „angenommen“ heute, Sequenz A startet, Opener heute fällig.'
+                    : 'Telefon: Leads mit Nummer stehen sofort in deiner Anrufliste – ohne LinkedIn-Schritte.'}
               </p>
             </FormField>
             <FormField label="Quelle">
@@ -461,13 +482,15 @@ export function Component() {
                         <span
                           role="gridcell"
                           className="text-small text-ink-2 min-w-0 truncate"
-                          title={[z.company, z.role_title, z.city].filter(Boolean).join(' · ') || undefined}
+                          title={
+                            [z.company, z.role_title, z.city, z.phone, z.email].filter(Boolean).join(' · ') || undefined
+                          }
                         >
                           {z.company ?? <span className="text-ink-3">–</span>}
-                          {z.role_title || z.city ? (
+                          {z.role_title || z.city || z.phone || z.email ? (
                             <span className="text-ink-3">
                               {' · '}
-                              {[z.role_title, z.city].filter(Boolean).join(' · ')}
+                              {[z.role_title, z.city, z.phone, z.email].filter(Boolean).join(' · ')}
                             </span>
                           ) : null}
                         </span>

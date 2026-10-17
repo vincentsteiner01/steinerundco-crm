@@ -31,6 +31,8 @@ export type Quoten = {
   entscheider_quote: number | null
   termine_pro_100_anrufe: number | null
   termin_quote_gespraech: number | null
+  /** Telefon-Funnel (17.10.2026): Entscheider je Connect */
+  entscheider_von_connects: number | null
 }
 export type FunnelWerte = { summen: Summen; quoten: Quoten }
 export type Fussnote = 'zaehler' | 'sheet' | null
@@ -55,6 +57,7 @@ export function quotenAus(s: Summen): Quoten {
     entscheider_quote: quote(s.entscheider_gespraeche, s.anrufe),
     termine_pro_100_anrufe: s.anrufe ? ((s.termine_telefon ?? 0) * 100) / s.anrufe : null,
     termin_quote_gespraech: quote(s.termine_telefon, s.entscheider_gespraeche),
+    entscheider_von_connects: quote(s.entscheider_gespraeche, s.anrufe_erreicht),
   }
 }
 
@@ -101,6 +104,7 @@ export function ausFunnelMonat(f: FunnelMonat | null | undefined): FunnelWerte {
       entscheider_quote: f.entscheider_quote,
       termine_pro_100_anrufe: f.termine_pro_100_anrufe,
       termin_quote_gespraech: quote(f.termine_telefon, f.entscheider_gespraeche),
+      entscheider_von_connects: quote(f.entscheider_gespraeche, f.anrufe_erreicht),
     },
   }
 }
@@ -404,6 +408,7 @@ export type FunnelZeile = {
     | 'ereignis:gespraech_eroeffnet'
     | 'ereignis:nachricht_erhalten'
     | 'ereignis:pitch_gesendet'
+    | 'ereignis:anruf'
     | 'termine'
     | 'termine:erstgespraech'
     | 'termine:strategiegespraech'
@@ -502,6 +507,116 @@ export function funnelZeilen(
     }),
     zeile('kunden_gewonnen', '08', 'Kunden gewonnen', { quote: 'kunden_quote', leads: 'kunde' }),
   ]
+}
+
+/**
+ * Telefon-Funnel (Feedback 0b376afc, 17.10.2026): Im Reiter Telefon stand der LinkedIn-Funnel. Jetzt: Dials → Connects →
+ * Entscheider → Termine, je Konversion zur Vorstufe. Die Sales-Schritte danach zeigt „Sales-Calls“ (kanalübergreifend).
+ */
+export function funnelZeilenTelefon(
+  w: FunnelWerte,
+  v: FunnelWerte,
+  ziele: Ziele | undefined,
+  nurSheet: Set<Metric>,
+): FunnelZeile[] {
+  const zeile = (
+    metric: Metric,
+    nr: string,
+    label: string,
+    o: { gross?: boolean; quote?: keyof Quoten; ziel?: number | null; hinweis?: string; leads?: FunnelZeile['leads'] },
+  ): FunnelZeile => {
+    const q = o.quote ? w.quoten[o.quote] : undefined
+    const vq = o.quote ? v.quoten[o.quote] : undefined
+    const wertJetzt = wert(w.summen, metric)
+    const vorWert = wert(v.summen, metric)
+    const ziel = o.ziel ?? null
+    return {
+      metric,
+      nr,
+      label,
+      sub: false,
+      gross: !!o.gross,
+      wert: wertJetzt,
+      quote: q,
+      vorWert,
+      vorQuote: vq,
+      delta: wertJetzt - vorWert,
+      deltaPp: q !== undefined && q !== null && vq !== undefined && vq !== null ? (q - vq) * 100 : null,
+      ziel,
+      erreicht: ziel === null || q === undefined || q === null ? null : q >= ziel,
+      fussnote: nurSheet.has(metric) ? 'sheet' : null,
+      hinweis: o.hinweis ?? null,
+      leads: o.leads ?? null,
+    }
+  }
+  return [
+    zeile('anrufe', '01', 'Dials', { gross: true, hinweis: 'ausgehende Anrufe', leads: 'ereignis:anruf' }),
+    zeile('anrufe_erreicht', '02', 'Connects', {
+      gross: true,
+      quote: 'connect_rate',
+      ziel: ziele?.connect_rate,
+      hinweis: 'jemand am Apparat',
+    }),
+    zeile('entscheider_gespraeche', '03', 'Entscheider gesprochen', { quote: 'entscheider_von_connects' }),
+    zeile('termine_telefon', '04', 'Termine vereinbart', { quote: 'termin_quote_gespraech', hinweis: 'am Telefon' }),
+  ]
+}
+
+// ── Telefon-Auswertung aus den Anrufen (17.10.2026) ──────────────────────────────────────────────────────────
+
+type AnrufRoh = Pick<Call, 'outcome' | 'started_at' | 'corrected' | 'direction'>
+
+export type ErgebnisZeile = { outcome: string; label: string; gruppe: string; n: number; anteil: number }
+
+/** Anrufe je Ergebnis (Reihenfolge der Tasten-Definition), nur Ergebnisse mit mindestens einem Anruf. */
+export function anrufErgebnisse(
+  calls: readonly AnrufRoh[],
+  defs: readonly Pick<CallOutcomeDef, 'outcome' | 'label' | 'group_label' | 'sort_order'>[],
+): ErgebnisZeile[] {
+  const zaehler = new Map<string, number>()
+  let gesamt = 0
+  for (const c of calls) {
+    if (c.direction !== 'out' || c.corrected || !c.outcome) continue
+    zaehler.set(c.outcome, (zaehler.get(c.outcome) ?? 0) + 1)
+    gesamt++
+  }
+  return [...defs]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .filter((d) => (zaehler.get(d.outcome) ?? 0) > 0)
+    .map((d) => {
+      const n = zaehler.get(d.outcome) ?? 0
+      return { outcome: d.outcome, label: d.label, gruppe: d.group_label, n, anteil: gesamt ? n / gesamt : 0 }
+    })
+}
+
+export type StundenZeile = { stunde: number; dials: number; connects: number; quote: number | null }
+
+const BERLIN_STUNDE = new Intl.DateTimeFormat('de-DE', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Europe/Berlin' })
+
+/** Dials und Connects je Stunde (Berlin), 8–18 Uhr immer sichtbar, frühere/spätere nur mit Anrufen. */
+export function erreichbarkeitNachStunde(
+  calls: readonly AnrufRoh[],
+  defs: readonly Pick<CallOutcomeDef, 'outcome' | 'is_connect'>[],
+): StundenZeile[] {
+  const connect = new Set(defs.filter((d) => d.is_connect).map((d) => d.outcome))
+  const proStunde = new Map<number, { dials: number; connects: number }>()
+  for (const c of calls) {
+    if (c.direction !== 'out' || c.corrected || !c.outcome) continue
+    // formatToParts: „format“ liefert in de-DE „09 Uhr“
+    const h = Number(BERLIN_STUNDE.formatToParts(new Date(c.started_at)).find((x) => x.type === 'hour')?.value)
+    if (!Number.isFinite(h)) continue
+    const s = proStunde.get(h) ?? { dials: 0, connects: 0 }
+    s.dials++
+    if (connect.has(c.outcome)) s.connects++
+    proStunde.set(h, s)
+  }
+  const stunden = new Set<number>([8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, ...proStunde.keys()])
+  return [...stunden]
+    .sort((a, b) => a - b)
+    .map((stunde) => {
+      const s = proStunde.get(stunde) ?? { dials: 0, connects: 0 }
+      return { stunde, ...s, quote: quote(s.connects, s.dials) }
+    })
 }
 
 // ── Hook-Kacheln (§ 1.5 Nr. 40, K-14/K-15) ────────────────────────────────────────────────────────────────

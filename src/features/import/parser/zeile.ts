@@ -14,6 +14,8 @@ export function zeileZuRow(z: SchnellimportZeile, anrede: Salutation | null): Im
   if (z.role_title) r.role_title = z.role_title
   if (z.linkedin_url) r.linkedin_url = z.linkedin_url
   if (z.city) r.city = z.city
+  if (z.phone) r.phone = z.phone
+  if (z.email) r.email = z.email
   if (z.title) r.title = z.title // vorher ein No-op – „Dr. Anna Beispiel“ verlor den Titel (§ 6.3 Beispiel 1, Review)
   return r
 }

@@ -379,6 +379,13 @@ export function logCallParameter(e: AnrufParameterEingabe): LogCallParameter {
     case 'not_now':
       callbackAt = lokalNachIso(w.callbackAt, dueTime)
       break
+    // Feedback 886113f4: optional „Nochmal anrufen am …“ – log_call nimmt den Zeitpunkt statt der Kadenz
+    case 'no_answer':
+    case 'voicemail':
+    case 'voicemail_left':
+    case 'busy':
+      callbackAt = w.callbackAt ? lokalNachIso(w.callbackAt, dueTime) : null
+      break
     case 'meeting_booked':
       meetingAt = lokalNachIso(w.meetingAt, dueTime)
       break
