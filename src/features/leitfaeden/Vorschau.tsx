@@ -89,7 +89,7 @@ export function Vorschau({ kanal, subject, body, leadId, onLeadChange, mitTaste 
         </h3>
         {lead ? (
           <span className="border-line-strong text-ui inline-flex h-7 items-center gap-1.5 rounded-xs border pr-1 pl-2.5">
-            <span className="text-ink-bright font-serif italic">{lead.full_name ?? '–'}</span>
+            <span className="text-ink-bright font-semibold">{lead.full_name ?? '–'}</span>
             {lead.company_name ? <span className="text-small text-ink-3">{lead.company_name}</span> : null}
             <button
               type="button"
@@ -127,9 +127,7 @@ export function Vorschau({ kanal, subject, body, leadId, onLeadChange, mitTaste 
                       onClick={() => waehlen(t.id)}
                       className="text-ui hover:bg-surface-hover flex h-9 w-full items-center gap-2.5 rounded-sm px-2.5 text-left font-normal"
                     >
-                      <span className="text-ink-bright truncate font-serif text-[16px] italic">
-                        {t.full_name ?? '–'}
-                      </span>
+                      <span className="text-ink-bright truncate text-[15px] font-semibold">{t.full_name ?? '–'}</span>
                       {t.company_name ? <span className="text-small text-ink-3 truncate">{t.company_name}</span> : null}
                     </button>
                   ))

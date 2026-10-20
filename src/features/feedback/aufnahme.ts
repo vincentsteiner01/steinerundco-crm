@@ -18,11 +18,8 @@ const STICKY_ATTR = 'data-feedback-sticky'
 const MAX_BYTES = 5 * 1024 * 1024
 const ZEITLIMIT_MS = 8000
 
-const SCHRIFTEN: { familie: string; datei: string; stil: 'normal' | 'italic'; gewicht: string }[] = [
-  { familie: 'Geist', datei: '/fonts/geist-latin.woff2', stil: 'normal', gewicht: '100 900' },
-  { familie: 'Geist Mono', datei: '/fonts/geist-mono-latin.woff2', stil: 'normal', gewicht: '100 900' },
-  { familie: 'Newsreader', datei: '/fonts/newsreader-italic-latin.woff2', stil: 'italic', gewicht: '400' },
-]
+// Seit dem hellen Design (20.10.2026) nutzt das CRM die Systemschrift – sie ist im Bild ohne Einbetten verfügbar.
+const SCHRIFTEN: { familie: string; datei: string; stil: 'normal' | 'italic'; gewicht: string }[] = []
 
 let schriftCss: Promise<string> | null = null
 

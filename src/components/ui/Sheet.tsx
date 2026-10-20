@@ -20,7 +20,7 @@ export function Sheet({ offen, onOpenChange, titel, breite = 640, children, kopf
   return (
     <RD.Root open={offen} onOpenChange={onOpenChange}>
       <RD.Portal>
-        <RD.Overlay className="bg-canvas/50 fixed inset-0 z-[60]" />
+        <RD.Overlay className="bg-scrim fixed inset-0 z-[60]" />
         <RD.Content
           style={{ ['--sheet-b' as string]: `${breite}px` }}
           className={cn(

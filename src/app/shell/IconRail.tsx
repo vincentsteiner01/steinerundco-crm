@@ -1,3 +1,4 @@
+import { Marke } from '@/components/ui/Marke'
 import { MessageSquareWarning, Search } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 import { NAV } from '@/app/nav'
@@ -21,15 +22,11 @@ export function IconRail() {
   const zaehler = useNavZaehler()
   return (
     <aside
-      className="border-line bg-canvas sticky top-0 flex h-dvh w-16 flex-col items-center border-r px-2.5 pt-[18px] pb-3.5"
+      className="border-line bg-sidebar sticky top-0 flex h-dvh w-16 flex-col items-center border-r px-2.5 pt-[18px] pb-3.5"
       aria-label="Seitenleiste"
     >
-      <NavLink
-        to={PFADE.heute}
-        className="text-ink-bright pb-[18px] font-serif text-[22px] leading-none italic"
-        aria-label="Steiner & Co. – Heute"
-      >
-        S&amp;
+      <NavLink to={PFADE.heute} className="pb-4" aria-label="Steiner & Co. – Heute">
+        <Marke nurSymbol groesse="l" />
       </NavLink>
       <Tooltip
         text={
@@ -43,7 +40,7 @@ export function IconRail() {
           type="button"
           onClick={() => setPaletteOffen(true)}
           aria-label={ALLGEMEIN.suchenOderBefehl}
-          className="border-line-strong text-ink-3 hover:bg-surface-hover hover:text-ink mb-3.5 grid h-[34px] w-full place-items-center rounded-sm border"
+          className="border-line bg-canvas text-ink-3 hover:text-ink shadow-card mb-3.5 grid h-[34px] w-full place-items-center rounded-sm border"
         >
           <Search size={14} strokeWidth={1.75} aria-hidden />
         </button>
@@ -70,7 +67,7 @@ export function IconRail() {
                 // die Funktion landete als Quelltext im DOM und gab JEDEM Eintrag den Lime-Balken (Runde 2, 900 px).
                 className={cn(
                   'ease-brand hover:bg-surface-hover hover:text-ink text-ink-2 relative grid h-[34px] place-items-center rounded-sm transition-[background,color] duration-[var(--t-1)]',
-                  'aria-[current=page]:bg-surface-hover aria-[current=page]:text-ink',
+                  'aria-[current=page]:bg-surface-pressed/70 aria-[current=page]:text-ink-bright',
                   'aria-[current=page]:before:bg-signal aria-[current=page]:before:absolute aria-[current=page]:before:top-2 aria-[current=page]:before:bottom-2 aria-[current=page]:before:-left-2.5 aria-[current=page]:before:w-0.5 aria-[current=page]:before:content-[""]',
                 )}
               >

@@ -1,3 +1,4 @@
+import { Marke } from '@/components/ui/Marke'
 import { MessageSquareWarning, Search } from 'lucide-react'
 import { lazy, Suspense } from 'react'
 import { NavLink, useNavigate } from 'react-router'
@@ -27,21 +28,20 @@ export function Sidebar() {
 
   return (
     <aside
-      className="border-line bg-canvas sticky top-0 flex h-dvh flex-col border-r px-3 pt-[22px] pb-4"
+      className="border-line bg-sidebar sticky top-0 flex h-dvh flex-col border-r px-3 pt-[18px] pb-4"
       aria-label="Seitenleiste"
     >
-      <NavLink to={PFADE.heute} className="flex items-baseline gap-2.5 px-2.5 pb-[18px]">
-        <span className="text-ink-bright font-serif text-[26px] leading-none italic">Steiner &amp; Co.</span>
-        <span className="label">CRM</span>
+      <NavLink to={PFADE.heute} className="flex items-center px-2 pb-4">
+        <Marke zusatz="CRM" />
       </NavLink>
 
       <button
         type="button"
         onClick={() => setPaletteOffen(true)}
-        className="border-line-strong text-ink-3 ease-brand hover:bg-surface-hover hover:text-ink mb-3.5 flex h-[34px] w-full items-center gap-2 rounded-sm border px-2.5 text-left text-[13px] transition-[color,background] duration-[var(--t-1)]"
+        className="border-line bg-canvas text-ink-3 ease-brand hover:text-ink shadow-card mb-3.5 flex h-[34px] w-full items-center gap-2 rounded-sm border px-2.5 text-left text-[13px] transition-[color,background] duration-[var(--t-1)]"
       >
         <Search size={14} strokeWidth={1.75} aria-hidden />
-        <span className="flex-1">{ALLGEMEIN.suchenOderBefehl}</span>
+        <span className="min-w-0 flex-1 truncate">{ALLGEMEIN.suchenOderBefehl}</span>
         <Kbd>⌘K</Kbd>
       </button>
 
@@ -57,9 +57,7 @@ export function Sidebar() {
               className={({ isActive }) =>
                 cn(
                   'group text-ui ease-brand hover:bg-surface-hover hover:text-ink relative flex h-[34px] items-center gap-2.5 rounded-sm px-2.5 transition-[background,color] duration-[var(--t-1)]',
-                  isActive
-                    ? 'bg-surface-hover text-ink before:bg-signal before:absolute before:top-2 before:bottom-2 before:-left-3 before:w-0.5 before:content-[""]'
-                    : 'text-ink-2',
+                  isActive ? 'bg-surface-pressed/70 text-ink-bright' : 'text-ink-2',
                 )
               }
             >
@@ -69,7 +67,7 @@ export function Sidebar() {
                 const text = n.zaehler === 'telefon' && zaehler.telefon > 0 ? `${zaehler.telefon}` : wert
                 return (
                   <>
-                    <n.icon size={18} strokeWidth={1.75} aria-hidden className="opacity-85" />
+                    <n.icon size={18} strokeWidth={1.75} aria-hidden className={isActive ? 'text-ink' : 'text-ink-3'} />
                     <span>{n.label}</span>
                     {n.pfad === '/einstellungen' ? (
                       <Suspense fallback={null}>

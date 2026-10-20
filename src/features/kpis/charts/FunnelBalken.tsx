@@ -20,7 +20,7 @@ export function FunnelBalken({ anteil, className }: FunnelBalkenProps) {
     >
       <line x1="0" x2="100%" y1={1.5} y2={1.5} className="stroke-line-strong" strokeWidth={1} />
       {breite > 0 ? (
-        <rect x={0} y={0} width={`${breite.toFixed(2)}%`} height={3} className="fill-ink opacity-90" />
+        <rect x={0} y={0} width={`${breite.toFixed(2)}%`} height={3} className="fill-signal opacity-80" />
       ) : null}
     </svg>
   )

@@ -120,7 +120,7 @@ function Uebersicht() {
       <span className="label">Handbuch</span>
       <h2
         id="hilfe-titel"
-        className="text-ink-bright mt-2 font-serif text-[32px] leading-[1.1] italic max-md:text-[28px]"
+        className="text-ink-bright mt-2 text-[30px] leading-[1.15] font-bold tracking-[-0.02em] max-md:text-[26px]"
       >
         Was das CRM kann – und was nicht.
       </h2>
@@ -175,7 +175,7 @@ function ThemaText({ thema, person }: { thema: Thema; person: PersonId | null })
         </span>
         <h2
           id="hilfe-titel"
-          className="text-ink-bright mt-2 font-serif text-[32px] leading-[1.1] italic max-md:text-[28px]"
+          className="text-ink-bright mt-2 text-[30px] leading-[1.15] font-bold tracking-[-0.02em] max-md:text-[26px]"
         >
           {thema.titel}
         </h2>

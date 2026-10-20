@@ -1,4 +1,5 @@
 // oxlint-disable react/only-export-components -- sicheresZiel/MAX_VERSUCHE werden vom Test geprüft
+import { Marke } from '@/components/ui/Marke'
 import { Eye, EyeOff } from 'lucide-react'
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Navigate, useNavigate, useSearchParams } from 'react-router'
@@ -134,10 +135,7 @@ export function Component() {
       aria-label="Anmelden"
     >
       <header className="flex flex-wrap items-baseline justify-between gap-4">
-        <div className="flex items-baseline gap-2.5">
-          <span className="text-ink-bright font-serif text-[26px] leading-none italic">Steiner &amp; Co.</span>
-          <span className="label">CRM</span>
-        </div>
+        <Marke groesse="l" zusatz="CRM" />
         {/* Dateline nach ux § 6.4 („Mittwoch, 14. Oktober 2026 · KW 42“); reference.html kürzt das Datum – ux gilt für Wortlaut. */}
         <span className="text-ink-3 tnum font-mono text-[12.5px] tracking-[0.02em]">
           {dateline()} · crm.steinerundco.de

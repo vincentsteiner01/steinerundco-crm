@@ -1,3 +1,4 @@
+import { Marke } from '@/components/ui/Marke'
 import { MessageSquareWarning, Search } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router'
 import { PFADE } from '@/app/pfade'
@@ -16,9 +17,8 @@ export function PhoneTopbar() {
   const setPaletteOffen = useUiStore((s) => s.setPaletteOffen)
   return (
     <header className="border-line bg-canvas sticky top-0 z-30 flex h-14 items-center justify-between border-b px-4">
-      <NavLink to={PFADE.heute} className="flex items-baseline gap-2">
-        <span className="text-ink-bright font-serif text-[22px] leading-none italic">Steiner &amp; Co.</span>
-        <span className="label">CRM</span>
+      <NavLink to={PFADE.heute} className="flex items-center">
+        <Marke zusatz="CRM" />
       </NavLink>
       <span className="flex items-center gap-1">
         {/* Feedback mit Screenshot – oben statt schwebend über Kartentext und Tab-Leiste (Runde 2, 390 px) */}

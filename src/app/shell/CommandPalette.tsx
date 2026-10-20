@@ -118,7 +118,7 @@ function QuelleGruppe({
           {/* Einzeilig wie die 40-px-Zeile verlangt: lange Namen/Firmen enden mit „…“ (Runde 2: zweizeilige Treffer) */}
           {gruppe === 'leads' ? (
             <span
-              className="text-ink-bright max-w-[60%] flex-none truncate font-serif text-[18px] leading-[1.2] italic"
+              className="text-ink-bright max-w-[60%] flex-none truncate text-[16px] leading-[1.25] font-semibold"
               title={t.name}
             >
               {t.name}
@@ -165,7 +165,7 @@ export function CommandPalette() {
       onOpenChange={setOffen}
       label="Suchen oder Befehl"
       shouldFilter={false}
-      overlayClassName="fixed inset-0 z-[60] bg-canvas/50"
+      overlayClassName="fixed inset-0 z-[60] bg-scrim"
       contentClassName={cn(
         'fixed left-1/2 top-[14vh] z-[61] w-[min(var(--spacing-palette),calc(100vw-32px))] -translate-x-1/2 overflow-hidden rounded-lg bg-surface-raised shadow-float outline-none',
         'animate-[pop-in_var(--t-3)_var(--ease-brand)] max-md:inset-0 max-md:top-0 max-md:w-auto max-md:translate-x-0 max-md:rounded-none',

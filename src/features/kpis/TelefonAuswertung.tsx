@@ -8,7 +8,7 @@ function Balken({ anteil, ton = 'ink' }: { anteil: number; ton?: 'ink' | 'signal
   return (
     <span className="bg-surface-hover block h-1.5 w-full overflow-hidden rounded-full" aria-hidden>
       <span
-        className={ton === 'signal' ? 'bg-signal block h-full' : 'bg-ink-3 block h-full'}
+        className={ton === 'signal' ? 'bg-signal block h-full' : 'bg-signal/45 block h-full'}
         style={{ width: `${Math.round(Math.min(1, Math.max(0, anteil)) * 100)}%` }}
       />
     </span>

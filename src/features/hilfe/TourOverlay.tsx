@@ -223,7 +223,7 @@ export default function TourOverlay({ tour: tourKey, name, onEnde }: TourOverlay
   const titel = mitName(schritt.titel, name)
 
   const abdunkler =
-    'bg-canvas/70 pointer-events-none absolute ease-brand transition-[top,left,width,height] duration-[var(--t-3)]'
+    'bg-scrim pointer-events-none absolute ease-brand transition-[top,left,width,height] duration-[var(--t-3)]'
 
   return createPortal(
     <div

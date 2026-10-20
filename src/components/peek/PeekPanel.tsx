@@ -174,7 +174,7 @@ export function PeekPanel({ leadId, children, kopfRechts, onSchliessen, onWechse
         <div
           data-scrim
           // Sheet (< 768) liegt über der Tab-Leiste (z-50) – sonst scrollte der Lead-Inhalt unter ihr weg (Runde 2, 390 px)
-          className={cn('split:hidden bg-canvas/35 fixed inset-0', modus === 'sheet' ? 'z-[54]' : 'z-[39]')}
+          className={cn('split:hidden bg-scrim fixed inset-0', modus === 'sheet' ? 'z-[54]' : 'z-[39]')}
           onClick={schliesse}
           aria-hidden
         />

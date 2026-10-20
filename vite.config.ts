@@ -36,8 +36,8 @@ export default defineConfig({
         start_url: '/',
         scope: '/',
         display: 'standalone',
-        background_color: '#07080d',
-        theme_color: '#07080d',
+        background_color: '#ffffff',
+        theme_color: '#ffffff',
         icons: [
           // nicht unter /icons/ – den Pfad belegt Apache global (Alias auf die eigenen Verzeichnis-Icons)
           { src: '/icon-192.png', sizes: '192x192', type: 'image/png' },

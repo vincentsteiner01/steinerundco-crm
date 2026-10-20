@@ -169,8 +169,8 @@ export const THEMEN: readonly Thema[] = [
         punkte: [
           '**Rückrufe** – zugesagte Rückrufe mit Uhrzeit.',
           '**Antworten** – Leads, die geantwortet haben und auf dich warten.',
-          '**Überfällig** – Schritte, deren Termin vorbei ist (Amber).',
-          '**Heute fällig** – Schritte für heute (Lime).',
+          '**Überfällig** – Schritte, deren Termin vorbei ist (orange).',
+          '**Heute fällig** – Schritte für heute (blau).',
           '**Annahme prüfen** – offene Vernetzungsanfragen der letzten 7 Tage zum Abhaken.',
           '**Opener senden** – frisch Vernetzte, die erste Nachricht ist fertig.',
           '**Neue Anfragen** – deine Tagesliste aus dem Schnellimport.',
@@ -493,7 +493,7 @@ export const THEMEN: readonly Thema[] = [
         art: 'liste',
         punkte: [
           'Links der Baum: Kanal → Phase → Leitfaden. Unter jeder Phase steht ihr Zweck.',
-          'Rechts Text, „Wann verwenden?“, Anredeform und Notizen. Platzhalter wie [Vorname] oder [Unternehmen] werden für jeden Lead gefüllt; was offen bleibt, ist Amber markiert und muss vor dem Kopieren gefüllt werden.',
+          'Rechts Text, „Wann verwenden?“, Anredeform und Notizen. Platzhalter wie [Vorname] oder [Unternehmen] werden für jeden Lead gefüllt; was offen bleibt, ist orange markiert und muss vor dem Kopieren gefüllt werden.',
           'Die Vorschau mit einem echten Lead zeigt den fertigen Text, {C} kopiert ihn.',
           'Statistik: wie oft gesendet, wie viele Antworten binnen 7 Tagen, Quote.',
           'Duplizieren, Deaktivieren und „Als Standard für Schritt …“ bestimmen, welche Vorlage eine Sequenz nimmt.',

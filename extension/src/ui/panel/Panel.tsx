@@ -228,7 +228,10 @@ export function Panel() {
     <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <header className="kopf">
         <span className="links">
-          <span className="marke">Steiner &amp; Co.</span>
+          <span className="marke">
+            <img src="/icons/icon-32.png" alt="" />
+            Steiner &amp; Co.
+          </span>
           <span className="label">CRM</span>
         </span>
         {ich ? (

@@ -1,6 +1,6 @@
 /* ──────────────────────────────────────────────────────────────────────────
    tokens.css · Steiner & Co. CRM · crm.steinerundco.de
-   Design-System „Editorial Terminal“ (Richtung A + Jury-Grafts) · Stand 14.10.2026
+   Design-System „Hell“ (Notion/iOS) · Stand 20.10.2026 – löst „Editorial Terminal“ (dunkel) ab.
 
    Einbinden (Vite + Tailwind v4):
      src/index.css
@@ -10,62 +10,16 @@
    Alles, was Tailwind kennt (Farben, Schriften, Größen, Radien, Schatten,
    Easing, Breakpoints), steht im @theme-Block und erzeugt Utilities
    (bg-surface-raised, text-ink-3, font-mono, text-label, rounded-md …).
-   Zeiten (--t-*) und Maße der Shell stehen als normale Custom Properties
-   auf :root, weil Tailwind dafür keinen Namensraum hat.
+   Die Namen sind semantisch geblieben (surface/ink/line/signal) – Komponenten
+   kennen nur sie, deshalb war der Wechsel auf Hell ein Austausch der Werte.
 
-   Dunkel ist das einzige Theme in v1 (siehe DESIGN-SYSTEM.md § 7). Ein helles
-   Theme wäre ein einziger [data-theme="light"]-Block mit denselben Namen –
-   deshalb heißen die Tokens semantisch (surface/ink/line/signal), nicht nach
-   ihrem Wert.
+   Grundsätze: weiße Fläche, Seitenleiste in warmem Grau, Text in Notion-Anthrazit,
+   ein Akzent (Blau) für Primäraktion, Fokus und „heute“; Etiketten in Pastell
+   (tag-*), Systemschrift (SF Pro auf Mac/iPhone), ruhige Rundungen, weiche Schatten.
+   Alle Textfarben ≥ 4,5 : 1 auf ihrer Fläche (geprüft 20.10.2026).
    ────────────────────────────────────────────────────────────────────────── */
 
-/* ── 0 · Schriften (self-hosted unter /public/fonts, alle OFL) ─────────────
-   geist-latin.woff2              Geist Variable 100–900, latin        29 KB
-   geist-mono-latin.woff2         Geist Mono Variable 100–900, latin   23 KB
-   newsreader-italic-latin.woff2  Newsreader Italic 400, latin         63 KB
-   In index.html alle drei mit <link rel="preload" as="font" type="font/woff2"
-   crossorigin> vorladen und im PWA-Precache halten – dann greift „swap“
-   praktisch nie und es gibt keinen sichtbaren Reflow von Georgia auf Newsreader. */
-
-@font-face {
-  font-family: 'Geist';
-  src: url('/fonts/geist-latin.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
-    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Geist Mono';
-  src: url('/fonts/geist-mono-latin.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-  unicode-range:
-    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC,
-    U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Newsreader';
-  src: url('/fonts/newsreader-italic-latin.woff2') format('woff2');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
-/* Metrik-angepasster Fallback, damit Namen beim Font-Swap nicht springen.
-   Werte sind Näherungen (Georgia Italic → Newsreader Italic); bei Bedarf mit
-   `npx fontpie` nachmessen – markiert als unsicher. */
-@font-face {
-  font-family: 'Newsreader Fallback';
-  src: local('Georgia Italic'), local('Georgia-Italic'), local('Georgia');
-  font-style: italic;
-  size-adjust: 94%;
-  ascent-override: 92%;
-  descent-override: 24%;
-  line-gap-override: 0%;
-}
+/* ── 0 · Schriften: Systemschrift, nichts zu laden (SF Pro auf Apple, Segoe UI auf Windows) ── */
 
 /* ── 1 · Tailwind v4 Theme ────────────────────────────────────────────────── */
 @theme {
@@ -79,60 +33,84 @@
   --ease-*: initial;
   --tracking-*: initial;
 
-  /* 1.1 Flächen (fünf Tintenstufen, von hinten nach vorn) */
-  --color-canvas: #07080d; /* App-Hintergrund, Sidebar, Tab-Leiste        */
-  --color-surface: #0a0b11; /* Inhaltsfläche, Queue-Karte (passiv)         */
-  --color-surface-raised: #0f1119; /* aktive Karte, Peek, Palette, Toast, Popover */
-  --color-surface-hover: #161924; /* Hover-Zeile, Inputs, Nachrichten-Block      */
-  --color-surface-pressed: #1e2230; /* gedrückt, Avatar Vincent, kbd-Fläche        */
+  /* 1.1 Flächen */
+  --color-canvas: #ffffff; /* App-Hintergrund, Seitenkopf, Tab-Leiste      */
+  --color-sidebar: #f7f7f5; /* Seitenleiste und Icon-Rail (Notion-Grau)     */
+  --color-surface: #ffffff; /* Inhaltsfläche, Karten                         */
+  --color-surface-raised: #ffffff; /* Peek, Palette, Toast, Popover (mit Schatten) */
+  --color-surface-hover: #f1f1ef; /* Hover-Zeile, Inputs, Nachrichten-Block       */
+  --color-surface-pressed: #e8e7e4; /* gedrückt, Avatar-Fläche, kbd                 */
+  --color-scrim: rgb(15 15 15 / 0.32); /* Abdunklung hinter Dialogen               */
 
-  /* 1.2 Tinte (Text). Kontraste auf --color-surface-raised: ink 16,5 · ink-2 8,0 ·
-     ink-3 4,8 · ink-4 3,5 · deco 2,7. Regel: Informationstext nie unter ink-3. */
-  --color-ink: #f1f0ea; /* Primärtext („Papier“)                */
-  --color-ink-bright: #fbfaf6; /* Lead-Namen, Seitentitel, KPI-Ziffern  */
-  --color-ink-2: rgb(241 240 234 / 0.68); /* Sekundärtext, Unternehmen, Zitate    */
-  --color-ink-3: rgb(241 240 234 / 0.5); /* Labels, Meta, Zeitstempel, kbd       */
-  --color-ink-4: rgb(241 240 234 / 0.4); /* NUR deaktiviert + Platzhalter        */
-  --color-deco: rgb(241 240 234 / 0.32); /* NUR Linien, Icons, Achsenstriche – nie Text */
+  /* 1.2 Tinte (Text). Kontraste auf Weiß: ink 12,3 · ink-2 6,5 · ink-3 5,4. Regel: Informationstext nie unter ink-3. */
+  --color-ink: #37352f; /* Primärtext                           */
+  --color-ink-bright: #1f1e1c; /* Namen, Seitentitel, Kennzahlen       */
+  --color-ink-2: #5f5e5b; /* Sekundärtext, Unternehmen, Zitate    */
+  --color-ink-3: #6b6a66; /* Labels, Meta, Zeitstempel, kbd       */
+  --color-ink-4: #a19f9a; /* NUR deaktiviert + Platzhalter        */
+  --color-deco: #d3d1cb; /* NUR Linien, Icons, Achsenstriche – nie Text */
 
   /* 1.3 Linien */
-  --color-line: rgb(241 240 234 / 0.1); /* Haarlinie: Zeilen, Trenner           */
-  --color-line-strong: rgb(241 240 234 / 0.2); /* Rahmen: Panel, Input, Chip, kbd      */
+  --color-line: rgb(55 53 47 / 0.09); /* Haarlinie: Zeilen, Trenner           */
+  --color-line-strong: rgb(55 53 47 / 0.16); /* Rahmen: Panel, Input, Karte, kbd     */
 
-  /* 1.4 Signalfarben = Zeitzustand. Nichts anderes ist farbig. */
-  --color-signal: #caff68; /* heute fällig · Primäraktion · Fokus · Cursor */
-  --color-signal-ink: #07080d; /* Text auf Lime                        */
-  --color-signal-hover: #d8ff8f; /* Hover der Primäraktion (Lime aufgehellt) */
-  --color-signal-tint: rgb(202 255 104 / 0.14); /* Chip „heute“, Zeilen-Tint            */
-  --color-overdue: #ffb269; /* überfällig · Rückruf verpasst · offener Platzhalter */
-  --color-overdue-tint: rgb(255 178 105 / 0.14);
-  --color-done: #86c79f; /* NUR Erledigt-Zeile, Rückgängig-Toast, Zellen-Blink */
-  --color-done-tint: rgb(134 199 159 / 0.14);
-  --color-danger: #ff5b52; /* destruktive Bestätigung, Fehler, Sperrliste */
-  --color-danger-tint: rgb(255 91 82 / 0.12);
-  --color-presence: #69e7df; /* NUR der 6-px-Präsenzpunkt der anderen Person */
+  /* 1.4 Akzent und Zustände */
+  --color-signal: #1b64bd; /* Primäraktion · Fokus · heute fällig · Auswahl */
+  --color-signal-ink: #ffffff; /* Text auf dem Akzent                  */
+  --color-signal-hover: #15559f;
+  --color-signal-tint: #e8f1fb; /* Chip „heute“, Auswahl-Zeile          */
+  --color-overdue: #a24d09; /* überfällig · Rückruf verpasst · offener Platzhalter */
+  --color-overdue-tint: #fbecdd;
+  --color-done: #357050; /* Erledigt, Rückgängig-Toast, Zellen-Blink */
+  --color-done-tint: #edf3ec;
+  --color-danger: #b23631; /* destruktive Bestätigung, Fehler, Sperrliste */
+  --color-danger-tint: #fdebec;
+  --color-presence: #12a594; /* Präsenzpunkt der anderen Person      */
 
-  /* 1.5 Schriften */
-  --font-sans: 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --font-serif: 'Newsreader', 'Newsreader Fallback', Georgia, 'Times New Roman', serif;
-  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* 1.4b Etiketten in Pastell (Notion-Palette, Text ≥ 4,5 : 1 auf dem eigenen Grund) */
+  --color-tag-grau: #f1f1ef;
+  --color-tag-grau-ink: #5f5e5b;
+  --color-tag-braun: #f4eeee;
+  --color-tag-braun-ink: #87563f;
+  --color-tag-orange: #fbecdd;
+  --color-tag-orange-ink: #a24d09;
+  --color-tag-gelb: #fbf3db;
+  --color-tag-gelb-ink: #896510;
+  --color-tag-gruen: #edf3ec;
+  --color-tag-gruen-ink: #357050;
+  --color-tag-blau: #e7f3f8;
+  --color-tag-blau-ink: #286b93;
+  --color-tag-lila: #f6f3f9;
+  --color-tag-lila-ink: #7a51a1;
+  --color-tag-rosa: #faf1f5;
+  --color-tag-rosa-ink: #ad3a78;
+  --color-tag-rot: #fdebec;
+  --color-tag-rot-ink: #b23631;
+
+  /* 1.5 Schriften: eine Systemschrift für alles; Zahlen über tabular-nums (Utility tnum, mono, display) */
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', 'Helvetica Neue', Helvetica,
+    Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji';
+  --font-serif: var(--font-sans); /* früher Newsreader – bleibt als Name, falls noch eine Klasse darauf zeigt */
+  --font-mono: var(--font-sans); /* Ziffern stehen über tabular-nums trotzdem in Spalten */
+  --font-code: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; /* nur für Code/Schlüssel */
 
   /* 1.6 Schriftgrößen (text-<name>). Zweite Zeile = Zeilenhöhe, Spationierung, Gewicht. */
   --text-kbd: 11px;
   --text-kbd--line-height: 1;
   --text-kbd--letter-spacing: 0.02em;
-  --text-label: 11px;
+  --text-label: 12px;
   --text-label--line-height: 1.3;
-  --text-label--letter-spacing: 0.12em;
-  --text-label--font-weight: 600;
-  --text-mono-sm: 11.5px;
+  --text-label--letter-spacing: 0;
+  --text-label--font-weight: 500;
+  --text-mono-sm: 12px;
   --text-mono-sm--line-height: 1.3;
-  --text-mono-sm--letter-spacing: 0.02em;
-  --text-small: 12.5px;
+  --text-mono-sm--letter-spacing: 0;
+  --text-small: 13px;
   --text-small--line-height: 1.4;
   --text-mono: 13px;
   --text-mono--line-height: 1.4;
-  --text-ui: 13.5px;
+  --text-ui: 14px;
   --text-ui--line-height: 1.4;
   --text-ui--font-weight: 500;
   --text-table: 14px;
@@ -141,41 +119,42 @@
   --text-body--line-height: 1.55;
   --text-h3: 15px;
   --text-h3--line-height: 1.35;
-  --text-h3--font-weight: 550;
-  --text-voice: 17px;
-  --text-voice--line-height: 1.4; /* Newsreader, ein Satz je Screen */
-  --text-h2: 18px;
+  --text-h3--font-weight: 600;
+  --text-voice: 15px;
+  --text-voice--line-height: 1.5; /* ein ruhiger Satz je Screen */
+  --text-h2: 19px;
   --text-h2--line-height: 1.3;
-  --text-h2--letter-spacing: -0.02em;
-  --text-h2--font-weight: 550;
-  --text-lead: 22px;
-  --text-lead--line-height: 1.2;
-  --text-lead--letter-spacing: -0.005em; /* Newsreader: Queue-Karte, Peek-Kopf */
-  --text-display-sm: 28px;
-  --text-display-sm--line-height: 1;
+  --text-h2--letter-spacing: -0.01em;
+  --text-h2--font-weight: 650;
+  --text-lead: 19px;
+  --text-lead--line-height: 1.25;
+  --text-lead--letter-spacing: -0.01em; /* Namen: Queue-Karte, Peek-Kopf */
+  --text-display-sm: 26px;
+  --text-display-sm--line-height: 1.05;
   --text-display-sm--letter-spacing: -0.02em;
-  --text-display-sm--font-weight: 500;
-  --text-display: 40px;
-  --text-display--line-height: 1;
+  --text-display-sm--font-weight: 650;
+  --text-display: 34px;
+  --text-display--line-height: 1.05;
   --text-display--letter-spacing: -0.02em;
-  --text-display--font-weight: 500;
-  --text-display-xl: 72px;
-  --text-display-xl--line-height: 0.95;
+  --text-display--font-weight: 650;
+  --text-display-xl: 60px;
+  --text-display-xl--line-height: 1;
   --text-display-xl--letter-spacing: -0.03em;
-  --text-display-xl--font-weight: 500;
-  --text-headline: clamp(32px, 2.6vw, 44px);
-  --text-headline--line-height: 1.05;
-  --text-headline--letter-spacing: -0.01em;
+  --text-display-xl--font-weight: 650;
+  --text-headline: clamp(28px, 2.3vw, 36px);
+  --text-headline--line-height: 1.15;
+  --text-headline--letter-spacing: -0.02em;
 
-  /* 1.7 Gewichte (Geist nie über 600) */
+  /* 1.7 Gewichte */
   --font-weight-normal: 400;
   --font-weight-medium: 500;
-  --font-weight-strong: 550;
+  --font-weight-strong: 600;
   --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 
   /* 1.8 Spationierung */
-  --tracking-label: 0.12em;
-  --tracking-mono-sm: 0.02em;
+  --tracking-label: 0;
+  --tracking-mono-sm: 0;
   --tracking-h2: -0.02em;
   --tracking-display: -0.02em;
   --tracking-display-xl: -0.03em;
@@ -193,16 +172,17 @@
   --spacing-tabbar: 56px; /* Tab-Leiste Phone (+ safe-area) – 56 px nach BAUPLAN § 1.5 Nr. 22 (ux § 7.1), nicht 60 */
   --spacing-palette: 640px;
 
-  /* 1.10 Radien (Terminal, nicht Mobile-App) */
-  --radius-xs: 3px; /* Chip, kbd, Glyph-Rahmen          */
-  --radius-sm: 6px; /* Button, Input, Nachrichten-Block */
-  --radius-md: 10px; /* Queue-Karte, Panel, Zähler       */
-  --radius-lg: 14px; /* Peek, Palette, Toast, Dialog     */
+  /* 1.10 Radien (ruhig, iOS-nah) */
+  --radius-xs: 5px; /* Chip, kbd, Glyph-Rahmen          */
+  --radius-sm: 8px; /* Button, Input, Nachrichten-Block */
+  --radius-md: 12px; /* Karte, Panel, Zähler             */
+  --radius-lg: 16px; /* Peek, Palette, Toast, Dialog     */
   --radius-full: 999px; /* Avatar, Präsenzpunkt             */
 
-  /* 1.11 Elevation: genau zwei Schatten, nur für Schwebendes */
-  --shadow-float: 0 24px 64px rgb(0 0 0 / 0.55), 0 0 0 1px rgb(241 240 234 / 0.2);
-  --shadow-toast: 0 12px 32px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(241 240 234 / 0.12);
+  /* 1.11 Elevation: weich, nur für Schwebendes (+ card für ruhig gehobene Karten) */
+  --shadow-float: 0 16px 40px rgb(15 15 15 / 0.12), 0 3px 8px rgb(15 15 15 / 0.06), 0 0 0 1px rgb(15 15 15 / 0.06);
+  --shadow-toast: 0 8px 24px rgb(15 15 15 / 0.12), 0 0 0 1px rgb(15 15 15 / 0.06);
+  --shadow-card: 0 1px 2px rgb(15 15 15 / 0.04), 0 0 0 1px rgb(15 15 15 / 0.05);
 
   /* 1.12 Bewegung */
   --ease-brand: cubic-bezier(0.16, 1, 0.3, 1); /* alles, was erscheint oder sich bewegt */
@@ -260,7 +240,7 @@
 
 /* ── 2 · Nicht-Tailwind-Variablen ────────────────────────────────────────── */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --t-1: 160ms; /* Hover, Chip, Fokus, Tab-Marker                     */
   --t-2: 200ms; /* Karte → Erledigt-Zeile, Toast, Zähler-Tick         */
   --t-3: 220ms; /* Peek von rechts, Palette, Screen-Wechsel           */
@@ -310,18 +290,6 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
-  }
-  /* 3 % Rauschen auf der Fläche, damit Schwarz nicht nach Bildschirm aussieht.
-     Kein Blend-Mode (Repaint-Kosten), pointer-events none. Liegt ÜBER dem Inhalt: unter #root zeichneten deckende
-     canvas-Flächen (sticky Seitenkopf, Tab-Leiste) ein rauschfreies, sichtbar dunkleres Rechteck (Runde 2, Heute 1440/1024). */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    z-index: 2147483000;
-    pointer-events: none;
-    opacity: 0.035;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
   #root {
     position: relative;
@@ -383,16 +351,16 @@
     opacity: 1;
   }
   ::selection {
-    background: var(--color-signal);
-    color: var(--color-signal-ink);
+    background: rgb(27 100 189 / 0.18);
+    color: inherit;
   }
   [hidden] {
     display: none !important;
   }
 
-  /* Fokus: Lime, 2 px, außen. Zeilen und Karten bekommen stattdessen den Cursor-Zustand (§ 3.9). */
+  /* Fokus: Akzent, 2 px, außen. Zeilen und Karten bekommen stattdessen den Cursor-Zustand (§ 3.9). */
   :focus-visible {
-    outline: 2px solid var(--color-signal);
+    outline: 2px solid rgb(27 100 189 / 0.6);
     outline-offset: 2px;
     border-radius: inherit;
   }
@@ -438,7 +406,7 @@
 
 /* ── 4 · Utilities (Tailwind v4 @utility → auch mit Varianten nutzbar: hover:tnum …) ── */
 
-/* Tabulare Ziffern, auch für Geist (z. B. Zähler im Chip) */
+/* Tabulare Ziffern im Fließtext (z. B. Zähler im Chip) */
 @utility tnum {
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings:
@@ -463,11 +431,10 @@
   border: 1px solid var(--color-line-strong);
 }
 
-/* Typo-Rollen (siehe DESIGN-SYSTEM.md § 3.4) */
+/* Typo-Rollen: alles Systemschrift; Gewicht und Größe statt Kursive */
 @utility headline {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-weight: 700;
   font-size: var(--text-headline);
   line-height: var(--text-headline--line-height);
   letter-spacing: var(--text-headline--letter-spacing);
@@ -475,17 +442,15 @@
   hyphens: none;
 }
 @utility lead-name {
-  font-family: var(--font-serif);
-  font-style: italic;
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-weight: 600;
   font-size: var(--text-lead);
   line-height: var(--text-lead--line-height);
   letter-spacing: var(--text-lead--letter-spacing);
   color: var(--color-ink-bright);
 }
 @utility voice {
-  font-family: var(--font-serif);
-  font-style: italic;
+  font-family: var(--font-sans);
   font-weight: 400;
   font-size: var(--text-voice);
   line-height: var(--text-voice--line-height);
@@ -496,7 +461,6 @@
   line-height: var(--text-label--line-height);
   font-weight: var(--text-label--font-weight);
   letter-spacing: var(--text-label--letter-spacing);
-  text-transform: uppercase;
   color: var(--color-ink-3);
 }
 @utility mono {
@@ -519,7 +483,7 @@
     'lnum' 1;
 }
 @utility display {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-weight: var(--text-display--font-weight);
   font-size: var(--text-display);
   line-height: var(--text-display--line-height);
@@ -531,7 +495,7 @@
     'lnum' 1;
 }
 @utility display-xl {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-weight: var(--text-display-xl--font-weight);
   font-size: var(--text-display-xl);
   line-height: var(--text-display-xl--line-height);
@@ -549,10 +513,10 @@
   min-width: 20px;
   padding: 2px 5px;
   text-align: center;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--text-kbd);
+  font-weight: 500;
   line-height: 1;
-  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--color-ink-3);
   border: 1px solid var(--color-line-strong);
@@ -574,20 +538,19 @@
   height: 16px;
   min-width: 18px;
   padding: 0 4px;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 11px;
+  font-weight: 600;
   line-height: 1;
-  letter-spacing: 0.02em;
-  color: var(--color-ink-3);
-  border: 1px solid var(--color-line-strong);
+  color: var(--color-tag-blau-ink);
+  background: var(--color-tag-blau);
   border-radius: var(--radius-xs);
 }
 
-/* Cursor-Zustand für Zeilen/Karten (Tastatur-Position): 2-px-Balken links + Fläche */
+/* Cursor-Zustand für Zeilen/Karten (Tastatur-Position): zartes Blau wie eine Auswahl in Notion */
 @utility cursor-bar {
   position: relative;
-  background: var(--color-surface-hover);
-  box-shadow: inset 2px 0 0 var(--color-signal);
+  background: var(--color-signal-tint);
 }
 
 /* Eine Zeile, abgeschnitten */
@@ -607,47 +570,7 @@
   white-space: nowrap;
 }
 
-/* Rauschen abschalten (z. B. in Print/Screenshots) */
-@utility no-noise {
-  & body::before {
-    display: none;
-  }
-}
-
-/* ── 5 · Helles Theme (NICHT aktiv – dokumentierter Fallback, Richtung C § 1.8 invertiert) ──
-   Erst nach vier Wochen Realbetrieb entscheiden (DESIGN-SYSTEM.md § 7). Aktivierung wäre:
-   <html data-theme="light"> + diesen Block einkommentieren. Komponenten bleiben unberührt,
-   weil sie nur semantische Namen kennen. Lime ist auf Papier kein Signal (1,3 : 1) – im hellen
-   Theme übernimmt Forest #236b46 die Rolle von --color-signal, Lime bleibt Markierung.
-
-:root[data-theme="light"] {
-  color-scheme: light;
-  --color-canvas:          #f1f0ea;
-  --color-surface:         #fbfaf6;
-  --color-surface-raised:  #ffffff;
-  --color-surface-hover:   #e7e5dc;
-  --color-surface-pressed: #dddace;
-  --color-ink:        #07080d;
-  --color-ink-bright: #000000;
-  --color-ink-2:      rgb(7 8 13 / 0.72);
-  --color-ink-3:      rgb(7 8 13 / 0.58);
-  --color-ink-4:      rgb(7 8 13 / 0.40);
-  --color-deco:       rgb(7 8 13 / 0.28);
-  --color-line:        rgb(7 8 13 / 0.09);
-  --color-line-strong: rgb(7 8 13 / 0.18);
-  --color-signal:      #236b46;
-  --color-signal-ink:  #fbfaf6;
-  --color-signal-hover: #1d5a3a;
-  --color-signal-tint: rgb(35 107 70 / 0.10);
-  --color-overdue:      #8a4f0f;
-  --color-overdue-tint: rgb(255 178 105 / 0.26);
-  --color-done:      #1a553a;
-  --color-done-tint: rgb(134 199 159 / 0.22);
-  --color-danger:      #b8302a;
-  --color-danger-tint: rgb(255 91 82 / 0.14);
-  --color-presence:    #0b6f69;
-  --shadow-float: 0 8px 24px rgb(7 8 13 / 0.12), 0 1px 3px rgb(7 8 13 / 0.08);
-  --shadow-toast: 0 8px 24px rgb(7 8 13 / 0.12), 0 1px 3px rgb(7 8 13 / 0.08);
-}
-:root[data-theme="light"] body::before { opacity: 0.035; mix-blend-mode: multiply; }
-*/
+/* ── 5 · Dunkles Theme ─────────────────────────────────────────────────────
+   Bis 19.10.2026 war „Editorial Terminal“ (dunkel, Lime) das einzige Theme. Seit 20.10.2026 ist Hell
+   Standard (Vincent: „sauber, simpel, wie Notion und iOS – hell, freundlich“). Die alten Werte stehen in
+   der Git-Historie (Commit vor dem Redesign), falls je ein Dunkelmodus gewünscht wird. */

@@ -279,14 +279,19 @@ export function EingangListe() {
             const n = zaehler[f]
             if (!aktiv && n === 0 && f !== 'offen' && f !== 'alle') return null
             return (
-              // Aktiv neutral wie das Segment daneben (surface-hover + line-strong) – Lime heißt nur heute/Primär/Fokus
-              // (DESIGN-SYSTEM § 2, Runde 3). Solange geladen wird „–“ statt einer falschen 0.
+              // Aktiv neutral wie der Schieber im Segment (weiß, Rahmen, zarter Schatten) – Blau heißt nur heute/Primär/Fokus
+              // (Runde 3, helles Design 20.10.2026). Solange geladen wird „–“ statt einer falschen 0.
               <Chip
                 key={f}
                 ton={aktiv ? 'neutral' : 'muted'}
                 aria-pressed={aktiv}
                 onClick={() => setze('status', f === 'offen' ? null : f)}
-                className={cn('h-7 px-2.5', aktiv ? 'bg-surface-hover' : 'border-line')}
+                className={cn(
+                  'h-7 px-2.5',
+                  aktiv
+                    ? 'bg-surface-raised border-line-strong text-ink-bright shadow-card'
+                    : 'border-line bg-transparent',
+                )}
               >
                 {filterLabel(f)} <span className="font-mono">{isLoading ? '–' : n}</span>
               </Chip>

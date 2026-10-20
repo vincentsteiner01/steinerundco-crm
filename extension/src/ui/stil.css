@@ -1,57 +1,44 @@
-/* Steiner & Co. CRM – Erweiterung. Design-System „Editorial Terminal“ (tokens.css des CRM, ohne Tailwind):
-   dunkle Tinte, Papier-Text, Lime = heute/Primär/Fokus, Amber = überfällig/offener Platzhalter, Sage = gerade erledigt,
-   Rot = Sperre/Fehler. Newsreader kursiv nur für Namen, Geist Mono für jede Zahl. */
-
-@font-face {
-  font-family: 'Geist';
-  src: url('/fonts/geist-latin.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Geist Mono';
-  src: url('/fonts/geist-mono-latin.woff2') format('woff2');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: 'Newsreader';
-  src: url('/fonts/newsreader-italic-latin.woff2') format('woff2');
-  font-weight: 400;
-  font-style: italic;
-  font-display: swap;
-}
+/* Steiner & Co. CRM – Erweiterung. Helles Design wie das CRM (tokens.css, Stand 20.10.2026, Notion/iOS):
+   weiße Fläche, Anthrazit-Text, Blau = heute/Primär/Fokus, Orange = überfällig/offener Platzhalter, Grün = erledigt,
+   Rot = Sperre/Fehler, Etiketten in Pastell. Systemschrift (SF Pro auf dem Mac), Zahlen tabellarisch. */
 
 :root {
-  color-scheme: dark;
-  --canvas: #07080d;
-  --surface: #0a0b11;
-  --surface-raised: #0f1119;
-  --surface-hover: #161924;
-  --surface-pressed: #1e2230;
-  --ink: #f1f0ea;
-  --ink-bright: #fbfaf6;
-  --ink-2: rgb(241 240 234 / 0.68);
-  --ink-3: rgb(241 240 234 / 0.5);
-  --ink-4: rgb(241 240 234 / 0.4);
-  --deco: rgb(241 240 234 / 0.32);
-  --line: rgb(241 240 234 / 0.1);
-  --line-strong: rgb(241 240 234 / 0.2);
-  --signal: #caff68;
-  --signal-hover: #d8ff8f;
-  --signal-ink: #07080d;
-  --signal-tint: rgb(202 255 104 / 0.14);
-  --overdue: #ffb269;
-  --overdue-tint: rgb(255 178 105 / 0.14);
-  --done: #86c79f;
-  --done-tint: rgb(134 199 159 / 0.14);
-  --danger: #ff5b52;
-  --danger-tint: rgb(255 91 82 / 0.12);
-  --sans: 'Geist', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-  --serif: 'Newsreader', Georgia, 'Times New Roman', serif;
-  --mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  color-scheme: light;
+  --canvas: #ffffff;
+  --sidebar: #f7f7f5;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-hover: #f1f1ef;
+  --surface-pressed: #e8e7e4;
+  --ink: #37352f;
+  --ink-bright: #1f1e1c;
+  --ink-2: #5f5e5b;
+  --ink-3: #6b6a66;
+  --ink-4: #a19f9a;
+  --deco: #d3d1cb;
+  --line: rgb(55 53 47 / 0.09);
+  --line-strong: rgb(55 53 47 / 0.16);
+  --signal: #1b64bd;
+  --signal-hover: #15559f;
+  --signal-ink: #ffffff;
+  --signal-tint: #e8f1fb;
+  --overdue: #a24d09;
+  --overdue-tint: #fbecdd;
+  --done: #357050;
+  --done-tint: #edf3ec;
+  --danger: #b23631;
+  --danger-tint: #fdebec;
+  --tag-grau: #f1f1ef;
+  --tag-grau-ink: #5f5e5b;
+  --tag-blau: #e7f3f8;
+  --tag-blau-ink: #286b93;
+  --tag-gruen: #edf3ec;
+  --tag-gruen-ink: #357050;
+  --sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI', 'Helvetica Neue', Helvetica,
+    Arial, sans-serif;
+  --serif: var(--sans);
+  --mono: var(--sans);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --t-1: 160ms;
   --t-2: 200ms;
@@ -69,7 +56,7 @@ body {
   background: var(--canvas);
   color: var(--ink);
   font-family: var(--sans);
-  font-size: 13.5px;
+  font-size: 14px;
   line-height: 1.4;
   -webkit-font-smoothing: antialiased;
 }
@@ -97,7 +84,7 @@ a {
 }
 
 :focus-visible {
-  outline: 2px solid var(--signal);
+  outline: 2px solid rgb(27 100 189 / 0.6);
   outline-offset: 2px;
 }
 
@@ -110,38 +97,43 @@ a {
 
 /* ── Typografie ─────────────────────────────────────────────── */
 .label {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.3;
-  letter-spacing: 0.12em;
-  font-weight: 600;
-  text-transform: uppercase;
+  font-weight: 500;
   color: var(--ink-3);
 }
 .name {
-  font-family: var(--serif);
-  font-style: italic;
-  font-weight: 400;
-  font-size: 22px;
-  line-height: 1.2;
-  letter-spacing: -0.005em;
+  font-family: var(--sans);
+  font-weight: 650;
+  font-size: 19px;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
   color: var(--ink-bright);
   margin: 0;
   overflow-wrap: anywhere;
 }
 .voice {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 17px;
-  line-height: 1.4;
+  font-family: var(--sans);
+  font-size: 14.5px;
+  line-height: 1.45;
   color: var(--ink-2);
   margin: 0;
 }
 .marke {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 17px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--sans);
+  font-weight: 600;
+  font-size: 14.5px;
+  letter-spacing: -0.01em;
   color: var(--ink-bright);
   white-space: nowrap;
+}
+.marke img {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
 }
 .klein {
   font-size: 12.5px;
@@ -154,8 +146,7 @@ a {
 }
 .mono-s {
   font-family: var(--mono);
-  font-size: 11.5px;
-  letter-spacing: 0.02em;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 .ink-2 {
@@ -236,9 +227,9 @@ a {
   gap: 8px;
   height: 32px;
   padding: 0 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--line-strong);
-  background: transparent;
+  background: var(--surface);
   color: var(--ink);
   font-size: 13.5px;
   font-weight: 500;
@@ -271,6 +262,7 @@ a {
 }
 .knopf.leise {
   border-color: transparent;
+  background: transparent;
   color: var(--ink-2);
 }
 .knopf.leise:hover:not(:disabled) {
@@ -312,11 +304,11 @@ kbd,
   height: 18px;
   padding: 0 4px;
   border: 1px solid var(--line-strong);
-  border-radius: 3px;
+  border-radius: 4px;
   font-family: var(--mono);
   font-size: 11px;
+  font-weight: 500;
   line-height: 1;
-  letter-spacing: 0.02em;
   color: var(--ink-3);
   background: transparent;
 }
@@ -326,7 +318,7 @@ kbd,
   border-color: currentColor;
 }
 .knopf.primaer kbd {
-  border-color: rgb(7 8 13 / 0.35);
+  border-color: rgb(255 255 255 / 0.55);
 }
 
 /* ── Chips ──────────────────────────────────────────────────── */
@@ -336,25 +328,25 @@ kbd,
   gap: 6px;
   height: 22px;
   padding: 0 8px;
-  border-radius: 3px;
-  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  border: 1px solid transparent;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
   color: var(--ink);
-  background: transparent;
+  background: var(--tag-grau);
 }
 .chip.muted {
   color: var(--ink-2);
 }
 .chip.ended {
-  border-color: var(--line);
+  background: transparent;
+  border-color: var(--line-strong);
   color: var(--ink-3);
 }
 .chip.won {
-  background: var(--ink);
-  color: var(--canvas);
-  border-color: var(--ink);
+  background: var(--tag-gruen);
+  color: var(--tag-gruen-ink);
 }
 .chip.heute {
   background: var(--signal-tint);
@@ -373,17 +365,22 @@ kbd,
   font-family: var(--mono);
 }
 .chip.gefahr {
+  background: var(--danger-tint);
   color: var(--danger);
-  border-color: rgb(255 91 82 / 0.4);
 }
 .chip.auswahl {
   cursor: pointer;
   height: 28px;
   padding: 0 10px;
 }
+.chip.auswahl {
+  background: var(--surface);
+  border-color: var(--line-strong);
+}
 .chip.auswahl[aria-pressed='true'] {
-  background: var(--surface-hover);
-  border-color: var(--ink);
+  background: var(--signal-tint);
+  border-color: var(--signal);
+  color: var(--signal);
 }
 .chip.auswahl:hover {
   background: var(--surface-hover);
@@ -423,10 +420,8 @@ kbd,
   gap: 4px;
 }
 .feld > span:first-child {
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  font-weight: 600;
-  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-3);
 }
 .eingabe,
@@ -434,9 +429,9 @@ kbd,
   width: 100%;
   height: 34px;
   padding: 0 10px;
-  border-radius: 6px;
+  border-radius: 8px;
   border: 1px solid var(--line-strong);
-  background: var(--surface-hover);
+  background: var(--surface);
   color: var(--ink);
   outline: none;
 }
@@ -459,7 +454,7 @@ kbd,
   height: 40px;
   font-family: var(--mono);
   font-size: 15px;
-  letter-spacing: 0.3em;
+  letter-spacing: 0.2em;
 }
 .raster-2 {
   display: grid;
@@ -468,25 +463,27 @@ kbd,
 }
 .segment {
   display: inline-flex;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  overflow: hidden;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--surface-hover);
   height: 32px;
 }
 .segment button {
   border: 0;
-  border-right: 1px solid var(--line);
+  border-radius: 6px;
   background: transparent;
   color: var(--ink-2);
   padding: 0 12px;
   cursor: pointer;
-}
-.segment button:last-child {
-  border-right: 0;
+  font-weight: 500;
 }
 .segment button[aria-pressed='true'] {
-  background: var(--surface-hover);
-  color: var(--ink);
+  background: var(--surface);
+  color: var(--ink-bright);
+  box-shadow:
+    0 1px 2px rgb(15 15 15 / 0.08),
+    0 0 0 1px rgb(15 15 15 / 0.04);
 }
 .haken {
   display: flex;
@@ -502,23 +499,28 @@ kbd,
   height: 16px;
   margin: 2px 0 0;
   border: 1px solid var(--line-strong);
-  border-radius: 3px;
+  border-radius: 5px;
   display: grid;
   place-items: center;
   background: transparent;
   cursor: pointer;
 }
+.haken input:checked {
+  background: var(--signal);
+  border-color: var(--signal);
+}
 .haken input:checked::after {
   content: '';
-  width: 8px;
-  height: 8px;
-  background: var(--ink);
+  width: 10px;
+  height: 10px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+    center / 10px 10px no-repeat;
 }
 
 /* ── Nachrichten-Block ─────────────────────────────────────── */
 .nachricht {
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--surface-hover);
   overflow: hidden;
 }
@@ -583,7 +585,7 @@ input.ph-offen {
   margin: 0 1px;
   padding: 0 4px;
   border: 1px dashed var(--overdue);
-  border-radius: 3px;
+  border-radius: 5px;
   background: var(--overdue-tint);
   color: var(--overdue);
   font-size: 13.5px;
@@ -634,7 +636,7 @@ input.ph-offen::placeholder {
 /* ── Hinweise ───────────────────────────────────────────────── */
 .hinweis {
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 10px 14px;
   font-size: 13.5px;
   color: var(--ink-2);
@@ -721,7 +723,7 @@ input.ph-offen::placeholder {
   gap: 10px;
   justify-items: start;
   padding: 14px;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid var(--line-strong);
   background: transparent;
   text-align: left;
@@ -759,7 +761,7 @@ input.ph-offen::placeholder {
 
 /* ── Verlauf (17.10.2026) – wie die Timeline im CRM: Zeit · Punkt mit Linie · Inhalt ─────────── */
 .klein-segment {
-  height: 26px;
+  height: 28px;
 }
 .klein-segment button {
   padding: 0 9px;
@@ -830,7 +832,7 @@ input.ph-offen::placeholder {
 .verlauf-kanal {
   color: var(--ink-3);
   border: 1px solid var(--line-strong);
-  border-radius: 3px;
+  border-radius: 5px;
   padding: 0 4px;
   font-size: 10.5px;
 }

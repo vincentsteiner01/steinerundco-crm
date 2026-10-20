@@ -147,12 +147,12 @@ describe('EingangListe', () => {
     expect(await screen.findByText('Dora Neu')).toBeInTheDocument()
   })
 
-  it('Runde 3: aktiver Status-Filter neutral wie das Segment (kein Lime), inaktive gedämpft', async () => {
+  it('Runde 3: aktiver Status-Filter neutral wie der Segment-Schieber (kein Akzent), inaktive gedämpft', async () => {
     rendern(<EingangListe />)
     await screen.findByRole('list', { name: 'Eingang' })
     const offen = within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: /Offen/ })
     expect(offen).toHaveAttribute('aria-pressed', 'true')
-    expect(offen).toHaveClass('bg-surface-hover', 'border-line-strong', 'text-ink')
+    expect(offen).toHaveClass('bg-surface-raised', 'border-line-strong', 'text-ink-bright')
     expect(offen).not.toHaveClass('bg-signal-tint')
     expect(offen).not.toHaveClass('text-signal')
     const alle = within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: /Alle/ })

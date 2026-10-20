@@ -149,7 +149,7 @@ export function FeedbackDialog({ bild: startBild, kontext, onSchliessen }: Feedb
   return (
     <RD.Root open={offen} onOpenChange={(o) => (o ? setOffen(true) : schliessen())}>
       <RD.Portal>
-        <RD.Overlay {...ignorieren} className="bg-canvas/50 fixed inset-0 z-[60]" />
+        <RD.Overlay {...ignorieren} className="bg-scrim fixed inset-0 z-[60]" />
         <RD.Content
           {...ignorieren}
           onKeyDown={tasten}

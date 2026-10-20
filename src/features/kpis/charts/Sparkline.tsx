@@ -31,9 +31,9 @@ export function Sparkline({ werte, breite = 96, hoehe = 20, label, className }: 
       data-sparkline
     >
       {n > 1 ? (
-        <polyline points={pfad} fill="none" className="stroke-ink-2" strokeWidth={1} strokeLinejoin="round" />
+        <polyline points={pfad} fill="none" className="stroke-signal" strokeWidth={1} strokeLinejoin="round" />
       ) : null}
-      {letzter ? <circle cx={letzter[0]} cy={letzter[1]} r={1.5} className="fill-ink" /> : null}
+      {letzter ? <circle cx={letzter[0]} cy={letzter[1]} r={1.5} className="fill-signal" /> : null}
     </svg>
   )
 }

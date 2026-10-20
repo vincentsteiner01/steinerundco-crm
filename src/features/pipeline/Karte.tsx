@@ -50,7 +50,7 @@ export function Karte({
       aria-selected={cursor || undefined}
       style={{ transform: CSS.Translate.toString(transform) }}
       className={cn(
-        'bg-surface border-line text-ink mb-2 cursor-grab rounded-md border p-3 outline-none select-none',
+        'bg-surface border-line text-ink shadow-card mb-2 cursor-grab rounded-md border p-3 outline-none select-none',
         cursor && 'cursor-bar',
         isDragging && 'shadow-float rotate-1 cursor-grabbing',
       )}

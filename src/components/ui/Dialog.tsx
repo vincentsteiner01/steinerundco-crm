@@ -28,7 +28,7 @@ export function Dialog({
   return (
     <RD.Root open={offen} onOpenChange={onOpenChange}>
       <RD.Portal>
-        <RD.Overlay className="bg-canvas/50 fixed inset-0 z-[60] data-[state=open]:animate-[screen-in_var(--t-3)_var(--ease-brand)]" />
+        <RD.Overlay className="bg-scrim fixed inset-0 z-[60] data-[state=open]:animate-[screen-in_var(--t-3)_var(--ease-brand)]" />
         <RD.Content
           className={cn(
             'bg-surface-raised shadow-float fixed top-1/2 left-1/2 z-[61] w-[min(440px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-lg p-6 outline-none',

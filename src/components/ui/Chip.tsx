@@ -6,20 +6,51 @@ import { phaseVon } from '@/lib/stufen'
 import { berlinTag, tageDifferenz } from '@/lib/zeit'
 import { PHASE_LABEL, STUFEN_LABEL } from '@/texte/de'
 import { cn } from './cn'
+import { PHASE_FARBE } from './phaseFarbe'
 
-export type ChipTon = 'neutral' | 'muted' | 'ended' | 'won' | 'today' | 'overdue' | 'later' | 'done' | 'danger' | 'neu'
+export type ChipTon =
+  | 'neutral'
+  | 'muted'
+  | 'ended'
+  | 'won'
+  | 'today'
+  | 'overdue'
+  | 'later'
+  | 'done'
+  | 'danger'
+  | 'neu'
+  // Etiketten-Farben (Notion-Palette, 20.10.2026) – Phasen im StatusChip
+  | 'grau'
+  | 'braun'
+  | 'orange'
+  | 'gelb'
+  | 'gruen'
+  | 'blau'
+  | 'lila'
+  | 'rosa'
+  | 'rot'
 
+// Hell (20.10.2026): Pastell-Fläche statt Rahmen, wie Etiketten in Notion; nur „beendet“ bleibt als Umriss
 const TON: Record<ChipTon, string> = {
-  neutral: 'border-line-strong text-ink',
-  muted: 'border-line-strong text-ink-2',
-  ended: 'border-line text-ink-3',
-  won: 'border-ink bg-ink text-canvas',
-  today: 'border-signal/24 bg-signal-tint text-signal',
-  overdue: 'border-overdue/24 bg-overdue-tint text-overdue',
-  later: 'border-line-strong text-ink-3',
-  done: 'border-done/30 text-done',
-  danger: 'border-danger/40 text-danger',
-  neu: 'border-signal/40 text-signal',
+  neutral: 'border-transparent bg-tag-grau text-ink',
+  muted: 'border-transparent bg-tag-grau text-ink-2',
+  ended: 'border-line-strong text-ink-3',
+  won: 'border-transparent bg-tag-gruen text-tag-gruen-ink',
+  today: 'border-transparent bg-signal-tint text-signal',
+  overdue: 'border-transparent bg-overdue-tint text-overdue',
+  later: 'border-transparent bg-tag-grau text-ink-3',
+  done: 'border-transparent bg-done-tint text-done',
+  danger: 'border-transparent bg-danger-tint text-danger',
+  neu: 'border-transparent bg-tag-blau text-tag-blau-ink',
+  grau: 'border-transparent bg-tag-grau text-tag-grau-ink',
+  braun: 'border-transparent bg-tag-braun text-tag-braun-ink',
+  orange: 'border-transparent bg-tag-orange text-tag-orange-ink',
+  gelb: 'border-transparent bg-tag-gelb text-tag-gelb-ink',
+  gruen: 'border-transparent bg-tag-gruen text-tag-gruen-ink',
+  blau: 'border-transparent bg-tag-blau text-tag-blau-ink',
+  lila: 'border-transparent bg-tag-lila text-tag-lila-ink',
+  rosa: 'border-transparent bg-tag-rosa text-tag-rosa-ink',
+  rot: 'border-transparent bg-tag-rot text-tag-rot-ink',
 }
 
 export type ChipProps = {
@@ -78,7 +109,7 @@ export function Chip({
         className={cn(
           BASIS,
           TON[ton],
-          'ease-brand hover:bg-surface-hover transition-[background,color] duration-[var(--t-1)]',
+          'ease-brand transition-[background,color,filter] duration-[var(--t-1)] hover:brightness-[0.96]',
           className,
         )}
         {...(rest as HTMLAttributes<HTMLButtonElement>)}
@@ -111,7 +142,7 @@ export function StatusChip({
   const phase = phaseVon(stage)
   const fein = settings?.stage_labels?.[stage]?.label ?? STUFEN_LABEL[stage].label
   return (
-    <Chip ton={phase.ton} title={fein} className={className} {...rest}>
+    <Chip ton={PHASE_FARBE[phase.key]} title={fein} className={className} {...rest}>
       {PHASE_LABEL[phase.key]}
     </Chip>
   )

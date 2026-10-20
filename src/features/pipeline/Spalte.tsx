@@ -8,7 +8,9 @@
 import { useDroppable } from '@dnd-kit/core'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useEffect, useRef, type ReactNode } from 'react'
+import { Chip } from '@/components/ui/Chip'
 import { cn } from '@/components/ui/cn'
+import { PHASE_FARBE } from '@/components/ui/phaseFarbe'
 import type { Phase } from '@/lib/stufen'
 import { LEER } from '@/texte/de'
 import { KARTE_SCHAETZUNG, konversionText, VIRTUELL_AB } from './logik'
@@ -57,7 +59,7 @@ export function Spalte({
         data-spalte={phase.key}
         data-eingeklappt
         className={cn(
-          'border-line bg-surface flex min-h-0 w-11 shrink-0 snap-start flex-col items-center rounded-md border pt-2',
+          'bg-sidebar flex min-h-0 w-11 shrink-0 snap-start flex-col items-center rounded-md border border-transparent pt-2',
           isOver && 'border-signal',
         )}
       >
@@ -79,21 +81,22 @@ export function Spalte({
       ref={setNodeRef}
       data-spalte={phase.key}
       className={cn(
-        'flex min-h-0 w-[272px] shrink-0 snap-start flex-col',
-        isOver && 'border-signal rounded-md border-t-2',
+        // Notion-Kanban (helles Design, 20.10.2026): getönte Spaltenfläche, farbiges Phasen-Etikett im Kopf, weiße Karten
+        'bg-sidebar flex min-h-0 w-[272px] shrink-0 snap-start flex-col rounded-md px-1.5 pb-1.5',
+        isOver && 'ring-signal/50 ring-2',
       )}
     >
       <button
         type="button"
         onClick={onToggle}
         aria-expanded
-        className="hover:text-ink flex h-9 min-w-0 shrink-0 items-center gap-2 text-left whitespace-nowrap"
+        className="hover:text-ink flex h-10 min-w-0 shrink-0 items-center gap-2 px-1 text-left whitespace-nowrap"
         title={pflicht ? 'Drop verlangt eine Angabe (Datum oder Grund)' : undefined}
       >
-        <span className="label min-w-0 truncate" title={phase.label}>
+        <Chip ton={PHASE_FARBE[phase.key]} className="min-w-0" title={phase.label}>
           {phase.label}
-        </span>
-        <span className="text-ink tnum shrink-0 font-mono text-[13px]">{kopf.zaehler}</span>
+        </Chip>
+        <span className="text-ink-3 tnum shrink-0 font-mono text-[13px]">{kopf.zaehler}</span>
         {kopf.konversion !== null ? (
           <span
             className="mono-sm text-ink-3 shrink-0"
@@ -115,7 +118,7 @@ export function Spalte({
       </button>
       {anzahl === 0 ? (
         <div className="min-h-0 flex-1" data-karten>
-          <div className="border-line text-ink-3 rounded-md border border-dashed px-3 py-6 text-center text-[12.5px]">
+          <div className="border-line-strong text-ink-3 rounded-md border border-dashed px-3 py-6 text-center text-[12.5px]">
             {LEER.pipelineSpalte.titel}
           </div>
         </div>

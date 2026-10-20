@@ -60,7 +60,7 @@ export function Balken({ tage, heute, label, hoehe = 128, className }: BalkenPro
                 rx={1}
                 className={cn(
                   'ease-brand transition-opacity duration-[var(--t-1)]',
-                  istHeute ? 'fill-signal' : wochenende ? 'fill-deco' : 'fill-ink opacity-25 group-hover:opacity-60',
+                  istHeute ? 'fill-signal' : wochenende ? 'fill-deco' : 'fill-signal opacity-40 group-hover:opacity-75',
                 )}
               />
             ) : null}

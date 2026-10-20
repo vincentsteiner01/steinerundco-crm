@@ -1,5 +1,5 @@
 /* base.css · Reset-Ergänzungen zu tokens.css § 3 (BAUPLAN § 3.1.3).
-   body: bg-canvas text-ink font-sans text-body · focus-visible Lime 2 px / Offset 2 px ·
+   body: bg-canvas text-ink font-sans text-body · focus-visible Akzent 2 px / Offset 2 px ·
    prefers-reduced-motion → alle --t-* 0 ms · Scrollbar · ::selection signal-tint. */
 @layer base {
   body {
@@ -10,12 +10,12 @@
     line-height: var(--text-body--line-height);
   }
   :focus-visible {
-    outline: 2px solid var(--color-signal);
+    outline: 2px solid rgb(27 100 189 / 0.6);
     outline-offset: 2px;
   }
   ::selection {
-    background: var(--color-signal-tint);
-    color: var(--color-ink-bright);
+    background: rgb(27 100 189 / 0.18);
+    color: inherit;
   }
   kbd + kbd {
     margin-left: 4px;
@@ -31,7 +31,7 @@
   select.select {
     appearance: none;
     -webkit-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgb(241 240 234 / 0.5)' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgb(55 53 47 / 0.55)' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 10px center;
     background-size: 16px 16px;
@@ -41,7 +41,7 @@
     background: var(--color-surface-raised);
     color: var(--color-ink);
   }
-  /* Native Checkbox: 16 px, gefüllt = 8-px-Quadrat ink (kein Häkchen-Icon) */
+  /* Native Checkbox: 16 px, iOS-nah – angehakt = Akzent-Fläche mit weißem Häkchen */
   input.checkbox {
     appearance: none;
     -webkit-appearance: none;
@@ -50,21 +50,27 @@
     flex: none;
     display: grid;
     place-items: center;
-    border: 1px solid var(--color-line-strong);
+    border: 1.5px solid var(--color-deco);
     border-radius: var(--radius-xs);
-    background: var(--color-surface-hover);
+    background: var(--color-surface);
     cursor: pointer;
+    transition:
+      background var(--t-1) var(--ease-brand),
+      border-color var(--t-1) var(--ease-brand);
   }
   input.checkbox::after {
     content: '';
-    width: 8px;
-    height: 8px;
-    border-radius: 1px;
+    width: 10px;
+    height: 10px;
     background: transparent;
-    transition: background var(--t-1) var(--ease-brand);
+  }
+  input.checkbox:checked {
+    background: var(--color-signal);
+    border-color: var(--color-signal);
   }
   input.checkbox:checked::after {
-    background: var(--color-ink);
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E")
+      center / 10px 10px no-repeat;
   }
   input.checkbox:disabled {
     opacity: 0.45;

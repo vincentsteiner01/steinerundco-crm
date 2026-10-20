@@ -26,7 +26,7 @@ export function ShortcutHilfe() {
       }}
     >
       <RD.Portal>
-        <RD.Overlay className="bg-canvas/50 fixed inset-0 z-[60]" />
+        <RD.Overlay className="bg-scrim fixed inset-0 z-[60]" />
         <RD.Content className="bg-surface-raised shadow-float fixed top-[14vh] left-1/2 z-[61] max-h-[72vh] w-[min(720px,calc(100vw-32px))] -translate-x-1/2 animate-[pop-in_var(--t-3)_var(--ease-brand)] overflow-auto rounded-lg px-6 py-5 outline-none max-md:inset-0 max-md:top-0 max-md:max-h-none max-md:w-auto max-md:translate-x-0 max-md:rounded-none">
           <div className="flex items-center gap-3">
             <RD.Title className="text-h2 text-ink-bright">{ALLGEMEIN.tastenkuerzel}</RD.Title>

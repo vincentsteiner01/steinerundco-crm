@@ -76,7 +76,7 @@ function Person({ item }: { item: QueueItem }) {
   return (
     <div className="mt-2 grid gap-0.5">
       <div className="flex flex-wrap items-baseline gap-x-2.5">
-        <span className="text-lead font-serif italic" data-auftrag-name>
+        <span className="text-lead text-ink-bright font-semibold" data-auftrag-name>
           {item.lead_name ?? '–'}
         </span>
         <span className="text-ink-3 text-small">{item.company_name ?? 'ohne Firma'}</span>

@@ -10,7 +10,7 @@ const tabKlasse = (aktiv: boolean) =>
   cn(
     'relative flex flex-col items-center justify-center gap-1 text-[11px] font-medium',
     aktiv
-      ? 'text-ink before:absolute before:-top-px before:left-[30%] before:right-[30%] before:h-0.5 before:bg-signal before:content-[""]'
+      ? 'text-signal' // wie iOS: aktives Symbol + Beschriftung im Akzent, kein Balken (helles Design, 20.10.2026)
       : 'text-ink-3',
   )
 
@@ -54,7 +54,7 @@ export function TabLeiste() {
   return (
     <nav
       aria-label="Navigation"
-      className="border-line bg-canvas fixed inset-x-0 bottom-0 z-50 grid h-[calc(var(--spacing-tabbar)+env(safe-area-inset-bottom))] grid-cols-5 border-t pb-[env(safe-area-inset-bottom)]"
+      className="border-line bg-canvas/90 fixed inset-x-0 bottom-0 z-50 grid h-[calc(var(--spacing-tabbar)+env(safe-area-inset-bottom))] grid-cols-5 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
     >
       {TAB_LEISTE.map((t) => (
         <NavLink key={t.pfad} to={t.pfad} data-tour={`nav:${t.pfad}`} className={({ isActive }) => tabKlasse(isActive)}>
