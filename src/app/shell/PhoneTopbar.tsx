@@ -6,7 +6,7 @@ import { useUiStore } from '@/app/uiStore'
 import { Avatar } from '@/components/ui/Avatar'
 import { DropdownMenu } from '@/components/ui/DropdownMenu'
 import { useAuth } from '@/features/auth/authStore'
-import { FEEDBACK_EVENT } from '@/features/feedback/texte'
+import { FEEDBACK_EVENT } from '@/features/feedback/ereignis'
 import { ALLGEMEIN } from '@/texte/de'
 
 /** Phone-Topbar 56 px: Marke links, rechts Lupe (Palette, ux § 7.1) und Avatar → Menü (DESIGN-SYSTEM § 4.2). */

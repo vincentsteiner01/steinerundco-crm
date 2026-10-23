@@ -2,7 +2,6 @@
 // BAUPLAN § 3.1.4 – Router und Routen (eingefroren). Jede Route lädt lazy eine Datei, die `Component` exportiert.
 import { createBrowserRouter, Navigate } from 'react-router'
 import { RequireAuth } from '@/features/auth/RequireAuth'
-import { NichtGefunden } from './fehler/NichtGefunden'
 import { RouteFehler } from './fehler/RouteFehler'
 import { AppShell } from './shell/AppShell'
 
@@ -57,7 +56,8 @@ export const router = createBrowserRouter([
           { path: 'feedback', lazy: () => import('@/features/feedback/FeedbackSeite') },
           { path: 'einstellungen', element: <Navigate to="/einstellungen/profil" replace /> },
           { path: 'einstellungen/:bereich', lazy: () => import('@/features/einstellungen/EinstellungenSeite') },
-          { path: '*', Component: NichtGefunden },
+          // 404 nachgeladen: hält Seitenkopf/EmptyState aus dem Start-Bundle (E22)
+          { path: '*', lazy: () => import('./fehler/NichtGefunden').then((m) => ({ Component: m.NichtGefunden })) },
         ],
       },
     ],

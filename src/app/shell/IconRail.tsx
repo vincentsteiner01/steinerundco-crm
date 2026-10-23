@@ -10,7 +10,7 @@ import { Tooltip } from '@/components/ui/Tooltip'
 import { cn } from '@/components/ui/cn'
 import { useNavZaehler } from '@/data/nav'
 import { useAuth } from '@/features/auth/authStore'
-import { FEEDBACK_EVENT } from '@/features/feedback/texte'
+import { FEEDBACK_EVENT } from '@/features/feedback/ereignis'
 import { ALLGEMEIN } from '@/texte/de'
 
 /** 768–1023 px: Sidebar als Icon-Rail 64 px (Tooltips mit Label + G-Akkord). */
@@ -78,7 +78,7 @@ export function IconRail() {
                   'aria-[current=page]:before:bg-signal aria-[current=page]:before:absolute aria-[current=page]:before:top-2 aria-[current=page]:before:bottom-2 aria-[current=page]:before:-left-2.5 aria-[current=page]:before:w-0.5 aria-[current=page]:before:content-[""]',
                 )}
               >
-                <n.icon size={18} strokeWidth={1.75} aria-hidden />
+                {n.icon ? <n.icon size={18} strokeWidth={1.75} aria-hidden /> : null}
                 {n.zaehler === 'heute' && zaehler.heute > 0 ? (
                   <span className="text-signal tnum absolute top-1 right-1 font-mono text-[9px]">{zaehler.heute}</span>
                 ) : null}

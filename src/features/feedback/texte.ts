@@ -3,7 +3,7 @@ import type { ChipTon } from '@/components/ui/Chip'
 import type { FeedbackArt, FeedbackStatus } from '@/data/feedback'
 
 /** Fenster-Ereignis, das den Feedback-Dialog öffnet (⌥F in GlobaleTasten, Palette, Hilfe). */
-export const FEEDBACK_EVENT = 'crm:feedback'
+export { FEEDBACK_EVENT } from './ereignis'
 
 export const ART_LABEL: Record<FeedbackArt, string> = { fehler: 'Fehler', wunsch: 'Wunsch', frage: 'Frage' }
 

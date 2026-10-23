@@ -5,20 +5,15 @@
 import {
   BarChart3,
   BookOpen,
-  CalendarClock,
-  ChartNoAxesColumn,
   Columns3,
-  Contact,
   Ellipsis,
   Euro,
-  Kanban,
   LifeBuoy,
   ListChecks,
   Mail,
   MessageSquareWarning,
   MessagesSquare,
   Phone,
-  PhoneCall,
   Settings,
   Sun,
   Upload,
@@ -33,7 +28,8 @@ export type NavEintrag = {
   /** Pfad, optional mit Query (`/leitfaeden?kanal=telefon`) */
   pfad: string
   label: string
-  icon: LucideIcon
+  /** Nur oberste Ebene und „Mehr“ (Icon-Rail); Unterpunkte von Telefon/LinkedIn stehen eingerückt ohne Icon */
+  icon?: LucideIcon
   akkord?: string
   zaehler?: NavZaehler
   /** Aktiv nur, wenn der Query-Parameter einen dieser Werte hat (`null` = fehlt) – gleiche Seite, andere Ansicht */
@@ -63,15 +59,14 @@ export const NAV_BAUM: NavKnoten[] = [
     zaehler: 'telefon',
     offenStandard: true,
     kinder: [
-      { pfad: '/telefon', label: 'Anrufliste', icon: PhoneCall, akkord: 'G T', zaehler: 'telefon' },
-      { pfad: '/telefon/kontakte', label: 'Kontakte', icon: Contact },
-      { pfad: '/telefon/pipeline', label: 'Deal-Pipeline', icon: Kanban },
-      { pfad: '/telefon/follow-ups', label: 'Follow-ups', icon: CalendarClock },
-      { pfad: '/telefon/kpis', label: 'Sales-KPIs', icon: ChartNoAxesColumn },
+      { pfad: '/telefon', label: 'Anrufliste', akkord: 'G T', zaehler: 'telefon' },
+      { pfad: '/telefon/kontakte', label: 'Kontakte' },
+      { pfad: '/telefon/pipeline', label: 'Deal-Pipeline' },
+      { pfad: '/telefon/follow-ups', label: 'Follow-ups' },
+      { pfad: '/telefon/kpis', label: 'Sales-KPIs' },
       {
         pfad: '/leitfaeden?kanal=telefon',
         label: 'Leitfäden',
-        icon: BookOpen,
         akkord: 'G F',
         aktivBei: { param: 'kanal', werte: ['telefon', 'sonstiges'] },
       },
@@ -83,13 +78,12 @@ export const NAV_BAUM: NavKnoten[] = [
     icon: MessagesSquare,
     offenStandard: true,
     kinder: [
-      { pfad: '/auftrag', label: 'Auftrag', icon: ListChecks, akkord: 'G U' },
-      { pfad: '/pipeline', label: 'Pipeline', icon: Columns3, akkord: 'G P' },
-      { pfad: '/kpis', label: 'KPIs', icon: BarChart3, akkord: 'G K' },
+      { pfad: '/auftrag', label: 'Auftrag', akkord: 'G U' },
+      { pfad: '/pipeline', label: 'Pipeline', akkord: 'G P' },
+      { pfad: '/kpis', label: 'KPIs', akkord: 'G K' },
       {
         pfad: '/leitfaeden?kanal=linkedin',
         label: 'Vorlagen',
-        icon: BookOpen,
         aktivBei: { param: 'kanal', werte: ['linkedin', 'email', null] },
       },
     ],

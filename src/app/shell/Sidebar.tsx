@@ -18,7 +18,7 @@ import { Kbd } from '@/components/ui/Kbd'
 import { cn } from '@/components/ui/cn'
 import { useNavZaehler } from '@/data/nav'
 import { useAuth } from '@/features/auth/authStore'
-import { FEEDBACK_EVENT } from '@/features/feedback/texte'
+import { FEEDBACK_EVENT } from '@/features/feedback/ereignis'
 import { ALLGEMEIN } from '@/texte/de'
 import { RealtimePunkt } from './RealtimePunkt'
 
@@ -199,7 +199,7 @@ function Eintrag({
       data-tour={`nav:${pfadOhneQuery(e.pfad)}`}
       className={cn(ZEILE, eingerueckt && 'pl-[34px]', aktiv ? 'bg-surface-pressed/70 text-ink-bright' : 'text-ink-2')}
     >
-      {eingerueckt ? null : (
+      {eingerueckt || !e.icon ? null : (
         <e.icon size={18} strokeWidth={1.75} aria-hidden className={aktiv ? 'text-ink' : 'text-ink-3'} />
       )}
       <span className="min-w-0 truncate">{e.label}</span>
