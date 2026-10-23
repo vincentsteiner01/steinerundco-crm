@@ -1,0 +1,1 @@
+import{_ as e}from"./index-tKXORxSG.js";function t(){return e(`formular`),null}export{t};
