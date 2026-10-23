@@ -11,6 +11,19 @@ import { queueOptimistischEntfernen } from './queue'
 import { rpc } from './rpc'
 import { supabase } from './supabase'
 
+/** Leads (aus `leadIds`), zu denen `memberId` schon eine Verbindung im CRM hat – „Neue Anfragen“ überspringt sie (23.10.2026). */
+export async function ladeVerbundeneLeads(leadIds: readonly string[], memberId: string): Promise<Set<string>> {
+  const out = new Set<string>()
+  for (let i = 0; i < leadIds.length; i += 200) {
+    const teil = leadIds.slice(i, i + 200)
+    const zeilen = pruefe(
+      await supabase.from('linkedin_connections').select('lead_id').eq('member_id', memberId).in('lead_id', teil),
+    )
+    for (const z of zeilen) out.add(z.lead_id)
+  }
+  return out
+}
+
 export function useConnections(leadId: string | null | undefined) {
   return useQuery({
     queryKey: qk.connections.lead(leadId ?? ''),

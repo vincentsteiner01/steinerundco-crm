@@ -15,7 +15,7 @@ import type { QueueItem } from '@/types/domain'
 import { itemKey } from '@/features/heute/sektionen'
 import { chatgptPrompt, gruppiere } from './auftrag'
 import { NeueAnnahmen } from './NeueAnnahmen'
-import { AnnahmeZeile, NachrichtZeile, type ZeilenStatus } from './Zeilen'
+import { NachrichtZeile, type ZeilenStatus } from './Zeilen'
 
 function Abschnitt({
   nr,
@@ -64,7 +64,9 @@ export function Component() {
     () => gruppiere(stand ?? [], (stepId) => !!(stepId && idx?.stepsById.get(stepId)?.is_opener)),
     [stand, idx],
   )
-  const alle = [...gruppen.annahmen, ...gruppen.opener, ...gruppen.followUps]
+  // „Annahmen prüfen“ (offene Anfragen der letzten 7 Tage) macht der Agent nicht mehr einzeln: mit „Neue Anfragen“ wären das
+  // Hunderte Profilaufrufe; Annahmen kommen über „Neue Annahmen“ (Kürzlich hinzugefügt). In „Heute“ bleibt die Abhakliste.
+  const alle = [...gruppen.opener, ...gruppen.followUps]
   const gesamt = alle.length
   const nrVon = (i: QueueItem) => alle.indexOf(i) + 1
   const erledigt = Object.keys(status).length
@@ -128,36 +130,22 @@ export function Component() {
 
       <Abschnitt
         nr={1}
+        titel="Neue Anfragen eintragen"
+        hinweis="Vernetzungsanfragen, die auf LinkedIn verschickt wurden und noch offen sind („Einladungen verwalten“ → „Gesendet“). Sie zählen bei den KPIs als „Vernetzungen versendet“ – jede Person nur einmal, auch wenn sie mehrfach eingetragen wird."
+      >
+        <NeueAnnahmen art="anfrage" me={me} onFertig={() => void aktualisieren()} />
+      </Abschnitt>
+
+      <Abschnitt
+        nr={2}
         titel="Neue Annahmen eintragen"
         hinweis="Personen, die auf LinkedIn neu vernetzt sind. Bekannte Personen erkennt das CRM an der LinkedIn-URL; neue werden angelegt. Danach erscheint ihr Opener unter „Opener senden“."
       >
         <NeueAnnahmen me={me} onFertig={() => void aktualisieren()} />
       </Abschnitt>
 
-      {gruppen.annahmen.length ? (
-        <Abschnitt
-          nr={2}
-          titel="Annahmen prüfen"
-          zaehler={gruppen.annahmen.length}
-          hinweis="Anfragen, die im CRM als gesendet stehen. Nur „Angenommen“ klicken, wenn ihr auf LinkedIn vernetzt seid."
-        >
-          <ol className="grid gap-3">
-            {gruppen.annahmen.map((i) => (
-              <AnnahmeZeile
-                key={itemKey(i)}
-                item={i}
-                nr={nrVon(i)}
-                gesamt={gesamt}
-                status={status[itemKey(i)]}
-                setStatus={setzeStatus(itemKey(i))}
-              />
-            ))}
-          </ol>
-        </Abschnitt>
-      ) : null}
-
       <Abschnitt
-        nr={gruppen.annahmen.length ? 3 : 2}
+        nr={3}
         titel="Opener senden"
         zaehler={gruppen.opener.length}
         hinweis="Erste Nachricht nach der Annahme. Den Text genau so senden und danach „Gesendet“ klicken."
@@ -182,7 +170,7 @@ export function Component() {
       </Abschnitt>
 
       <Abschnitt
-        nr={gruppen.annahmen.length ? 4 : 3}
+        nr={4}
         titel="Follow-ups senden"
         zaehler={gruppen.followUps.length}
         hinweis="Nachfassen bei Personen ohne Antwort. Hat jemand inzwischen geantwortet, nichts senden und „Hat geantwortet“ klicken."

@@ -1,7 +1,7 @@
 {
   "name": "steinerundco-crm-erweiterung",
   "private": true,
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Steiner & Co. CRM für LinkedIn – Chrome-Erweiterung (Manifest V3), liest nur auf Klick, sendet nie etwas auf LinkedIn.",
   "type": "module",
   "engines": {

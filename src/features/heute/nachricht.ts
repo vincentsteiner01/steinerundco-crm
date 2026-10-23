@@ -2,6 +2,7 @@
 // lib/platzhalter.ts (`fuellen`, `tokens`); hier steht nur, welche Vorlage eine Karte bekommt und was daraus wird.
 import { fuellen, tokens, type FuellErgebnis, type PlatzhalterKontext, type PlatzhalterLead } from '@/lib/platzhalter'
 import { OPENER_NACH_ROLLE, phase2Vorlage, VORLAGE, type VorlageKey } from '@/lib/vorlagenKeys'
+import { aktiveVariante, istAktiv } from '@/lib/vorlagenWahl'
 import type { LeadMitBezug, Member, QueueItem, ReplyLabel, Template } from '@/types/domain'
 import type { KartenZustand } from './kartenStore'
 
@@ -56,6 +57,8 @@ export function wiedervorlageStandard(
 /**
  * Vorlage einer Karte: gewechselte Vorlage (⌘⇧E) → Antworten-Karte nach `PHASE2_VORLAGE_NACH_LABEL` → Opener nach Rolle
  * (`OPENER_NACH_ROLLE`) → Wiedervorlage ohne Vorlage: Standard (`wiedervorlageStandard`) → Vorlage des Schritts/der Aufgabe aus der View.
+ * 23.10.2026: Automatisch gewählte Vorlagen müssen aktiv sein – sonst die aktive Variante derselben Familie (lib/vorlagenWahl);
+ * eine inaktive Rollen-Vorlage (ZG – Kundenbetreuer) fällt ganz weg. Eine bewusst gewechselte Vorlage bleibt, wie sie ist.
  */
 export function vorlageFuerKarte(
   item: QueueItem,
@@ -67,15 +70,17 @@ export function vorlageFuerKarte(
   istOpener: boolean,
 ): Template | null {
   if (zustand.vorlageId) return nachId(templates, zustand.vorlageId)
+  const aktiv = (t: Template | null) => aktiveVariante(t, templates)
   if (art === 'antworten')
-    return nachKey(templates, antwort?.label ? phase2Vorlage(antwort.label, !!antwort.note) : null)
+    return aktiv(nachKey(templates, antwort?.label ? phase2Vorlage(antwort.label, !!antwort.note) : null))
   if (istOpener && lead?.role) {
     const rolle = OPENER_NACH_ROLLE(lead.role)
-    if (rolle) return nachKey(templates, rolle)
+    const t = rolle ? nachKey(templates, rolle) : null
+    if (istAktiv(t)) return t
   }
   if (art === 'wiedervorlage' && !item.template_id)
-    return nachKey(templates, wiedervorlageStandard(item, lead?.follow_up_count))
-  return nachId(templates, item.template_id)
+    return aktiv(nachKey(templates, wiedervorlageStandard(item, lead?.follow_up_count)))
+  return aktiv(nachId(templates, item.template_id))
 }
 
 export type NachrichtErgebnis = FuellErgebnis & {

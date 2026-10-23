@@ -8,6 +8,7 @@ import { phaseVon, stageLabel, stageRank, STUFEN } from '@/lib/stufen'
 import { hatAufklappText, ohneDoppelteEmailSendung, ohneDoppeltenImport, timelineKategorie } from '@/lib/verlauf'
 import { normalizeLinkedinUrl } from '@/lib/url'
 import { OPENER_NACH_ROLLE, phase2Vorlage, SEQUENZ, VORLAGE } from '@/lib/vorlagenKeys'
+import { aktiveVariante, istAktiv } from '@/lib/vorlagenWahl'
 import { berlinTag, tagPlus } from '@/lib/zeit'
 import { ALLGEMEIN, GATE_GRUND_LABEL, GRUND_LABEL, TIMELINE_TEXT, TOAST } from '@/texte/de'
 import type { Activity, ActivityType, Channel, ConnectionStatus, EndedReason, LeadStage, ReplyLabel, TemplatePhase } from '@/types/domain'
@@ -309,15 +310,28 @@ export function erstelleHandler(deps: HandlerDeps) {
 
   // ── Lead-Ansicht ──────────────────────────────────────────────────────────
 
+  // Wie im CRM (lib/vorlagenWahl, 23.10.2026): inaktive Vorlagen → aktive Variante derselben Familie
+  const VORLAGE_FELDER = 'id, key, name, body, phase, channel, active, sort_order'
+  type VorlageZeile = { id: string; key: string; name: string; body: string; phase: string; channel: string; active: boolean | null; sort_order: number | null }
+  const alsInfo = (t: VorlageZeile): VorlageInfo => ({ id: t.id, key: t.key, name: t.name, body: t.body, phase: t.phase as TemplatePhase })
+  async function aktivOderVariante(t: VorlageZeile | null): Promise<VorlageInfo | null> {
+    if (!t) return null
+    if (istAktiv(t)) return alsInfo(t)
+    const familie = pruefeNull(await db.from('templates').select(VORLAGE_FELDER).eq('channel', t.channel as Channel).eq('phase', t.phase as TemplatePhase)) as VorlageZeile[] | null
+    return alsInfo(aktiveVariante(t, familie ?? []) ?? t)
+  }
   async function vorlageNachId(id: string | null | undefined): Promise<VorlageInfo | null> {
     if (!id) return null
-    const t = pruefeNull(await db.from('templates').select('id, key, name, body, phase').eq('id', id).maybeSingle())
-    return t ? { id: t.id, key: t.key, name: t.name, body: t.body, phase: t.phase as TemplatePhase } : null
+    return aktivOderVariante(pruefeNull(await db.from('templates').select(VORLAGE_FELDER).eq('id', id).maybeSingle()) as VorlageZeile | null)
   }
   async function vorlageNachKey(key: string | null | undefined): Promise<VorlageInfo | null> {
     if (!key) return null
-    const t = pruefeNull(await db.from('templates').select('id, key, name, body, phase').eq('key', key).maybeSingle())
-    return t ? { id: t.id, key: t.key, name: t.name, body: t.body, phase: t.phase as TemplatePhase } : null
+    return aktivOderVariante(pruefeNull(await db.from('templates').select(VORLAGE_FELDER).eq('key', key).maybeSingle()) as VorlageZeile | null)
+  }
+  /** Rollen-Vorlage nur, solange sie aktiv ist (ZG – Kundenbetreuer ist seit 23.10.2026 aus). */
+  async function rollenVorlage(key: string): Promise<VorlageInfo | null> {
+    const t = pruefeNull(await db.from('templates').select(VORLAGE_FELDER).eq('key', key).maybeSingle()) as VorlageZeile | null
+    return t && istAktiv(t) ? alsInfo(t) : null
   }
 
   function kurz(z: KurzZeile, liste: MemberZeile[]): LeadKurz {
@@ -386,7 +400,7 @@ export function erstelleHandler(deps: HandlerDeps) {
         istOpener: !!schritt?.is_opener,
       }
       const rolle = schritt?.is_opener ? OPENER_NACH_ROLLE(lead.role) : null
-      vorlage = (rolle ? await vorlageNachKey(VORLAGE[rolle]) : null) ?? (await vorlageNachId(schritt?.template_id))
+      vorlage = (rolle ? await rollenVorlage(VORLAGE[rolle]) : null) ?? (await vorlageNachId(schritt?.template_id))
     }
 
     // Antwort offen (eingehende Nachricht ohne Reaktion) → Phase-2-Vorschlag nach Reaktion

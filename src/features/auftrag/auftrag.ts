@@ -74,12 +74,12 @@ export function chatgptPrompt(url: string = AUFTRAG_URL, maxNachrichten = 25): s
     '',
     `1. Öffne ${url} in einem eigenen Tab und lass ihn offen. Vincent ist dort angemeldet. Siehst du stattdessen eine Anmeldeseite, brich ab und sag mir Bescheid.`,
     '',
-    '2. Neue Annahmen: Öffne auf LinkedIn „Mein Netzwerk“ → „Kontakte“ und sortiere nach „Kürzlich hinzugefügt“. Nimm alle Personen, die in den letzten 3 Tagen hinzugekommen sind. Trage sie im CRM im Feld „Neue Annahmen eintragen“ ein, eine Person pro Zeile, in diesem Format:',
+    '2. Neue Anfragen (für die KPI „Vernetzungen versendet“): Öffne auf LinkedIn https://www.linkedin.com/mynetwork/invitation-manager/sent/ („Einladungen verwalten“ → „Gesendet“). Nimm alle Personen, deren Einladung heute oder in den letzten 3 Tagen gesendet wurde („Gesendet vor … Minuten/Stunden/Tagen“). Trage sie im CRM im Feld „Neue Anfragen eintragen“ ein – gleiches Format wie unten bei den Annahmen, eine Person pro Zeile – und klicke „Eintragen“. Warte auf die Ergebniszeile („… als Anfrage eingetragen …“) und merke dir ihren Wortlaut. Schon eingetragene Personen erkennt das CRM, es zählt nichts doppelt.',
+    '',
+    '3. Neue Annahmen: Öffne auf LinkedIn „Mein Netzwerk“ → „Kontakte“ und sortiere nach „Kürzlich hinzugefügt“. Nimm alle Personen, die in den letzten 3 Tagen hinzugekommen sind. Trage sie im CRM im Feld „Neue Annahmen eintragen“ ein, eine Person pro Zeile, in diesem Format:',
     '   Herr Vorname Nachname | Firma | https://www.linkedin.com/in/profil',
     '   (statt „Herr“ „Frau“, wenn es eine Frau ist; ist die Firma unbekannt, lass das Feld leer). Klicke dann „Eintragen“. Personen, die das CRM schon kennt, erkennt es selbst.',
     '   Warte, bis unter dem Feld die Ergebniszeile erscheint („… als angenommen eingetragen …“) – bei vielen Personen kann das eine Minute dauern. Merke dir ihren Wortlaut. Steht dort, dass Annahmen nicht gespeichert wurden, klicke noch einmal „Eintragen“.',
-    '',
-    '3. Falls es den Abschnitt „Annahmen prüfen“ gibt: Prüfe für jede Person dort auf LinkedIn, ob ihr inzwischen vernetzt seid. Wenn ja, klicke im CRM „Angenommen“. Wenn nein, lass die Zeile stehen.',
     '',
     '4. Arbeite danach die Abschnitte „Opener senden“ und „Follow-ups senden“ von oben nach unten ab. Für jede Aufgabe:',
     '   a) Öffne über den LinkedIn-Link das Profil der Person und dann den Chat mit ihr.',
@@ -96,8 +96,9 @@ export function chatgptPrompt(url: string = AUFTRAG_URL, maxNachrichten = 25): s
     '   – Ist eine Zeile gesperrt, ein Knopf ausgegraut oder sieht eine Seite anders aus als beschrieben: diese Aufgabe überspringen und am Ende melden.',
     '   – Erscheint „Offline“ oder „nicht gespeichert“ oder lädt die Seite länger als eine Minute: 30 Sekunden warten, die Auftragsseite neu laden und den letzten Schritt wiederholen. Das CRM erkennt Doppeltes, es wird nichts doppelt gezählt. Klappt es nach drei Versuchen nicht, abbrechen und melden.',
     '   – Ohne Häkchen „Gesendet“ im CRM keine weitere LinkedIn-Nachricht senden.',
+    '   – Die KPIs (Anfragen, Annahmen, eröffnete Gespräche, Antworten) entstehen ausschließlich aus deinen Einträgen und Klicks im CRM. Mach die Schritte 2 und 3 deshalb bei JEDEM Durchgang, auch wenn danach keine Nachricht fällig ist, und trage jede Antwort mit „Hat geantwortet“ ein.',
     '',
-    '6. Melde mir am Ende: den Wortlaut der Ergebniszeile bei „Neue Annahmen eintragen“, wie viele Nachrichten gesendet wurden, wer schon geantwortet hatte und was nicht geklappt hat.',
+    '6. Melde mir am Ende: den Wortlaut der Ergebniszeilen bei „Neue Anfragen eintragen“ und „Neue Annahmen eintragen“, wie viele Nachrichten gesendet wurden, wer schon geantwortet hatte und was nicht geklappt hat.',
   ].join('\n')
 }
 
@@ -116,5 +117,26 @@ export function annahmenText(e: AnnahmenErgebnis): string {
   if (e.uebersprungen.length) satz += ` Übersprungen: ${e.uebersprungen.join(', ')}.`
   if (e.fehlgeschlagen)
     satz += ` ${e.fehlgeschlagen} ${e.fehlgeschlagen === 1 ? 'Annahme' : 'Annahmen'} nicht gespeichert (Verbindung). Die Liste steht noch im Feld – einfach noch einmal „Eintragen“ klicken, doppelt wird nichts gezählt.`
+  return satz
+}
+
+export type AnfragenErgebnis = {
+  neu: number
+  bekannt: number
+  /** als gesendete Anfrage eingetragen (zählt bei „Vernetzungen versendet“) */
+  eingetragen: number
+  /** hatte schon eine Verbindung im CRM (offen oder angenommen) – nichts geändert */
+  schonVerbunden: number
+  uebersprungen: string[]
+  fehlgeschlagen: number
+}
+
+export function anfragenText(e: AnfragenErgebnis): string {
+  const teile = [`${e.eingetragen} als Anfrage eingetragen`, `${e.neu} neu angelegt`, `${e.bekannt} schon im CRM`]
+  if (e.schonVerbunden) teile.push(`${e.schonVerbunden} schon als Anfrage/Kontakt bekannt`)
+  let satz = `${teile.join(' · ')}.`
+  if (e.uebersprungen.length) satz += ` Übersprungen: ${e.uebersprungen.join(', ')}.`
+  if (e.fehlgeschlagen)
+    satz += ` ${e.fehlgeschlagen} ${e.fehlgeschlagen === 1 ? 'Anfrage' : 'Anfragen'} nicht gespeichert. Die Liste steht noch im Feld – einfach noch einmal „Eintragen“ klicken, doppelt wird nichts gezählt.`
   return satz
 }
