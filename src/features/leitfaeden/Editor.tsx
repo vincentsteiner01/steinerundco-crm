@@ -1,11 +1,15 @@
 // BAUPLAN § 3.7 Editor.tsx – Textarea `body` (+ `subject` bei E-Mail), Platzhalter als Chips neutral Mono,
 // `[` öffnet die Autovervollständigung (PLATZHALTER aus lib/platzhalter, LF-04), ⌘Enter speichert.
+// Telefon- und Sales-Leitfäden: „Als Kundenantwort“ setzt/entfernt „>“ vor den markierten Zeilen (blau, lib/kundenantwort).
+import { MessageCircleReply } from 'lucide-react'
 import { useId, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
+import { Button } from '@/components/ui/Button'
 import { Chip } from '@/components/ui/Chip'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { cn } from '@/components/ui/cn'
+import { istKundenPause, kundenantwortUmschalten } from '@/lib/kundenantwort'
 import { istBekannterPlatzhalter, tokens } from '@/lib/platzhalter'
 import type { Channel } from '@/types/domain'
 import { platzhalterEinfuegen, platzhalterTreffer, quelleLabel } from './editorHelfer'
@@ -33,7 +37,22 @@ export function Editor({ kanal, wert, onChange, onSpeichern, textareaRef, disabl
   const [filter, setFilter] = useState('')
   const [cursor, setCursor] = useState(0)
   const treffer = useMemo(() => platzhalterTreffer(filter), [filter])
-  const chips = useMemo(() => tokens(`${wert.subject}\n${wert.body}`), [wert.subject, wert.body])
+  const chips = useMemo(
+    () => tokens(`${wert.subject}\n${wert.body}`).filter((n) => !istKundenPause(n)),
+    [wert.subject, wert.body],
+  )
+  const mitKundenantwort = kanal === 'telefon' || kanal === 'sonstiges'
+
+  const kundenantwort = () => {
+    const el = feld.current
+    const r = kundenantwortUmschalten(wert.body, el?.selectionStart ?? 0, el?.selectionEnd ?? 0)
+    onChange({ ...wert, body: r.text })
+    requestAnimationFrame(() => {
+      if (!el) return
+      el.focus()
+      el.setSelectionRange(r.start, r.ende)
+    })
+  }
 
   const schliessen = () => {
     setVv(null)
@@ -165,6 +184,24 @@ export function Editor({ kanal, wert, onChange, onSpeichern, textareaRef, disabl
           ) : null}
         </div>
       </FormField>
+      {mitKundenantwort ? (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          <Button
+            variante="secondary"
+            groesse="S"
+            icon={MessageCircleReply}
+            disabled={disabled}
+            // Auswahl in der Textarea behalten
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={kundenantwort}
+          >
+            Als Kundenantwort
+          </Button>
+          <span className="text-small text-ink-3">
+            Zeilen mit „&gt;“ am Anfang erscheinen blau – z. B. „&gt; Antwort abwarten.“
+          </span>
+        </div>
+      ) : null}
       {chips.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1.5" aria-label="Platzhalter im Text">
           {chips.map((name) => {

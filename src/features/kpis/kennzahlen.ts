@@ -64,7 +64,8 @@ export function quotenAus(s: Summen): Quoten {
 export const ausSummen = (summen: Summen): FunnelWerte => ({ summen, quoten: quotenAus(summen) })
 export const LEERE_WERTE: FunnelWerte = ausSummen({})
 
-const METRIKEN: readonly Metric[] = [
+// Spalten von v_funnel_monthly („SG vereinbart“ gibt es nur als Tagesereignis, nicht in der Monats-View)
+const METRIKEN = [
   'vernetzungen_versendet',
   'vernetzungen_angenommen',
   'ausstehend',
@@ -84,7 +85,7 @@ const METRIKEN: readonly Metric[] = [
   'entscheider_gespraeche',
   'termine_telefon',
   'emails_gesendet',
-]
+] as const satisfies readonly Metric[]
 
 /** Monatsansicht: v_funnel_monthly 1:1 (Summen + vorberechnete Quoten, K-01/K-02). */
 export function ausFunnelMonat(f: FunnelMonat | null | undefined): FunnelWerte {

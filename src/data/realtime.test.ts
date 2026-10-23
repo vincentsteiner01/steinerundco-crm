@@ -1,4 +1,4 @@
-// BAUPLAN § 3.1.6: Invalidierungs-Tabelle (11 Tabellen) + Kanal crm:sync + Status → uiStore + Realtime-Toast-Regeln.
+// BAUPLAN § 3.1.6: Invalidierungs-Tabelle (Publikation, seit Migration 13 mit Umsatz) + Kanal crm:sync + Status → uiStore + Realtime-Toast-Regeln.
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -36,17 +36,19 @@ describe('invalidierungsKeys – Tabelle § 3.1.6 wörtlich', () => {
       qk.queue.all,
       qk.nav,
     ],
-    tasks: [qk.tasks.lead(L), ['tasks', 'faellig'], qk.queue.all, qk.nav],
-    meetings: [qk.meetings.lead(L), qk.queue.all, qk.kpis.all],
+    tasks: [qk.tasks.lead(L), ['tasks', 'faellig'], qk.queue.all, qk.nav, qk.leads.telefon],
+    meetings: [qk.meetings.lead(L), qk.queue.all, qk.kpis.all, qk.leads.telefon],
     linkedin_connections: [qk.connections.lead(L), qk.queue.all, qk.kpis.all],
     calls: [qk.calls.lead(L), ['calls', 'letzte'], ['calls', 'zeitraum'], qk.kpis.all],
     emails: [qk.emails.lead(L), ['emails', 'zeitraum'], qk.queue.all],
     daily_counters: [['counters'], qk.kpis.all],
     templates: [qk.templates.all],
     settings: [qk.settings],
+    contracts: [qk.umsatz],
+    payments: [qk.umsatz],
   }
 
-  it('deckt genau die 11 Tabellen der Publikation ab', () => {
+  it('deckt genau die Tabellen der Publikation ab', () => {
     expect([...REALTIME_TABELLEN].sort()).toEqual(Object.keys(faelle).sort())
   })
 
@@ -57,7 +59,7 @@ describe('invalidierungsKeys – Tabelle § 3.1.6 wörtlich', () => {
   }
 
   it('ohne lead_id (DELETE mit leerem old) fällt auf Präfixe zurück', () => {
-    expect(invalidierungsKeys('tasks', {})).toEqual([['tasks'], qk.queue.all, qk.nav])
+    expect(invalidierungsKeys('tasks', {})).toEqual([['tasks'], qk.queue.all, qk.nav, qk.leads.telefon])
     expect(invalidierungsKeys('leads', {})).toEqual([qk.leads.all, qk.queue.all, qk.nav])
   })
 
@@ -120,7 +122,7 @@ describe('invalidierungsBuendler', () => {
 })
 
 describe('useRealtimeSync – Kanal', () => {
-  it('abonniert crm:sync mit postgres_changes auf allen 11 Tabellen und setzt den Status', async () => {
+  it('abonniert crm:sync mit postgres_changes auf allen Tabellen und setzt den Status', async () => {
     const { renderHook } = await import('@testing-library/react')
     const { QueryClientProvider } = await import('@tanstack/react-query')
     const { createElement } = await import('react')
@@ -155,6 +157,7 @@ describe('useRealtimeSync – Kanal', () => {
         ['tasks', 'faellig'],
         qk.queue.all,
         qk.nav,
+        qk.leads.telefon,
       ]),
     )
     unmount()

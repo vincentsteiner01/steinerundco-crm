@@ -1,7 +1,7 @@
 // BAUPLAN § 3.7 Vorschau.tsx – „Vorschau mit …“ (useLeadSuche), gefüllter Text im Nachrichten-Block, offene Platzhalter Amber,
 // manuelle Platzhalter als Felder, `C` kopiert (lib/zwischenablage) – gesperrt, solange Platzhalter offen sind (§ 3.1.9a, LF-03).
 import { Search, X } from 'lucide-react'
-import { useId, useMemo, useRef, useState } from 'react'
+import { Fragment, useId, useMemo, useRef, useState } from 'react'
 import { toast } from '@/components/toast'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -9,6 +9,7 @@ import { cn } from '@/components/ui/cn'
 import { useLead, useLeadSuche } from '@/data/leads'
 import { useMe } from '@/data/members'
 import { useHotkeys } from '@/lib/keyboard'
+import { istKundenPause, kundenZeile, ohneKundenMarker } from '@/lib/kundenantwort'
 import { fuellen, tokens, type PlatzhalterKontext, type PlatzhalterLead } from '@/lib/platzhalter'
 import { kopieren } from '@/lib/zwischenablage'
 import { TOAST } from '@/texte/de'
@@ -54,7 +55,9 @@ export function Vorschau({ kanal, subject, body, leadId, onLeadChange, mitTaste 
   const leadDaten = useMemo<PlatzhalterLead>(() => lead ?? {}, [lead])
   const voll = kanal === 'email' && subject ? `${subject}\n\n${body}` : body
   const ergebnis = useMemo(() => fuellen(voll, leadDaten, ctx), [voll, leadDaten, ctx])
-  const grund = kopierGrund(ergebnis.offen)
+  // `[…]` = Antwort des Gegenübers (Telefon-Leitfäden), kein offener Platzhalter
+  const offen = useMemo(() => ergebnis.offen.filter((n) => !istKundenPause(n)), [ergebnis.offen])
+  const grund = kopierGrund(offen)
   const manuell = useMemo(() => tokens(voll).filter(istManuell), [voll])
 
   const kopierenJetzt = async () => {
@@ -62,7 +65,7 @@ export function Vorschau({ kanal, subject, body, leadId, onLeadChange, mitTaste 
       toast(`${grund}.`)
       return
     }
-    const r = await kopieren(ergebnis.text)
+    const r = await kopieren(ohneKundenMarker(ergebnis.text))
     toast(r === 'ok' ? TOAST.kopiert : 'Text markiert – ⌘C zum Kopieren.')
     setKopiert(true)
     if (timer.current) window.clearTimeout(timer.current)
@@ -77,7 +80,10 @@ export function Vorschau({ kanal, subject, body, leadId, onLeadChange, mitTaste 
     onLeadChange?.(lid)
   }
 
-  const bodySegmente = segmente(body, leadDaten, ctx)
+  const bodyZeilen = body.split('\n').map((z) => {
+    const k = kundenZeile(z)
+    return { kunde: k.kunde, teile: segmente(k.text, leadDaten, ctx) }
+  })
   const subjectSegmente = kanal === 'email' && subject ? segmente(subject, leadDaten, ctx) : null
   const gefuellt = Object.keys(ergebnis.gefuellt).length
 
@@ -170,12 +176,12 @@ export function Vorschau({ kanal, subject, body, leadId, onLeadChange, mitTaste 
         </div>
       ) : null}
 
-      <div className="border-line bg-surface-hover max-w-[64ch] rounded-sm border" data-offen={ergebnis.offen.length}>
+      <div className="border-line bg-surface-hover max-w-[64ch] rounded-sm border" data-offen={offen.length}>
         <div className="border-line text-ink-3 tnum flex min-h-7 flex-wrap items-center gap-x-3 gap-y-1 border-b px-3 py-1 font-mono text-[11.5px] tracking-[0.02em]">
           <span>
             Platzhalter{' '}
-            <span className={cn(ergebnis.offen.length ? 'text-overdue' : 'text-ink-2')}>
-              {gefuellt}/{gefuellt + ergebnis.offen.length}
+            <span className={cn(offen.length ? 'text-overdue' : 'text-ink-2')}>
+              {gefuellt}/{gefuellt + offen.length}
             </span>{' '}
             gefüllt
           </span>
@@ -188,7 +194,18 @@ export function Vorschau({ kanal, subject, body, leadId, onLeadChange, mitTaste 
             </p>
           ) : null}
           <p>
-            <Segmente teile={bodySegmente} />
+            {bodyZeilen.map((z, i) => (
+              <Fragment key={i}>
+                {i > 0 ? '\n' : null}
+                {z.kunde ? (
+                  <span className="text-signal font-medium" data-kunde="">
+                    <Segmente teile={z.teile} />
+                  </span>
+                ) : (
+                  <Segmente teile={z.teile} />
+                )}
+              </Fragment>
+            ))}
           </p>
         </div>
       </div>
@@ -211,6 +228,10 @@ function Segmente({ teile }: { teile: Segment[] }) {
           >
             {s.wert}
           </mark>
+        ) : s.name && istKundenPause(s.name) ? (
+          <span key={i} className="text-signal" title="Antwort des Gegenübers">
+            {s.wert}
+          </span>
         ) : (
           <mark
             key={i}

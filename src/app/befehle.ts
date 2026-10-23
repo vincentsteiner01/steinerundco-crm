@@ -19,7 +19,7 @@ import { useTemplates } from '@/data/templates'
 import { phaseVon } from '@/lib/stufen'
 import { KANAL_LABEL, PHASE_LABEL } from '@/texte/de'
 import { SYSTEM_ANSICHTEN } from './ansichten'
-import { NAV } from './nav'
+import { gruppeVon, NAV_SEITEN, type NavEintrag } from './nav'
 import { PFADE } from './pfade'
 import { useUiStore } from './uiStore'
 
@@ -119,11 +119,17 @@ export const PALETTE_QUELLEN: PaletteQuelle[] = [
   },
 ]
 
-const SEITEN: Befehl[] = NAV.filter((n): n is Exclude<typeof n, 'trenner'> => n !== 'trenner').map((n) => ({
+function seitenLabel(n: NavEintrag): string {
+  const g = gruppeVon(n)
+  return g && g.gruppe !== 'mehr' ? `${g.label} · ${n.label}` : n.label
+}
+
+// Unterseiten mit Gruppe („Telefon · Kontakte“), damit „Telefon“ in der Suche alle Telefon-Seiten findet
+const SEITEN: Befehl[] = NAV_SEITEN.map((n) => ({
   id: `seite:${n.pfad}`,
-  label: n.label,
+  label: seitenLabel(n),
   gruppe: 'seiten',
-  tasten: [n.akkord],
+  tasten: n.akkord ? [n.akkord] : undefined,
   ausfuehren: ({ navigate }) => navigate(n.pfad),
 }))
 

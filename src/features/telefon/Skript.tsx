@@ -7,6 +7,7 @@ import { cn } from '@/components/ui/cn'
 import { Segment } from '@/components/ui/Segment'
 import { Select } from '@/components/ui/Select'
 import { Tabs } from '@/components/ui/Tabs'
+import { istKundenPause, kundenZeile } from '@/lib/kundenantwort'
 import { platzhalterWert, type PlatzhalterKontext, type PlatzhalterLead } from '@/lib/platzhalter'
 import type { CallBasis, Template } from '@/types/domain'
 import { SKRIPT_TABS, skriptVorlagen, type SkriptTab } from './skriptLogik'
@@ -25,7 +26,10 @@ const PHASEN_RASTER =
 
 const TOKEN = /(\[[^[\]\n]{1,40}\])/
 
-/** Text mit markierten Platzhaltern: gefüllt = `mark`, offen = amber (DESIGN-SYSTEM: offener Platzhalter = overdue). */
+/**
+ * Text mit markierten Platzhaltern: gefüllt = `mark`, offen = amber (DESIGN-SYSTEM: offener Platzhalter = overdue).
+ * Kundenantworten (Zeile mit „>“, `[…]`) blau (lib/kundenantwort).
+ */
 export function GefuellterText({ body, lead, ctx }: { body: string; lead: PlatzhalterLead; ctx?: PlatzhalterKontext }) {
   const norm = body.replace(/\b(Herr|Frau)\s+\[Nachname\]/g, '[Anrede] [Nachname]')
   const absaetze = norm.split(/\n{2,}/)
@@ -33,25 +37,41 @@ export function GefuellterText({ body, lead, ctx }: { body: string; lead: Platzh
     <>
       {absaetze.map((abs, ai) => (
         <p key={ai} className="mb-[0.8em] last:mb-0">
-          {abs.split('\n').map((zeile, zi) => (
-            <Fragment key={zi}>
-              {zi > 0 ? <br /> : null}
-              {zeile.split(TOKEN).map((teil, ti): ReactNode => {
-                if (!TOKEN.test(teil)) return teil
-                const name = teil.slice(1, -1).trim()
-                const wert = platzhalterWert(name, lead, ctx)
-                return wert === null ? (
-                  <mark key={ti} className="text-overdue rounded-xs bg-transparent px-0.5" title={`${name} – offen`}>
+          {abs.split('\n').map((roh, zi) => {
+            const { kunde, text: zeile } = kundenZeile(roh)
+            const teile = zeile.split(TOKEN).map((teil, ti): ReactNode => {
+              if (!TOKEN.test(teil)) return teil
+              const name = teil.slice(1, -1).trim()
+              if (istKundenPause(name))
+                return (
+                  <span key={ti} className="text-signal" title="Antwort des Gegenübers">
                     {teil}
-                  </mark>
-                ) : (
-                  <mark key={ti} className="bg-signal-tint text-ink rounded-xs px-0.5" title={`aus ${name}`}>
-                    {wert}
-                  </mark>
+                  </span>
                 )
-              })}
-            </Fragment>
-          ))}
+              const wert = platzhalterWert(name, lead, ctx)
+              return wert === null ? (
+                <mark key={ti} className="text-overdue rounded-xs bg-transparent px-0.5" title={`${name} – offen`}>
+                  {teil}
+                </mark>
+              ) : (
+                <mark key={ti} className="bg-signal-tint text-ink rounded-xs px-0.5" title={`aus ${name}`}>
+                  {wert}
+                </mark>
+              )
+            })
+            return (
+              <Fragment key={zi}>
+                {zi > 0 ? <br /> : null}
+                {kunde ? (
+                  <span className="text-signal font-medium" data-kunde="">
+                    {teile}
+                  </span>
+                ) : (
+                  teile
+                )}
+              </Fragment>
+            )
+          })}
         </p>
       ))}
     </>

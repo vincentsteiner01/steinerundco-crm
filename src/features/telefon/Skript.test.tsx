@@ -2,7 +2,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { VORLAGE } from '@/lib/vorlagenKeys'
-import { Skript } from './Skript'
+import { GefuellterText, Skript } from './Skript'
 import { naechsterTab, SKRIPT_TABS, skriptVorlagen, startTab } from './skriptLogik'
 import { LEAD_A, TEMPLATES } from './_testHilfe'
 
@@ -129,5 +129,19 @@ describe('Skript', () => {
     const auswahl = screen.getByRole('combobox', { name: 'Vorlage' })
     expect(auswahl).toHaveClass('w-full')
     expect(auswahl).toHaveAttribute('title', 'Sehr lange Vorlage für den Einstieg Nummer 1') // abgeschnittener Name per Hover
+  })
+
+  it('Kundenantworten (Zeile mit „>“, „[…]“) erscheinen blau, ohne Marker (23.10.2026)', () => {
+    const { container } = render(
+      <GefuellterText
+        body={'Spreche ich mit der Kundenbetreuung?\n\n> Antwort abwarten.\n\nGut. […] Danke.'}
+        lead={{}}
+      />,
+    )
+    const kunde = container.querySelectorAll('[data-kunde]')
+    expect([...kunde].map((k) => k.textContent)).toEqual(['Antwort abwarten.'])
+    expect(kunde[0]).toHaveClass('text-signal')
+    expect(container.textContent).not.toContain('>')
+    expect(screen.getByTitle('Antwort des Gegenübers')).toHaveTextContent('[…]')
   })
 })

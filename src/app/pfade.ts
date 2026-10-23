@@ -10,6 +10,12 @@ export const PFADE = {
   pipeline: '/pipeline',
   telefon: '/telefon',
   anruf: (leadId: string) => `/telefon/anruf/${leadId}`,
+  // Telefon-Bereiche nach Mikes Sales Hub (23.10.2026)
+  telefonKontakte: '/telefon/kontakte',
+  dealPipeline: '/telefon/pipeline',
+  followUps: '/telefon/follow-ups',
+  salesKpis: '/telefon/kpis',
+  umsatz: '/umsatz',
   email: '/email',
   emailVerfassen: '/email/verfassen',
   kpis: '/kpis',

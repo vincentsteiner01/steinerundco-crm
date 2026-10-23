@@ -1,7 +1,7 @@
 import { Marke } from '@/components/ui/Marke'
 import { MessageSquareWarning, Search } from 'lucide-react'
-import { NavLink, useNavigate } from 'react-router'
-import { NAV } from '@/app/nav'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router'
+import { aktiverEintrag, gruppeVon, NAV, pfadOhneQuery } from '@/app/nav'
 import { PFADE } from '@/app/pfade'
 import { useUiStore } from '@/app/uiStore'
 import { Avatar } from '@/components/ui/Avatar'
@@ -20,6 +20,11 @@ export function IconRail() {
   const abmelden = useAuth((s) => s.abmelden)
   const setPaletteOffen = useUiStore((s) => s.setPaletteOffen)
   const zaehler = useNavZaehler()
+  const { pathname, search } = useLocation()
+  const aktiv = aktiverEintrag(pathname, search)
+  // Gruppen (Telefon, LinkedIn) stehen als eine Ikone mit dem Pfad ihrer ersten Seite – aktiv für jede ihrer Seiten
+  const aktivPfad =
+    gruppeVon(aktiv)?.gruppe === 'mehr' ? aktiv?.pfad : (gruppeVon(aktiv)?.kinder[0]?.pfad ?? aktiv?.pfad)
   return (
     <aside
       className="border-line bg-sidebar sticky top-0 flex h-dvh w-16 flex-col items-center border-r px-2.5 pt-[18px] pb-3.5"
@@ -59,10 +64,12 @@ export function IconRail() {
                 </span>
               }
             >
-              <NavLink
+              <Link
                 to={n.pfad}
                 aria-label={n.label}
-                data-tour={`nav:${n.pfad}`}
+                aria-current={aktivPfad === n.pfad ? 'page' : undefined}
+                data-tour={`nav:${pfadOhneQuery(n.pfad)}`}
+                // aria-current aus aktiverEintrag (Gruppen, Query-Ansichten) – NavLink setzt es nur bei eigenem Pfadtreffer.
                 // Fester String statt className-Funktion: der Tooltip-Trigger (Radix Slot) verkettet className als Text –
                 // die Funktion landete als Quelltext im DOM und gab JEDEM Eintrag den Lime-Balken (Runde 2, 900 px).
                 className={cn(
@@ -75,7 +82,7 @@ export function IconRail() {
                 {n.zaehler === 'heute' && zaehler.heute > 0 ? (
                   <span className="text-signal tnum absolute top-1 right-1 font-mono text-[9px]">{zaehler.heute}</span>
                 ) : null}
-              </NavLink>
+              </Link>
             </Tooltip>
           ),
         )}

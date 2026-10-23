@@ -14,6 +14,8 @@ export const qk = {
     dublette: (url?: string, phone?: string, email?: string) => ['leads', 'dublette', url, phone, email] as const,
     ohneBewegung: ['leads', 'ohne-bewegung'] as const,
     pipeline: ['leads', 'pipeline'] as const,
+    /** Telefon-Ansichten (Kontakte · Deal-Pipeline · Follow-ups, 23.10.2026) – Präfix ['leads'] */
+    telefon: ['leads', 'telefon'] as const,
   },
   activities: (leadId: string) => ['activities', leadId] as const,
   activitiesZeitraum: (m: string, von: string, bis: string, types: readonly string[]) =>
@@ -66,4 +68,6 @@ export const qk = {
   companies: ['companies'] as const,
   nav: ['nav'] as const,
   feedback: ['feedback'] as const,
+  /** Umsatz (Migration 13): Aufträge + Zahlungen */
+  umsatz: ['umsatz'] as const,
 } as const

@@ -375,6 +375,79 @@ export type Database = {
         }
         Relationships: []
       }
+      contracts: {
+        Row: {
+          company_id: string | null
+          created_at: string
+          created_by: string | null
+          customer: string
+          frequency: string
+          id: string
+          lead_id: string | null
+          notes: string | null
+          product: string | null
+          recurring_amount: number
+          setup_amount: number
+          start_date: string
+          term_months: number | null
+          updated_at: string
+        }
+        Insert: {
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer: string
+          frequency?: string
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          product?: string | null
+          recurring_amount?: number
+          setup_amount?: number
+          start_date: string
+          term_months?: number | null
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer?: string
+          frequency?: string
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          product?: string | null
+          recurring_amount?: number
+          setup_amount?: number
+          start_date?: string
+          term_months?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'contracts_company_id_fkey'
+            columns: ['company_id']
+            isOneToOne: false
+            referencedRelation: 'companies'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'contracts_lead_id_fkey'
+            columns: ['lead_id']
+            isOneToOne: false
+            referencedRelation: 'leads'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'contracts_lead_id_fkey'
+            columns: ['lead_id']
+            isOneToOne: false
+            referencedRelation: 'v_leads_ohne_bewegung'
+            referencedColumns: ['lead_id']
+          },
+        ]
+      }
       daily_counters: {
         Row: {
           date: string
@@ -1442,6 +1515,47 @@ export type Database = {
             columns: ['member_id']
             isOneToOne: true
             referencedRelation: 'members'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          contract_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          paid_on: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          contract_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_on: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          contract_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          paid_on?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'payments_contract_id_fkey'
+            columns: ['contract_id']
+            isOneToOne: false
+            referencedRelation: 'contracts'
             referencedColumns: ['id']
           },
         ]
@@ -3086,6 +3200,7 @@ export type Database = {
         | 'entscheider_gespraeche'
         | 'termine_telefon'
         | 'emails_gesendet'
+        | 'strategiegespraeche_vereinbart'
       next_action_kind: 'sequenz_schritt' | 'rueckruf' | 'wiedervorlage' | 'aufgabe' | 'meeting' | 'antworten'
       note_variant: 'ohne' | 'note_v1' | 'note_v2'
       phone_source:
@@ -3732,6 +3847,7 @@ export const Constants = {
         'entscheider_gespraeche',
         'termine_telefon',
         'emails_gesendet',
+        'strategiegespraeche_vereinbart',
       ],
       next_action_kind: ['sequenz_schritt', 'rueckruf', 'wiedervorlage', 'aufgabe', 'meeting', 'antworten'],
       note_variant: ['ohne', 'note_v1', 'note_v2'],

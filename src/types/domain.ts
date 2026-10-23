@@ -198,6 +198,7 @@ export type Metric =
   | 'erstgespraeche_vereinbart'
   | 'erstgespraeche'
   | 'strategiegespraeche'
+  | 'strategiegespraeche_vereinbart'
   | 'kunden_gewonnen'
   | 'erstgespraech_no_show'
   | 'erstgespraech_abgesagt'
@@ -261,6 +262,13 @@ export type LinkedinConnection = T<'linkedin_connections'>
 export type Task = T<'tasks'>
 export type Meeting = T<'meetings'>
 export type Call = T<'calls'>
+/** Umsatz (Migration 13): Aufträge und Zahlungseingänge */
+export type Contract = T<'contracts'>
+export type ContractInsert = I<'contracts'>
+export type ContractUpdate = U<'contracts'>
+export type Payment = T<'payments'>
+export type PaymentInsert = I<'payments'>
+export type ContractFrequency = 'monatlich' | 'vierteljaehrlich' | 'halbjaehrlich' | 'jaehrlich'
 export type CallOutcomeDef = T<'call_outcome_defs'>
 export type Email = T<'emails'>
 export type DailyCounter = T<'daily_counters'>

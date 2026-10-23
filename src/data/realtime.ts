@@ -17,7 +17,7 @@ import { anzeigeName } from '@/lib/mitglied'
 
 export const REALTIME_KANAL = 'crm:sync'
 
-/** Die 11 Tabellen der Publikation `supabase_realtime` (Migration 1 Abschnitt 11). */
+/** Die Tabellen der Publikation `supabase_realtime` (Migration 1 Abschnitt 11; Umsatz seit Migration 13). */
 export const REALTIME_TABELLEN = [
   'leads',
   'activities',
@@ -30,6 +30,8 @@ export const REALTIME_TABELLEN = [
   'daily_counters',
   'templates',
   'settings',
+  'contracts',
+  'payments',
 ] as const
 export type RealtimeTabelle = (typeof REALTIME_TABELLEN)[number]
 
@@ -66,10 +68,16 @@ export function invalidierungsKeys(tabelle: RealtimeTabelle, zeile: Zeile): Quer
         qk.queue.all,
         qk.nav,
       ]
+    // Telefon-Ansichten (Kontakte · Deal-Pipeline · Follow-ups) betten Aufgaben und Termine ein (23.10.2026)
     case 'tasks':
-      return [...(leadId ? [qk.tasks.lead(leadId), ['tasks', 'faellig']] : [['tasks']]), qk.queue.all, qk.nav]
+      return [
+        ...(leadId ? [qk.tasks.lead(leadId), ['tasks', 'faellig']] : [['tasks']]),
+        qk.queue.all,
+        qk.nav,
+        qk.leads.telefon,
+      ]
     case 'meetings':
-      return [...(leadId ? [qk.meetings.lead(leadId)] : [['meetings']]), qk.queue.all, qk.kpis.all]
+      return [...(leadId ? [qk.meetings.lead(leadId)] : [['meetings']]), qk.queue.all, qk.kpis.all, qk.leads.telefon]
     case 'linkedin_connections':
       return [...(leadId ? [qk.connections.lead(leadId)] : [['connections']]), qk.queue.all, qk.kpis.all]
     case 'calls':
@@ -86,6 +94,9 @@ export function invalidierungsKeys(tabelle: RealtimeTabelle, zeile: Zeile): Quer
       return [qk.templates.all]
     case 'settings':
       return [qk.settings]
+    case 'contracts':
+    case 'payments':
+      return [qk.umsatz]
   }
 }
 

@@ -1,8 +1,16 @@
 import { Marke } from '@/components/ui/Marke'
-import { MessageSquareWarning, Search } from 'lucide-react'
-import { lazy, Suspense } from 'react'
-import { NavLink, useNavigate } from 'react-router'
-import { NAV } from '@/app/nav'
+import { ChevronRight, MessageSquareWarning, Search } from 'lucide-react'
+import { lazy, Suspense, useState } from 'react'
+import { Link, NavLink, useLocation, useNavigate } from 'react-router'
+import {
+  aktiverEintrag,
+  gruppeVon,
+  istGruppe,
+  NAV_BAUM,
+  pfadOhneQuery,
+  type NavEintrag,
+  type NavGruppe,
+} from '@/app/nav'
 import { PFADE } from '@/app/pfade'
 import { useUiStore } from '@/app/uiStore'
 import { Avatar } from '@/components/ui/Avatar'
@@ -25,10 +33,22 @@ export function Sidebar() {
   const setPaletteOffen = useUiStore((s) => s.setPaletteOffen)
   const setHilfeOffen = useUiStore((s) => s.setHilfeOffen)
   const zaehler = useNavZaehler()
+  const { pathname, search } = useLocation()
+  const aktiv = aktiverEintrag(pathname, search)
+  const aktiveGruppe = gruppeVon(aktiv)
+  const [offen, setOffen] = useState<Record<string, boolean>>(liesOffen)
+  const umschalten = (g: NavGruppe) => {
+    const jetzt = g.gruppe === aktiveGruppe?.gruppe || (offen[g.gruppe] ?? g.offenStandard)
+    // Die Gruppe der aktiven Seite bleibt offen – sonst verschwände der markierte Punkt
+    if (jetzt && g.gruppe === aktiveGruppe?.gruppe) return
+    const neu = { ...offen, [g.gruppe]: !jetzt }
+    setOffen(neu)
+    schreibeOffen(neu)
+  }
 
   return (
     <aside
-      className="border-line bg-sidebar sticky top-0 flex h-dvh flex-col border-r px-3 pt-[18px] pb-4"
+      className="border-line bg-sidebar sticky top-0 flex h-dvh flex-col overflow-hidden border-r px-3 pt-[18px] pb-4"
       aria-label="Seitenleiste"
     >
       <NavLink to={PFADE.heute} className="flex items-center px-2 pb-4">
@@ -45,52 +65,22 @@ export function Sidebar() {
         <Kbd>⌘K</Kbd>
       </button>
 
-      <nav className="grid gap-0.5" aria-label="Hauptnavigation">
-        {NAV.map((n, i) =>
-          n === 'trenner' ? (
+      {/* Scrollt bei kleiner Fensterhöhe, statt den Fuß (Ich, Feedback) zu verdrängen */}
+      <nav className="-mx-1 grid min-h-0 content-start gap-0.5 overflow-y-auto px-1 pb-2" aria-label="Hauptnavigation">
+        {NAV_BAUM.map((k, i) =>
+          k === 'trenner' ? (
             <hr key={`t${i}`} className="border-line my-2 border-0 border-t" />
+          ) : istGruppe(k) ? (
+            <Gruppe
+              key={k.gruppe}
+              gruppe={k}
+              offen={k.gruppe === aktiveGruppe?.gruppe || (offen[k.gruppe] ?? k.offenStandard)}
+              onToggle={() => umschalten(k)}
+              aktiv={aktiv}
+              zaehler={zaehler}
+            />
           ) : (
-            <NavLink
-              key={n.pfad}
-              to={n.pfad}
-              data-tour={`nav:${n.pfad}`}
-              className={({ isActive }) =>
-                cn(
-                  'group text-ui ease-brand hover:bg-surface-hover hover:text-ink relative flex h-[34px] items-center gap-2.5 rounded-sm px-2.5 transition-[background,color] duration-[var(--t-1)]',
-                  isActive ? 'bg-surface-pressed/70 text-ink-bright' : 'text-ink-2',
-                )
-              }
-            >
-              {({ isActive }) => {
-                const wert = n.zaehler ? zaehler[n.zaehler] : undefined
-                const faellig = n.zaehler === 'heute' && (wert ?? 0) > 0
-                const text = n.zaehler === 'telefon' && zaehler.telefon > 0 ? `${zaehler.telefon}` : wert
-                return (
-                  <>
-                    <n.icon size={18} strokeWidth={1.75} aria-hidden className={isActive ? 'text-ink' : 'text-ink-3'} />
-                    <span>{n.label}</span>
-                    {n.pfad === '/einstellungen' ? (
-                      <Suspense fallback={null}>
-                        <EingangZahl aktiv={isActive} />
-                      </Suspense>
-                    ) : null}
-                    {text !== undefined && text !== 0 ? (
-                      <span
-                        className={cn(
-                          'tnum ml-auto font-mono text-[12px] group-hover:hidden',
-                          isActive ? 'text-ink' : faellig ? 'text-signal' : 'text-ink-3',
-                        )}
-                      >
-                        {text}
-                      </span>
-                    ) : null}
-                    <span className="ml-auto hidden group-hover:inline-flex">
-                      <Kbd akkord={n.akkord} />
-                    </span>
-                  </>
-                )
-              }}
-            </NavLink>
+            <Eintrag key={k.pfad} e={k} aktiv={aktiv === k} zaehler={zaehler} />
           ),
         )}
       </nav>
@@ -140,5 +130,146 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+  )
+}
+
+const OFFEN_KEY = 'crm.nav.offen'
+
+/** Auf-/Zugeklappt je Gruppe – nur Bequemlichkeit dieses Browsers (fehlt der Speicher, gilt der Standard). */
+function liesOffen(): Record<string, boolean> {
+  try {
+    const roh = localStorage.getItem(OFFEN_KEY)
+    const w: unknown = roh ? JSON.parse(roh) : {}
+    return w && typeof w === 'object' ? (w as Record<string, boolean>) : {}
+  } catch {
+    return {}
+  }
+}
+function schreibeOffen(w: Record<string, boolean>): void {
+  try {
+    localStorage.setItem(OFFEN_KEY, JSON.stringify(w))
+  } catch {
+    // ohne Speicher bleibt es beim Standard
+  }
+}
+
+const ZEILE =
+  'group text-ui ease-brand hover:bg-surface-hover hover:text-ink relative flex h-[32px] w-full items-center gap-2.5 rounded-sm px-2.5 text-left transition-[background,color] duration-[var(--t-1)]'
+
+function ZaehlerText({
+  e,
+  zaehler,
+  aktiv,
+}: {
+  e: { zaehler?: NavEintrag['zaehler'] }
+  zaehler: ReturnType<typeof useNavZaehler>
+  aktiv: boolean
+}) {
+  const wert = e.zaehler ? zaehler[e.zaehler] : undefined
+  if (wert === undefined || wert === 0) return null
+  const faellig = e.zaehler === 'heute' && wert > 0
+  return (
+    <span
+      className={cn(
+        'tnum ml-auto font-mono text-[12px] group-hover:hidden',
+        aktiv ? 'text-ink' : faellig ? 'text-signal' : 'text-ink-3',
+      )}
+    >
+      {wert}
+    </span>
+  )
+}
+
+function Eintrag({
+  e,
+  aktiv,
+  zaehler,
+  eingerueckt,
+}: {
+  e: NavEintrag
+  aktiv: boolean
+  zaehler: ReturnType<typeof useNavZaehler>
+  eingerueckt?: boolean
+}) {
+  return (
+    <Link
+      to={e.pfad}
+      // Aktiv bestimmt aktiverEintrag (Query-Ansichten wie /leitfaeden?kanal=telefon), nicht NavLinks Pfadvergleich
+      aria-current={aktiv ? 'page' : undefined}
+      data-tour={`nav:${pfadOhneQuery(e.pfad)}`}
+      className={cn(ZEILE, eingerueckt && 'pl-[34px]', aktiv ? 'bg-surface-pressed/70 text-ink-bright' : 'text-ink-2')}
+    >
+      {eingerueckt ? null : (
+        <e.icon size={18} strokeWidth={1.75} aria-hidden className={aktiv ? 'text-ink' : 'text-ink-3'} />
+      )}
+      <span className="min-w-0 truncate">{e.label}</span>
+      {e.pfad === '/einstellungen' ? (
+        <Suspense fallback={null}>
+          <EingangZahl aktiv={aktiv} />
+        </Suspense>
+      ) : null}
+      <ZaehlerText e={e} zaehler={zaehler} aktiv={aktiv} />
+      {e.akkord ? (
+        <span className="ml-auto hidden group-hover:inline-flex">
+          <Kbd akkord={e.akkord} />
+        </span>
+      ) : null}
+    </Link>
+  )
+}
+
+function Gruppe({
+  gruppe,
+  offen,
+  onToggle,
+  aktiv,
+  zaehler,
+}: {
+  gruppe: NavGruppe
+  offen: boolean
+  onToggle: () => void
+  aktiv: NavEintrag | null
+  zaehler: ReturnType<typeof useNavZaehler>
+}) {
+  const id = `nav-gruppe-${gruppe.gruppe}`
+  const enthaeltAktiv = !!aktiv && gruppe.kinder.includes(aktiv)
+  return (
+    <div className="grid gap-0.5" data-gruppe={gruppe.gruppe}>
+      <button
+        type="button"
+        aria-expanded={offen}
+        aria-controls={id}
+        onClick={onToggle}
+        className={cn(ZEILE, enthaeltAktiv && !offen ? 'bg-surface-pressed/70 text-ink-bright' : 'text-ink-2')}
+      >
+        <gruppe.icon size={18} strokeWidth={1.75} aria-hidden className={enthaeltAktiv ? 'text-ink' : 'text-ink-3'} />
+        <span className="min-w-0 truncate">{gruppe.label}</span>
+        {/* Zugeklappt: Zähler der Gruppe (Anrufliste, Eingang) neben dem Pfeil */}
+        <span className="ml-auto flex items-center gap-2 [&>span]:ml-0 [&>span]:group-hover:inline">
+          {offen ? null : <ZaehlerText e={gruppe} zaehler={zaehler} aktiv={false} />}
+          {!offen && gruppe.gruppe === 'mehr' ? (
+            <Suspense fallback={null}>
+              <EingangZahl aktiv={false} />
+            </Suspense>
+          ) : null}
+          <ChevronRight
+            size={14}
+            strokeWidth={1.75}
+            aria-hidden
+            className={cn(
+              'text-ink-3 ease-brand shrink-0 transition-transform duration-[var(--t-1)]',
+              offen && 'rotate-90',
+            )}
+          />
+        </span>
+      </button>
+      {offen ? (
+        <div id={id} className="grid gap-0.5">
+          {gruppe.kinder.map((e) => (
+            <Eintrag key={e.pfad} e={e} aktiv={aktiv === e} zaehler={zaehler} eingerueckt />
+          ))}
+        </div>
+      ) : null}
+    </div>
   )
 }
