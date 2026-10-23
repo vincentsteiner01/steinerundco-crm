@@ -27,7 +27,14 @@ const ANDERE = '00000000-0000-4000-8000-000000000002'
 describe('invalidierungsKeys – Tabelle § 3.1.6 wörtlich', () => {
   const faelle: Record<RealtimeTabelle, unknown[][]> = {
     leads: [qk.leads.all, qk.leads.detail(L), qk.queue.all, qk.nav],
-    activities: [qk.activities(L), ['activities', 'zeitraum'], qk.leads.detail(L), qk.kpis.all, qk.templates.perf],
+    activities: [
+      qk.activities(L),
+      ['activities', 'zeitraum'],
+      qk.leads.detail(L),
+      qk.kpis.all,
+      qk.templates.perf,
+      [...qk.leads.telefon, 'notizen'],
+    ],
     enrollments: [
       qk.enrollments(L),
       ['enrollments', 'kanal'],
@@ -39,7 +46,13 @@ describe('invalidierungsKeys – Tabelle § 3.1.6 wörtlich', () => {
     tasks: [qk.tasks.lead(L), ['tasks', 'faellig'], qk.queue.all, qk.nav, qk.leads.telefon],
     meetings: [qk.meetings.lead(L), qk.queue.all, qk.kpis.all, qk.leads.telefon],
     linkedin_connections: [qk.connections.lead(L), qk.queue.all, qk.kpis.all],
-    calls: [qk.calls.lead(L), ['calls', 'letzte'], ['calls', 'zeitraum'], qk.kpis.all],
+    calls: [
+      qk.calls.lead(L),
+      ['calls', 'letzte'],
+      ['calls', 'zeitraum'],
+      qk.kpis.all,
+      [...qk.leads.telefon, 'notizen'],
+    ],
     emails: [qk.emails.lead(L), ['emails', 'zeitraum'], qk.queue.all],
     daily_counters: [['counters'], qk.kpis.all],
     templates: [qk.templates.all],

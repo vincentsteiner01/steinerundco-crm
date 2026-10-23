@@ -2,6 +2,7 @@
 // `fuellen` ersetzt gefüllte Platzhalter, lässt offene wörtlich stehen und listet sie; UI-Regel: „Kopieren“/„Öffnen“
 // sind gesperrt, solange `offen.length > 0`. Das Seed-Literal „Herr [Nachname]“ / „Frau [Nachname]“ wird als
 // `[Anrede] [Nachname]` behandelt.
+import { ohneFormat } from './leitfadenFormat'
 import { ANRUFGRUND_LABEL } from '@/texte/de'
 import type { CallBasis, Lead, Meeting, Salutation } from '@/types/domain'
 import { fmtDatum } from './format'
@@ -159,11 +160,12 @@ export function signaturAlsAbsender(body: string): string {
   return body.replace(SIGNATUR_VORNAME_RE, '$1[Absender Vorname]')
 }
 
-/** § 3.1.9a – füllt `[Name]`-Platzhalter, listet offene; Herr/Frau-Literal → `[Anrede] [Nachname]`. */
+/** § 3.1.9a – füllt `[Name]`-Platzhalter (ohne Leitfaden-Auszeichnung), listet offene; Herr/Frau-Literal → `[Anrede] [Nachname]`. */
 export function fuellen(body: string, lead: PlatzhalterLead, ctx: PlatzhalterKontext = {}): FuellErgebnis {
   const gefuellt: Record<string, string> = {}
   const offen: string[] = []
-  const norm = signaturAlsAbsender(body).replace(LITERAL_ANREDE_RE, '[Anrede] [Nachname]')
+  // Leitfaden-Auszeichnung (fett, „> “ Kundenantwort …) geht nie mit hinaus (23.10.2026)
+  const norm = signaturAlsAbsender(ohneFormat(body)).replace(LITERAL_ANREDE_RE, '[Anrede] [Nachname]')
   const text = norm.replace(TOKEN_RE, (ganz, roh: string) => {
     const name = roh.trim()
     const wert = platzhalterWert(name, lead, ctx)

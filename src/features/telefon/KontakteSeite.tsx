@@ -1,9 +1,10 @@
 // Telefon › Kontakte (`/telefon/kontakte`, 23.10.2026): Mikes Lead-Tabelle aus dem Sales Hub auf den CRM-Daten – alle Leads mit
 // Telefonnummer, Spalten Kontakt · Unternehmen · Telefon · Erstgespräch · Strategiegespräch · Status · Follow-up, fällige
-// Follow-ups zuerst. Bearbeitet wird im Peek (Klick auf die Zeile), angerufen im Anruf-Screen; Anlegen/Import = bestehende Seiten.
+// Follow-ups zuerst. Klick öffnet die Schnellnotiz (Notiz, Ergebnis, nächster Anruf; „Akte öffnen“ darin); Anlegen/Import =
+// bestehende Seiten.
 import { Phone, Plus, Search, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { PFADE } from '@/app/pfade'
 import { Button } from '@/components/ui/Button'
 import { Chip, StatusChip } from '@/components/ui/Chip'
@@ -15,7 +16,7 @@ import { Select } from '@/components/ui/Select'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { cn } from '@/components/ui/cn'
 import { useSettings } from '@/data/settings'
-import { useTelefonKontakte, type TelefonLead, type TelefonTermin } from '@/data/telefonAnsichten'
+import { useLetzteKontakte, useTelefonKontakte, type TelefonLead, type TelefonTermin } from '@/data/telefonAnsichten'
 import { fmtDatumKurz, fmtZeit, heuteBerlin } from '@/lib/format'
 import { PHASEN, phaseVon } from '@/lib/stufen'
 import { fmtTelefon } from '@/lib/telefon'
@@ -29,6 +30,7 @@ import {
   terminVon,
 } from './ansichten/logik'
 import { Kachel, Kacheln, TelefonUnterNav } from './ansichten/Teile'
+import { SchnellNotiz } from './SchnellNotiz'
 
 const STATUS_HINWEIS: Partial<Record<TelefonTermin['status'], string>> = {
   geplant: 'geplant',
@@ -81,7 +83,6 @@ function Anrufen({ lead }: { lead: TelefonLead }) {
 
 export function Component() {
   const navigate = useNavigate()
-  const [params, setParams] = useSearchParams()
   const { data, isLoading, isError, refetch } = useTelefonKontakte()
   const { data: settings } = useSettings()
   const [q, setQ] = useState('')
@@ -114,11 +115,13 @@ export function Component() {
     )
   }, [alle, q, phase])
 
-  const oeffnen = (id: string) => {
-    const p = new URLSearchParams(params)
-    p.set('lead', id)
-    setParams(p, { replace: true })
-  }
+  // Klick öffnet die Schnellnotiz (Mike: „ohne in der Akte zu wühlen“); die Akte selbst über „Akte öffnen“ darin
+  const [notizId, setNotizId] = useState<string | null>(null)
+  const oeffnen = (id: string) => setNotizId(id)
+  const notizIndex = liste.findIndex((l) => l.id === notizId)
+  const notizLead = notizIndex >= 0 ? liste[notizIndex] : null
+  const naechster = notizIndex >= 0 ? liste[notizIndex + 1] : undefined
+  const { data: kontakte } = useLetzteKontakte(notizLead ? [notizLead.id] : [])
 
   return (
     <>
@@ -288,6 +291,15 @@ export function Component() {
           {liste.length === 0 ? <p className="text-ui text-ink-2 py-6">Kein Kontakt passt zur Suche.</p> : null}
         </>
       )}
+      {notizLead ? (
+        <SchnellNotiz
+          key={notizLead.id}
+          lead={notizLead}
+          verlauf={kontakte?.get(notizLead.id) ?? []}
+          onClose={() => setNotizId(null)}
+          onWeiter={naechster ? () => setNotizId(naechster.id) : undefined}
+        />
+      ) : null}
     </>
   )
 }

@@ -1,15 +1,9 @@
 // Reine Logik der Telefon-Ansichten nach Mikes Sales Hub (23.10.2026): Termin-Daten je Lead, nächstes Follow-up, die acht
 // Deal-Phasen (abgeleitet aus Stufe + Terminen – nicht frei editierbar, damit die KPIs stimmen) und die Sales-KPIs je Tag,
 // Woche oder Monat.
-import type {
-  FollowUpAufgabe,
-  FollowUpTermin,
-  TelefonAufgabe,
-  TelefonLead,
-  TelefonTermin,
-} from '@/data/telefonAnsichten'
+import type { TelefonAufgabe, TelefonLead, TelefonTermin } from '@/data/telefonAnsichten'
 import { berlinTag, isodow, kalenderwoche, tagPlus, type Tag } from '@/lib/zeit'
-import type { MeetingType, Metric, TaskKind } from '@/types/domain'
+import type { CallOutcome, MeetingType, Metric, TaskKind } from '@/types/domain'
 
 // ── Termine und Follow-ups je Lead ─────────────────────────────────────────────────────────────────────────
 
@@ -131,64 +125,6 @@ export function nachPhase<T extends Pick<TelefonLead, 'stage' | 'meetings' | 'ta
   return out
 }
 
-// ── Follow-ups ─────────────────────────────────────────────────────────────────────────────────────────────
-
-export type FollowUpEintrag = {
-  id: string
-  art: 'aufgabe' | 'termin'
-  label: string
-  titel: string | null
-  zeit: string | null
-  memberId: string | null
-  lead: NonNullable<FollowUpAufgabe['leads']>
-}
-
-export function followUpEintraege(
-  aufgaben: readonly FollowUpAufgabe[],
-  termine: readonly FollowUpTermin[],
-): FollowUpEintrag[] {
-  const out: FollowUpEintrag[] = []
-  for (const a of aufgaben)
-    if (a.leads)
-      out.push({
-        id: `a:${a.id}`,
-        art: 'aufgabe',
-        label: AUFGABE_LABEL[a.kind],
-        titel: a.title,
-        zeit: a.due_at,
-        memberId: a.member_id,
-        lead: a.leads,
-      })
-  for (const t of termine)
-    if (t.leads)
-      out.push({
-        id: `t:${t.id}`,
-        art: 'termin',
-        label: TERMIN_LABEL[t.type],
-        titel: null,
-        zeit: t.scheduled_at,
-        memberId: t.member_id,
-        lead: t.leads,
-      })
-  return out.sort((a, b) => (a.zeit ?? '9999').localeCompare(b.zeit ?? '9999'))
-}
-
-export type FollowUpGruppe = 'ueberfaellig' | 'heute' | 'woche' | 'spaeter'
-export const FOLLOWUP_GRUPPEN: readonly { key: FollowUpGruppe; label: string }[] = [
-  { key: 'ueberfaellig', label: 'Überfällig' },
-  { key: 'heute', label: 'Heute' },
-  { key: 'woche', label: 'Nächste 7 Tage' },
-  { key: 'spaeter', label: 'Später' },
-]
-
-export function followUpGruppe(zeit: string | null, heute: Tag): FollowUpGruppe {
-  if (!zeit) return 'spaeter'
-  const tag = berlinTag(zeit)
-  if (tag < heute) return 'ueberfaellig'
-  if (tag === heute) return 'heute'
-  return tag <= tagPlus(heute, 7) ? 'woche' : 'spaeter'
-}
-
 // ── Sales-KPIs ─────────────────────────────────────────────────────────────────────────────────────────────
 
 export type KpiAnsicht = 'tage' | 'wochen' | 'monate'
@@ -291,4 +227,100 @@ export function conversions(s: SalesSummen): { label: string; z: number; n: numb
     q('EG Show-Rate', w(s, 'erstgespraeche'), w(s, 'erstgespraeche_vereinbart')),
     q('SG Show-Rate', w(s, 'strategiegespraeche'), w(s, 'strategiegespraeche_vereinbart')),
   ]
+}
+
+// ── Arbeitsliste (Follow-ups, 23.10.2026 nach Mikes „Follow-ups & nächste Schritte“) ────────────────────────────
+
+export type NaechsterSchritt = { zeit: string | null; label: string; aufgabe: TelefonAufgabe | null }
+
+/**
+ * Nächster Schritt eines Telefon-Leads: frühestes offenes Follow-up, geplanter Termin oder fälliger Versuch der Telefon-Sequenz
+ * (was zuerst kommt). Ohne alles: „Anruf“ ohne Datum (Kaltakquise, noch nie angerufen).
+ */
+export function naechsterSchritt(lead: Pick<TelefonLead, 'tasks' | 'meetings' | 'enrollments'>): NaechsterSchritt {
+  const kandidaten: NaechsterSchritt[] = []
+  const f = naechstesFollowUp(lead)
+  if (f?.due_at)
+    kandidaten.push({
+      zeit: f.due_at,
+      label:
+        f.kind === 'rueckruf'
+          ? 'Anruf'
+          : f.kind === 'wiedervorlage'
+            ? 'Wiedervorlage'
+            : f.title || AUFGABE_LABEL[f.kind],
+      aufgabe: f,
+    })
+  const t = lead.meetings.filter((m) => m.status === 'geplant').sort(nachZeit)[0]
+  if (t) kandidaten.push({ zeit: t.scheduled_at, label: TERMIN_LABEL[t.type], aufgabe: null })
+  const s = (lead.enrollments ?? []).find((e) => e.channel === 'telefon' && e.status === 'aktiv' && e.next_due_at)
+  if (s?.next_due_at) kandidaten.push({ zeit: s.next_due_at, label: 'Anruf', aufgabe: null })
+  kandidaten.sort((a, b) => (a.zeit ?? '').localeCompare(b.zeit ?? ''))
+  return kandidaten[0] ?? { zeit: null, label: 'Anruf', aufgabe: null }
+}
+
+/** Status wie in Mikes Tabelle: „Offen“, die Deal-Phase ab Erstgespräch, „Kunde“ oder „Beendet“. */
+export function telefonStatus(lead: Pick<TelefonLead, 'stage' | 'meetings'>): string {
+  if (lead.stage === 'kunde') return 'Kunde'
+  if (lead.stage === 'beendet') return 'Beendet'
+  const deal =
+    lead.meetings.length > 0 ||
+    [
+      'erstgespraech_vereinbart',
+      'erstgespraech',
+      'strategiegespraech_vereinbart',
+      'strategiegespraech',
+      'sales_follow_up',
+    ].includes(lead.stage)
+  return deal ? (DEAL_PHASEN.find((p) => p.key === dealPhase(lead))?.label ?? 'Offen') : 'Offen'
+}
+
+/** Offene Telefon-Leads (nicht Kunde/Beendet, nicht gesperrt): mit Datum zuerst (ältestes oben), dann ohne Datum nach Name. */
+export function arbeitsliste<T extends TelefonLead>(leads: readonly T[]): (T & { schritt: NaechsterSchritt })[] {
+  return leads
+    .filter((l) => l.stage !== 'kunde' && l.stage !== 'beendet' && !l.do_not_contact && l.phone_e164)
+    .map((l) => ({ ...l, schritt: naechsterSchritt(l) }))
+    .sort((a, b) => {
+      const za = a.schritt.zeit
+      const zb = b.schritt.zeit
+      if (za && zb) return za.localeCompare(zb)
+      if (za) return -1
+      if (zb) return 1
+      return (a.full_name ?? a.company_name ?? '').localeCompare(b.full_name ?? b.company_name ?? '', 'de')
+    })
+}
+
+/** Kurze Ergebnis-Wörter (Mikes „Nicht rangegangen“) – Spalte „Letzte Notiz“ und Knöpfe in der Schnellnotiz. */
+export const ERGEBNIS_KURZ: Partial<Record<CallOutcome, string>> = {
+  no_answer: 'Nicht rangegangen',
+  busy: 'Besetzt',
+  voicemail: 'Mailbox',
+  voicemail_left: 'Mailbox – Nachricht hinterlassen',
+  wrong_number: 'Falsche Nummer',
+  gatekeeper: 'Zentrale – nicht durchgestellt',
+  gatekeeper_blocked: 'Zentrale blockt',
+  callback_scheduled: 'Rückruf vereinbart',
+  dm_interest: 'Interesse – Termin anbieten',
+  meeting_booked: 'Termin vereinbart',
+  send_info: 'Info per E-Mail',
+  not_now: 'Kein Bedarf aktuell',
+  not_interested: 'Kein Interesse',
+  not_icp: 'Nicht passend',
+  do_not_call: 'Werbewiderspruch',
+}
+
+/** Ergebnisse, die die Schnellnotiz direkt verbucht; endgültige (Termin, Kein Interesse …) laufen über den Anruf-Screen. */
+export const SCHNELL_ERGEBNISSE: readonly CallOutcome[] = [
+  'no_answer',
+  'busy',
+  'voicemail_left',
+  'gatekeeper',
+  'callback_scheduled',
+  'dm_interest',
+]
+
+/** Text eines Eintrags in „Letzte Notiz“: Ergebnis-Kurzwort und Notiz („Nicht rangegangen – Sekretariat ab 14 Uhr“). */
+export function kontaktText(k: { outcome: CallOutcome | null; text: string | null }): string {
+  const ergebnis = k.outcome ? (ERGEBNIS_KURZ[k.outcome] ?? k.outcome) : null
+  return [ergebnis, k.text].filter(Boolean).join(' – ') || '–'
 }

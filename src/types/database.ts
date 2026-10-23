@@ -1973,6 +1973,7 @@ export type Database = {
           name: string
           notes: string | null
           phase: Database['crm']['Enums']['template_phase']
+          rating: number | null
           required_consent: Database['crm']['Enums']['email_consent_basis'][] | null
           sort_order: number
           subject: string | null
@@ -1995,6 +1996,7 @@ export type Database = {
           name: string
           notes?: string | null
           phase: Database['crm']['Enums']['template_phase']
+          rating?: number | null
           required_consent?: Database['crm']['Enums']['email_consent_basis'][] | null
           sort_order?: number
           subject?: string | null
@@ -2017,6 +2019,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phase?: Database['crm']['Enums']['template_phase']
+          rating?: number | null
           required_consent?: Database['crm']['Enums']['email_consent_basis'][] | null
           sort_order?: number
           subject?: string | null

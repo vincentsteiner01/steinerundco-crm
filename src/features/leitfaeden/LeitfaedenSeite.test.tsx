@@ -1,5 +1,5 @@
-// LeitfaedenSeite: Zustände (Laden, Fehler, leer, Daten), Kanal-Segment + ?kanal=, ?phase=-Chip, Suche (data-suche),
-// J/K-Cursor + Detail rechts (Desktop), ↵ öffnet die Vollseite, mobil öffnet der Klick.
+// LeitfaedenSeite (23.10.2026, Mikes Sales Hub): Bereiche, Kategorien mit Karten, Lesefenster (?id=), Sterne bewerten,
+// Bearbeiten-Fenster mit Formatleiste (Telefon & Sales), neuer Leitfaden aus „+ Leitfaden“ einer Kategorie.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -18,118 +18,113 @@ vi.mock('@/components/toast', () => ({
 import { useUiStore } from '@/app/uiStore'
 import { supabase } from '@/data/supabase'
 import { useAuth } from '@/features/auth/authStore'
-import { _akkordZuruecksetzen } from '@/lib/keyboard'
 import { MEMBER_V } from '@/test/fixtures/leads'
-import { kette } from '@/test/supabaseMock'
 import { ALLE, ERSTE_ID, rendern, setzeDesktop } from './_testHilfe'
 import { Component as LeitfaedenSeite } from './LeitfaedenSeite'
 
-const cursor = () => document.querySelector('[role="treeitem"][data-cursor]')
+const upserts = () =>
+  vi
+    .mocked(supabase.from)
+    .mock.results.map((r) => r.value as { upsert?: ReturnType<typeof vi.fn> })
+    .flatMap((b) => (b.upsert && vi.isMockFunction(b.upsert) ? b.upsert.mock.calls.map((c) => c[0]) : []))
 
 describe('LeitfaedenSeite', () => {
   beforeEach(() => {
     useUiStore.setState({ hotkeyScope: 'global', scopeStack: [] })
     useAuth.setState({ status: 'mitglied', member: { user_id: MEMBER_V, email: 'v@x', display_name: 'Vincent' } })
-    _akkordZuruecksetzen()
     localStorage.clear()
     setzeDesktop(true)
     vi.mocked(supabase.from).mockClear()
   })
 
-  it('Desktop: Kopf mit Kontext, Baum links, Detail rechts (erster Eintrag = Cursor)', async () => {
+  it('LinkedIn: Kategorien als Abschnitte, Karten mit Auszug und Sternen, „Leitfaden schreiben“', async () => {
     rendern(<LeitfaedenSeite />)
     expect(screen.getByRole('heading', { level: 1, name: 'Leitfäden' })).toBeInTheDocument()
-    await screen.findByRole('tree', { name: 'Leitfäden' })
-    expect(screen.getByText(/LinkedIn · 6 Phasen · 16 Leitfäden/)).toBeInTheDocument()
-    expect(cursor()).toHaveTextContent('Gesprächseröffnung (V1)')
-    const detail = await screen.findByRole('article')
-    expect(detail).toHaveAttribute('data-leitfaden', ERSTE_ID)
-    expect(within(detail).getByLabelText('Name')).toHaveValue('Gesprächseröffnung (V1)')
-    expect(within(detail).getByLabelText('Text')).toBeInTheDocument()
-    // Feedback 9959e426: Outreach (LinkedIn · Telefon · E-Mail) und Sales als eigene Bereiche
-    expect(screen.getByRole('group', { name: 'Outreach' })).toBeInTheDocument()
+    const eroeffnung = await screen.findByRole('region', { name: 'Gesprächseröffnung' })
+    expect(within(eroeffnung).getByRole('heading', { name: /Gesprächseröffnung \(3\)/ })).toBeInTheDocument()
+    const karte = eroeffnung.querySelector(`[data-leitfaden="${ERSTE_ID}"]`) as HTMLElement
+    expect(karte).toHaveTextContent('Gesprächseröffnung (V1)')
+    expect(karte).toHaveTextContent('Hallo [Vorname], [Unternehmen] in [Stadt]')
+    expect(within(karte).getByText('Noch nicht bewertet')).toBeInTheDocument()
+    // inaktive Variante steht hinten und ist markiert
+    const namen = [...eroeffnung.querySelectorAll('[data-leitfaden] button.text-left')].map((b) => b.textContent)
+    expect(namen.at(-1)).toBe('Gesprächseröffnung (V2)')
+    expect(screen.getByRole('button', { name: /Leitfaden schreiben/ })).toBeInTheDocument()
+  })
+
+  it('?kanal=telefon: Mikes Kategorien – Telefonakquise mit allen Telefon-Phasen, leere Sales-Kategorie', async () => {
+    rendern(<LeitfaedenSeite />, '/leitfaeden?kanal=telefon')
+    const akquise = await screen.findByRole('region', { name: 'Telefonakquise' })
+    expect(akquise.querySelectorAll('[data-leitfaden]')).toHaveLength(
+      ALLE.filter((t) => t.channel === 'telefon').length,
+    )
+    // Phase klein über dem Titel, Reihenfolge wie im Skript (Zentrale zuerst)
+    expect(akquise.querySelector('[data-leitfaden]')).toHaveTextContent(/^Zentrale/)
     expect(
-      within(screen.getByRole('group', { name: 'Sales' })).getByRole('button', { name: /Leitfäden/ }),
+      within(screen.getByRole('region', { name: 'Erstgespräch' })).getByText(
+        'Noch keine Leitfäden in dieser Kategorie.',
+      ),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Leitfaden anlegen/ })).toBeInTheDocument()
-    expect(screen.getByLabelText('Leitfaden suchen')).toHaveAttribute('data-suche')
   })
 
-  it('J/K bewegen den Cursor (Detail folgt), ↵ öffnet /leitfaeden/:id mit ?vorschau=', async () => {
-    const { router } = rendern(<LeitfaedenSeite />, '/leitfaeden?vorschau=abc')
-    await screen.findByRole('tree')
-    fireEvent.keyDown(document.body, { key: 'j' })
-    expect(cursor()).toHaveTextContent('Gesprächseröffnung (V2)')
-    fireEvent.keyDown(document.body, { key: 'j' })
-    expect(cursor()).toHaveTextContent('Gesprächseröffnung (V3)')
-    fireEvent.keyDown(document.body, { key: 'k' })
-    expect(cursor()).toHaveTextContent('Gesprächseröffnung (V2)')
-    await waitFor(() => expect(screen.getByRole('article')).toHaveAttribute('data-leitfaden', ALLE[1]?.id))
-    fireEvent.keyDown(document.body, { key: 'Enter' })
-    expect(router.state.location.pathname).toBe(`/leitfaeden/${ALLE[1]?.id}`)
-    expect(router.state.location.search).toBe('?vorschau=abc')
-  })
-
-  it('?kanal=telefon zeigt den Telefon-Baum; Segment wechselt den Kanal und löscht ?phase=', async () => {
-    const { router } = rendern(<LeitfaedenSeite />, '/leitfaeden?kanal=telefon&phase=mailbox')
-    await screen.findByRole('tree')
-    expect(screen.getByText(/Telefon · 10 Phasen · 10 Leitfäden/)).toBeInTheDocument()
-    const tree = screen.getByRole('tree')
-    expect(within(tree).getAllByRole('group')).toHaveLength(1)
-    expect(within(tree).getByRole('group', { name: 'Mailbox' })).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Entfernen' }))
-    await waitFor(() => expect(within(screen.getByRole('tree')).getAllByRole('group')).toHaveLength(10))
-    expect(router.state.location.search).toBe('?kanal=telefon')
-    fireEvent.click(within(screen.getByRole('group', { name: 'Outreach' })).getByRole('button', { name: /E-Mail/ }))
-    await waitFor(() => expect(router.state.location.search).toBe('?kanal=email'))
-    expect(screen.getAllByRole('treeitem')).toHaveLength(10)
-  })
-
-  it('Suche filtert den Baum und setzt den Cursor auf den ersten Treffer', async () => {
-    rendern(<LeitfaedenSeite />)
-    await screen.findByRole('tree')
-    fireEvent.change(screen.getByLabelText('Leitfaden suchen'), { target: { value: 'pitch' } })
-    expect(screen.getAllByRole('treeitem')).toHaveLength(2)
-    expect(cursor()).toHaveTextContent('Pitch A')
-  })
-
-  it('Mobil: nur der Baum, Klick öffnet die Vollseite', async () => {
-    setzeDesktop(false)
+  it('Karte öffnet das Lesefenster (?id=), Sterne bewerten, Bearbeiten öffnet den Editor', async () => {
     const { router } = rendern(<LeitfaedenSeite />)
-    await screen.findByRole('tree')
-    expect(screen.queryByRole('article')).not.toBeInTheDocument()
-    fireEvent.click(screen.getByRole('treeitem', { name: /Pitch B/ }))
-    expect(router.state.location.pathname).toMatch(/^\/leitfaeden\/2000/)
+    const eroeffnung = await screen.findByRole('region', { name: 'Gesprächseröffnung' })
+    fireEvent.click(within(eroeffnung).getByRole('button', { name: 'Gesprächseröffnung (V1)' }))
+    await waitFor(() => expect(router.state.location.search).toContain(`id=${ERSTE_ID}`))
+    const fenster = await screen.findByRole('dialog')
+    expect(within(fenster).getByRole('heading', { name: 'Gesprächseröffnung (V1)' })).toBeInTheDocument()
+    expect(within(fenster).getByText('Gesprächseröffnung')).toBeInTheDocument()
+    fireEvent.click(within(fenster).getByRole('button', { name: '2 von 3 Sternen' }))
+    await waitFor(() => expect(upserts()).toContainEqual(expect.objectContaining({ id: ERSTE_ID, rating: 2 })))
+    expect(within(fenster).getByRole('button', { name: /Kopieren/ })).toBeInTheDocument()
+    fireEvent.click(within(fenster).getByRole('button', { name: /Bearbeiten/ }))
+    const editor = await screen.findByRole('dialog', { name: 'Leitfaden bearbeiten' })
+    expect(within(editor).getByLabelText(/Titel/)).toHaveValue('Gesprächseröffnung (V1)')
+    // LinkedIn-Texte gehen so raus, wie sie stehen – keine Formatleiste
+    expect(within(editor).queryByRole('toolbar', { name: 'Formatierung' })).toBeNull()
   })
 
-  it('Laden: Skeleton (Status); Fehler: Meldung + Erneut versuchen', async () => {
-    vi.mocked(supabase.from).mockImplementation(
-      (tabelle: string) =>
-        kette(
-          tabelle === 'templates'
-            ? { data: null, error: { message: 'kaputt', code: '500' } }
-            : { data: [], error: null },
-        ) as never,
+  it('Telefon: „+ Leitfaden“ einer Kategorie → Editor mit Formatleiste; Fett-Knopf setzt **…**; Speichern legt an', async () => {
+    rendern(<LeitfaedenSeite />, '/leitfaeden?kanal=telefon')
+    const erst = await screen.findByRole('region', { name: 'Erstgespräch' })
+    fireEvent.click(within(erst).getByRole('button', { name: /Leitfaden/ }))
+    const editor = await screen.findByRole('dialog', { name: 'Leitfaden schreiben' })
+    expect(within(editor).getByLabelText('Kategorie')).toHaveValue('sonstiges:erstgespraech')
+    fireEvent.change(within(editor).getByLabelText(/Titel/), { target: { value: 'Ablauf Erstgespräch' } })
+    const text = within(editor).getByLabelText('Text') as HTMLTextAreaElement
+    fireEvent.change(text, { target: { value: 'Ziel des Gesprächs' } })
+    text.setSelectionRange(0, 4)
+    fireEvent.click(
+      within(within(editor).getByRole('toolbar', { name: 'Formatierung' })).getByRole('button', { name: 'Fett' }),
+    )
+    await waitFor(() => expect(text).toHaveValue('**Ziel** des Gesprächs'))
+    fireEvent.click(within(editor).getByRole('button', { name: /Speichern/ }))
+    await waitFor(() =>
+      expect(upserts()).toContainEqual(
+        expect.objectContaining({
+          channel: 'sonstiges',
+          phase: 'erstgespraech',
+          name: 'Ablauf Erstgespräch',
+          body: '**Ziel** des Gesprächs',
+          active: true,
+        }),
+      ),
+    )
+  })
+
+  it('Fehler beim Laden → Leerzustand mit „Erneut versuchen“', async () => {
+    vi.mocked(supabase.from).mockImplementationOnce(
+      () =>
+        ({
+          select: () => ({
+            order: () => ({
+              order: () => ({ order: () => ({ order: async () => ({ data: null, error: { message: 'kaputt' } }) }) }),
+            }),
+          }),
+        }) as never,
     )
     rendern(<LeitfaedenSeite />)
-    expect(screen.getByRole('status')).toBeInTheDocument()
-    await screen.findByText('Leitfäden konnten nicht geladen werden.')
-    expect(screen.getByRole('button', { name: /Erneut versuchen/ })).toBeInTheDocument()
-  })
-
-  it('Leer: Kein Leitfaden für den Kanal → Leerzustand mit „Leitfaden anlegen“ → /leitfaeden/neu?kanal=', async () => {
-    vi.mocked(supabase.from).mockImplementation(
-      (tabelle: string) =>
-        kette(
-          tabelle === 'templates'
-            ? { data: ALLE.filter((t) => t.channel !== 'email'), error: null }
-            : { data: [], error: null },
-        ) as never,
-    )
-    const { router } = rendern(<LeitfaedenSeite />, '/leitfaeden?kanal=email')
-    await screen.findByText('Noch kein Leitfaden für E-Mail.')
-    fireEvent.click(screen.getAllByRole('button', { name: 'Leitfaden anlegen' }).at(-1) as HTMLElement)
-    expect(router.state.location.pathname).toBe('/leitfaeden/neu')
-    expect(router.state.location.search).toBe('?kanal=email')
+    expect(await screen.findByText('Leitfäden konnten nicht geladen werden.')).toBeInTheDocument()
   })
 })

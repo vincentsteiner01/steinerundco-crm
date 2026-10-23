@@ -2,12 +2,12 @@
 // Einwände · Abschluss · Mailbox · Datenschutz (Tab/⇧Tab); Vorlagen Kanal telefon je Phase; Platzhalter gefüllt (lib/platzhalter),
 // offene amber markiert. Logik in skript.ts.
 import { ChevronDown } from 'lucide-react'
-import { Fragment, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import { FormatText } from '@/components/FormatText'
 import { cn } from '@/components/ui/cn'
 import { Segment } from '@/components/ui/Segment'
 import { Select } from '@/components/ui/Select'
 import { Tabs } from '@/components/ui/Tabs'
-import { istKundenPause, kundenZeile } from '@/lib/kundenantwort'
 import { platzhalterWert, type PlatzhalterKontext, type PlatzhalterLead } from '@/lib/platzhalter'
 import type { CallBasis, Template } from '@/types/domain'
 import { SKRIPT_TABS, skriptVorlagen, type SkriptTab } from './skriptLogik'
@@ -24,57 +24,28 @@ const VORLAGEN_SEGMENT_MAX = 32
 const PHASEN_RASTER =
   '[&>[role=tablist]]:grid [&>[role=tablist]]:grid-cols-3 [&_[role=tab]]:min-w-0 [&_[role=tab]]:justify-center [&_[role=tab]]:px-2'
 
-const TOKEN = /(\[[^[\]\n]{1,40}\])/
-
 /**
  * Text mit markierten Platzhaltern: gefüllt = `mark`, offen = amber (DESIGN-SYSTEM: offener Platzhalter = overdue).
- * Kundenantworten (Zeile mit „>“, `[…]`) blau (lib/kundenantwort).
+ * Formatierung (fett, Überschriften, Listen) und Kundenantworten blau über components/FormatText (23.10.2026).
  */
 export function GefuellterText({ body, lead, ctx }: { body: string; lead: PlatzhalterLead; ctx?: PlatzhalterKontext }) {
   const norm = body.replace(/\b(Herr|Frau)\s+\[Nachname\]/g, '[Anrede] [Nachname]')
-  const absaetze = norm.split(/\n{2,}/)
   return (
-    <>
-      {absaetze.map((abs, ai) => (
-        <p key={ai} className="mb-[0.8em] last:mb-0">
-          {abs.split('\n').map((roh, zi) => {
-            const { kunde, text: zeile } = kundenZeile(roh)
-            const teile = zeile.split(TOKEN).map((teil, ti): ReactNode => {
-              if (!TOKEN.test(teil)) return teil
-              const name = teil.slice(1, -1).trim()
-              if (istKundenPause(name))
-                return (
-                  <span key={ti} className="text-signal" title="Antwort des Gegenübers">
-                    {teil}
-                  </span>
-                )
-              const wert = platzhalterWert(name, lead, ctx)
-              return wert === null ? (
-                <mark key={ti} className="text-overdue rounded-xs bg-transparent px-0.5" title={`${name} – offen`}>
-                  {teil}
-                </mark>
-              ) : (
-                <mark key={ti} className="bg-signal-tint text-ink rounded-xs px-0.5" title={`aus ${name}`}>
-                  {wert}
-                </mark>
-              )
-            })
-            return (
-              <Fragment key={zi}>
-                {zi > 0 ? <br /> : null}
-                {kunde ? (
-                  <span className="text-signal font-medium" data-kunde="">
-                    {teile}
-                  </span>
-                ) : (
-                  teile
-                )}
-              </Fragment>
-            )
-          })}
-        </p>
-      ))}
-    </>
+    <FormatText
+      text={norm}
+      platzhalter={(name, roh, key): ReactNode => {
+        const wert = platzhalterWert(name, lead, ctx)
+        return wert === null ? (
+          <mark key={key} className="text-overdue rounded-xs bg-transparent px-0.5" title={`${name} – offen`}>
+            {roh}
+          </mark>
+        ) : (
+          <mark key={key} className="bg-signal-tint text-ink rounded-xs px-0.5" title={`aus ${name}`}>
+            {wert}
+          </mark>
+        )
+      }}
+    />
   )
 }
 

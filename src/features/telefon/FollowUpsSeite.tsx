@@ -1,71 +1,76 @@
-// Telefon › Follow-ups (`/telefon/follow-ups`, 23.10.2026): Mikes „Follow-ups & nächste Schritte“ – alle offenen Rückrufe,
-// Wiedervorlagen und Aufgaben plus geplante Termine, gruppiert Überfällig · Heute · Nächste 7 Tage · Später. Klick öffnet den Lead,
-// „Anrufen“ den Anruf-Screen; erledigt wird wie gewohnt im Lead bzw. nach dem Anruf.
-import { Phone } from 'lucide-react'
+// Telefon › Follow-ups (`/telefon/follow-ups`, 23.10.2026 – 1:1 nach Mikes „Follow-ups & nächste Schritte“): alle offenen
+// Telefon-Leads als Arbeitsliste – Datum (rot = fällig), Name, Unternehmen, Nummer zum Abtippen, letzte Notiz, Status, nächster
+// Schritt. Klick öffnet die Schnellnotiz (Ergebnis, Notiz, nächster Anruf) – „Speichern & nächster“ springt zur nächsten Zeile.
 import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
-import { PFADE } from '@/app/pfade'
-import { Chip, StatusChip } from '@/components/ui/Chip'
 import { LadeFehler } from '@/components/ui/LadeFehler'
 import { KopfStats, SeitenKopf } from '@/components/ui/SeitenKopf'
 import { Segment } from '@/components/ui/Segment'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { useMeId, useMembers } from '@/data/members'
-import { useSettings } from '@/data/settings'
-import { useFollowUps } from '@/data/telefonAnsichten'
-import { fmtDatumKurz, fmtZeit, heuteBerlin } from '@/lib/format'
-import { anzeigeName } from '@/lib/mitglied'
+import { cn } from '@/components/ui/cn'
+import { useMeId } from '@/data/members'
+import { useLetzteKontakte, useTelefonKontakte, type TelefonLead } from '@/data/telefonAnsichten'
+import { heuteBerlin } from '@/lib/format'
 import { fmtTelefon } from '@/lib/telefon'
-import { FOLLOWUP_GRUPPEN, followUpEintraege, followUpGruppe, type FollowUpEintrag } from './ansichten/logik'
+import { berlinTag } from '@/lib/zeit'
+import { arbeitsliste, kontaktText, TELEFON_TYP, telefonStatus, type NaechsterSchritt } from './ansichten/logik'
 import { TelefonUnterNav } from './ansichten/Teile'
+import { SchnellNotiz } from './SchnellNotiz'
 
 type Wer = 'alle' | 'meine'
+const SPALTEN =
+  'md:grid-cols-[112px_minmax(0,1.1fr)_minmax(0,1.2fr)_150px_minmax(0,1.1fr)_minmax(90px,0.5fr)_minmax(90px,0.5fr)]'
+type Zeile = TelefonLead & { schritt: NaechsterSchritt }
+
+const datumLang = (iso: string) => {
+  const [j, m, t] = berlinTag(iso).split('-')
+  return `${t}.${m}.${j}`
+}
+
+function DatumPille({ zeit, heute }: { zeit: string | null; heute: string }) {
+  if (!zeit) return <span className="text-ink-3 px-2.5 text-[13px]">–</span>
+  const faellig = berlinTag(zeit) <= heute
+  return (
+    <span
+      className={cn(
+        'tnum inline-flex h-7 items-center rounded-full px-3 text-[12.5px] font-semibold whitespace-nowrap',
+        faellig ? 'bg-tag-rot text-tag-rot-ink' : 'bg-surface-hover text-ink-2',
+      )}
+    >
+      {datumLang(zeit)}
+    </span>
+  )
+}
 
 export function Component() {
-  const [params, setParams] = useSearchParams()
-  const { data, isLoading, isError, refetch } = useFollowUps()
-  const { data: settings } = useSettings()
-  const { data: members } = useMembers()
+  const { data, isLoading, isError, refetch } = useTelefonKontakte()
   const meId = useMeId()
   const [wer, setWer] = useState<Wer>('alle')
+  const [offenId, setOffenId] = useState<string | null>(null)
   const heute = heuteBerlin()
 
-  const eintraege = useMemo(
-    () =>
-      followUpEintraege(data?.aufgaben ?? [], data?.termine ?? []).filter((e) => wer === 'alle' || e.memberId === meId),
+  const zeilen: Zeile[] = useMemo(
+    () => arbeitsliste(data ?? []).filter((l) => wer === 'alle' || l.owner_id === meId || l.sales_owner_id === meId),
     [data, wer, meId],
   )
-  const gruppen = useMemo(() => {
-    const g = new Map<string, FollowUpEintrag[]>()
-    for (const e of eintraege) {
-      const k = followUpGruppe(e.zeit, heute)
-      g.set(k, [...(g.get(k) ?? []), e])
-    }
-    return g
-  }, [eintraege, heute])
-  const name = (id: string | null) => {
-    const m = members?.find((x) => x.id === id)
-    return m ? anzeigeName(m) : ''
-  }
-
-  const oeffnen = (id: string) => {
-    const p = new URLSearchParams(params)
-    p.set('lead', id)
-    setParams(p, { replace: true })
-  }
+  const { data: kontakte } = useLetzteKontakte(zeilen.map((z) => z.id))
+  const faellig = zeilen.filter((z) => z.schritt.zeit && berlinTag(z.schritt.zeit) <= heute).length
+  const index = zeilen.findIndex((z) => z.id === offenId)
+  const offen = index >= 0 ? zeilen[index] : null
+  const naechste = index >= 0 ? zeilen[index + 1] : undefined
 
   return (
     <>
       <TelefonUnterNav />
       <SeitenKopf
         titel="Follow-ups"
-        kontext="Rückrufe · Wiedervorlagen · Termine"
+        kontext="Nummer abtippen · anrufen · Notiz"
+        voice="Deine Follow-ups und nächsten Schritte."
         rechts={
           <>
             <KopfStats
               eintraege={[
-                { wert: gruppen.get('ueberfaellig')?.length ?? 0, label: 'überfällig', ton: 'overdue' },
-                { wert: gruppen.get('heute')?.length ?? 0, label: 'heute', ton: 'signal' },
+                { wert: faellig, label: 'fällig', ton: 'overdue' },
+                { wert: zeilen.length, label: 'offen' },
               ]}
             />
             <Segment<Wer>
@@ -84,74 +89,81 @@ export function Component() {
       {isError ? (
         <LadeFehler text="Follow-ups konnten nicht geladen werden." onNochmal={() => void refetch()} />
       ) : isLoading ? (
-        <Skeleton zeilen={6} />
-      ) : eintraege.length === 0 ? (
-        <p className="text-ui text-ink-2 py-6">Nichts offen – keine Rückrufe, Wiedervorlagen oder geplanten Termine.</p>
+        <Skeleton zeilen={8} />
+      ) : zeilen.length === 0 ? (
+        <p className="text-ui text-ink-2 py-6">Keine offenen Telefon-Kontakte.</p>
       ) : (
-        <div className="grid gap-7">
-          {FOLLOWUP_GRUPPEN.filter((g) => gruppen.get(g.key)?.length).map((g) => (
-            <section key={g.key} aria-label={g.label} data-gruppe={g.key}>
-              <h2 className="text-h3 text-ink mb-2.5 flex items-baseline gap-2">
-                {g.label}
-                <span className="tnum text-ink-3 font-mono text-[12px]">{gruppen.get(g.key)?.length}</span>
-              </h2>
-              <ul className="border-line divide-line divide-y rounded-md border">
-                {(gruppen.get(g.key) ?? []).map((e) => (
-                  <li
-                    key={e.id}
-                    className="grid grid-cols-[136px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3.5 py-2.5 max-md:grid-cols-[minmax(0,1fr)_auto]"
+        <div className="border-line rounded-md border">
+          <div aria-hidden className={cn('label border-line grid gap-x-4 border-b px-4 py-2 max-md:hidden', SPALTEN)}>
+            <span>Datum</span>
+            <span>Kontakt</span>
+            <span>Unternehmen</span>
+            <span>Telefon</span>
+            <span>Letzte Notiz</span>
+            <span>Status</span>
+            <span>Nächster Schritt</span>
+          </div>
+          <ul className="divide-line grid grid-cols-1 divide-y" aria-label="Follow-ups">
+            {zeilen.map((z) => {
+              const letzte = kontakte?.get(z.id)?.[0]
+              const ueberfaellig = !!z.schritt.zeit && berlinTag(z.schritt.zeit) < heute
+              return (
+                <li
+                  key={z.id}
+                  data-lead={z.id}
+                  onClick={() => setOffenId(z.id)}
+                  className={cn(
+                    'grid min-w-0 cursor-pointer items-start gap-x-4 gap-y-1.5 px-4 py-3.5',
+                    SPALTEN,
+                    'max-md:grid-cols-[minmax(0,1fr)_auto]',
+                    ueberfaellig ? 'bg-tag-rot/30 hover:bg-tag-rot/45' : 'hover:bg-surface-hover',
+                  )}
+                >
+                  <span className="max-md:order-2 max-md:justify-self-end">
+                    <DatumPille zeit={z.schritt.zeit} heute={heute} />
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setOffenId(z.id)
+                    }}
+                    className="text-ink-bright decoration-line-strong min-w-0 text-left text-[15px] font-semibold underline underline-offset-4 max-md:order-1"
                   >
-                    <span className="flex flex-wrap items-center gap-1.5 max-md:order-2">
-                      {e.zeit ? (
-                        <Chip
-                          ton={g.key === 'ueberfaellig' ? 'overdue' : g.key === 'heute' ? 'today' : 'later'}
-                          className="font-mono"
-                        >
-                          {g.key === 'heute' ? fmtZeit(e.zeit) : `${fmtDatumKurz(e.zeit)} · ${fmtZeit(e.zeit)}`}
-                        </Chip>
-                      ) : (
-                        <Chip ton="later">ohne Datum</Chip>
-                      )}
+                    {z.full_name ?? z.company_name ?? '–'}
+                  </button>
+                  <span className="text-ink min-w-0 text-[14px] max-md:order-3 max-md:col-span-2">
+                    {z.company_name ?? '–'}
+                  </span>
+                  <span className="max-md:order-4">
+                    <span className="tnum text-ink block font-mono text-[14px] whitespace-nowrap">
+                      {fmtTelefon(z.phone_e164)}
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => oeffnen(e.lead.id)}
-                      className="min-w-0 text-left max-md:order-1 max-md:col-span-2"
-                    >
-                      <span className="flex min-w-0 items-baseline gap-2">
-                        <span className="text-ink-bright truncate font-medium">
-                          {e.lead.full_name ?? e.lead.company_name ?? '–'}
-                        </span>
-                        <span className="text-small text-ink-3 truncate">{e.lead.company_name ?? ''}</span>
-                      </span>
-                      <span className="text-small text-ink-2 flex min-w-0 flex-wrap items-center gap-x-2">
-                        <span className="font-medium">{e.label}</span>
-                        {e.titel ? <span className="truncate">{e.titel}</span> : null}
-                        {name(e.memberId) ? <span className="text-ink-3">· {name(e.memberId)}</span> : null}
-                      </span>
-                    </button>
-                    <span className="flex items-center gap-2 max-md:order-3">
-                      <span className="max-lg:hidden">
-                        <StatusChip stage={e.lead.stage} settings={settings} />
-                      </span>
-                      {e.lead.phone_e164 ? (
-                        <Link
-                          to={PFADE.anruf(e.lead.id)}
-                          title={fmtTelefon(e.lead.phone_e164)}
-                          className="border-line-strong text-small text-ink hover:bg-surface-hover inline-flex h-7 items-center gap-1.5 rounded-sm border px-2.5"
-                        >
-                          <Phone size={14} strokeWidth={1.75} aria-hidden />
-                          Anrufen
-                        </Link>
-                      ) : null}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+                    <span className="text-ink-3 block text-[12px]">{TELEFON_TYP[z.phone_type ?? 'unbekannt']}</span>
+                  </span>
+                  <span className="text-ink-3 line-clamp-2 min-w-0 text-[13px] max-md:order-6 max-md:col-span-2">
+                    {letzte ? kontaktText(letzte) : '–'}
+                  </span>
+                  <span className="text-ink text-[14px] max-md:order-5 max-md:justify-self-end">
+                    {telefonStatus(z)}
+                  </span>
+                  <span className="text-ink-bright text-[14px] font-semibold max-md:hidden">{z.schritt.label}</span>
+                </li>
+              )
+            })}
+          </ul>
         </div>
       )}
+
+      {offen ? (
+        <SchnellNotiz
+          key={offen.id}
+          lead={offen}
+          verlauf={kontakte?.get(offen.id) ?? []}
+          onClose={() => setOffenId(null)}
+          onWeiter={naechste ? () => setOffenId(naechste.id) : undefined}
+        />
+      ) : null}
     </>
   )
 }

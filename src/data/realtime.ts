@@ -58,6 +58,8 @@ export function invalidierungsKeys(tabelle: RealtimeTabelle, zeile: Zeile): Quer
         ...(leadId ? [qk.leads.detail(leadId)] : []),
         qk.kpis.all,
         qk.templates.perf,
+        // Spalte „Letzte Notiz“ in den Telefon-Listen (23.10.2026)
+        [...qk.leads.telefon, 'notizen'],
       ]
     // Integration M1–M8: zusätzlich Kanal-Listen/Zähler (Anrufliste M3, Einstellungen M8) und `['tasks', 'faellig']`
     // (Rückrufe der anderen Person in der Anrufliste) – Ergänzung zur Tabelle § 3.1.6, FOUNDATION-WUNSCH M3/M8.
@@ -85,6 +87,7 @@ export function invalidierungsKeys(tabelle: RealtimeTabelle, zeile: Zeile): Quer
         ...(leadId ? [qk.calls.lead(leadId), ['calls', 'letzte']] : [['calls']]),
         ['calls', 'zeitraum'],
         qk.kpis.all,
+        [...qk.leads.telefon, 'notizen'],
       ]
     case 'emails':
       return [...(leadId ? [qk.emails.lead(leadId)] : [['emails']]), ['emails', 'zeitraum'], qk.queue.all]

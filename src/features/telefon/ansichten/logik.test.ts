@@ -3,7 +3,10 @@ import type { TelefonAufgabe, TelefonLead, TelefonTermin } from '@/data/telefonA
 import {
   conversions,
   dealPhase,
-  followUpGruppe,
+  arbeitsliste,
+  kontaktText,
+  naechsterSchritt,
+  telefonStatus,
   kontakteSortiert,
   kpiSpanne,
   nachPhase,
@@ -116,13 +119,6 @@ describe('Termine und Follow-ups', () => {
     ])
     expect(r.map((x) => x.full_name)).toEqual(['Carl', 'Bernd', 'Anna', 'Zora'])
   })
-
-  it('followUpGruppe nach Berliner Tag', () => {
-    expect(followUpGruppe('2026-10-22T10:00:00Z', '2026-10-23')).toBe('ueberfaellig')
-    expect(followUpGruppe('2026-10-23T21:30:00Z', '2026-10-23')).toBe('heute') // 23:30 Berlin
-    expect(followUpGruppe('2026-10-23T22:30:00Z', '2026-10-23')).toBe('woche') // 00:30 Berlin am 24.
-    expect(followUpGruppe('2026-11-10T10:00:00Z', '2026-10-23')).toBe('spaeter')
-  })
 })
 
 describe('Sales-KPIs', () => {
@@ -154,5 +150,43 @@ describe('Sales-KPIs', () => {
     expect(c.find((x) => x.label === 'Anwahlen → Telefonate')?.quote).toBe(0.25)
     expect(c.find((x) => x.label === 'EG Show-Rate')?.quote).toBe(0.75)
     expect(c.find((x) => x.label === 'SG → Kunden')?.quote).toBeNull()
+  })
+})
+
+describe('Arbeitsliste (Mikes Follow-ups)', () => {
+  it('nächster Schritt = frühestes aus Rückruf, Termin, Telefon-Sequenz; ohne alles „Anruf“ ohne Datum', () => {
+    expect(naechsterSchritt(lead({ tasks: [aufgabe({ due_at: '2026-10-25T08:00:00Z' })] }))).toMatchObject({
+      zeit: '2026-10-25T08:00:00Z',
+      label: 'Anruf',
+    })
+    const mitSequenz = lead({
+      tasks: [aufgabe({ kind: 'wiedervorlage', due_at: '2026-10-30T08:00:00Z' })],
+      enrollments: [{ id: 'e1', channel: 'telefon', status: 'aktiv', next_due_at: '2026-10-24T07:30:00Z' }],
+    })
+    expect(naechsterSchritt(mitSequenz)).toMatchObject({ zeit: '2026-10-24T07:30:00Z', label: 'Anruf', aufgabe: null })
+    expect(naechsterSchritt(lead({}))).toEqual({ zeit: null, label: 'Anruf', aufgabe: null })
+  })
+
+  it('Status wie bei Mike: Offen, Deal-Phase, Kunde', () => {
+    expect(telefonStatus(lead({ stage: 'neu' }))).toBe('Offen')
+    expect(telefonStatus(lead({ stage: 'erstgespraech_vereinbart', meetings: [termin({})] }))).toBe('EG vereinbart')
+    expect(telefonStatus(lead({ stage: 'kunde' }))).toBe('Kunde')
+  })
+
+  it('nur offene Leads mit Nummer, mit Datum zuerst, dann nach Name', () => {
+    const r = arbeitsliste([
+      lead({ full_name: 'Zora', phone_e164: '+49211' }),
+      lead({ full_name: 'Ohne Nummer', phone_e164: null }),
+      lead({ full_name: 'Kunde', stage: 'kunde', phone_e164: '+49211' }),
+      lead({ full_name: 'Bert', phone_e164: '+49211', tasks: [aufgabe({ due_at: '2026-10-22T08:00:00Z' })] }),
+      lead({ full_name: 'Anna', phone_e164: '+49211' }),
+    ])
+    expect(r.map((x) => x.full_name)).toEqual(['Bert', 'Anna', 'Zora'])
+  })
+
+  it('kontaktText: Ergebnis-Kurzwort + Notiz', () => {
+    expect(kontaktText({ outcome: 'no_answer', text: null })).toBe('Nicht rangegangen')
+    expect(kontaktText({ outcome: null, text: 'ab 14 Uhr' })).toBe('ab 14 Uhr')
+    expect(kontaktText({ outcome: 'busy', text: 'später' })).toBe('Besetzt – später')
   })
 })

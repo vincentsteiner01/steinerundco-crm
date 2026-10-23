@@ -1,42 +1,150 @@
-// BAUPLAN § 3.7 LeitfaedenSeite.tsx – Zwei Spalten 280px 1fr: Baum + Detail (DESIGN-SYSTEM § 5.16); mobil: Liste → Detail.
-// Query: ?kanal= · ?phase= · ?vorschau=<lead_id>. Tasten: / Suche (data-suche, global) · J/K Cursor · ↵ öffnen.
-import { Plus, Search } from 'lucide-react'
+// Leitfäden (`/leitfaeden?kanal=`, 23.10.2026 nach Mikes Sales Hub – Vincent: „zu viel Text überall“): je Bereich (Telefon &
+// Sales · LinkedIn · E-Mail) Kategorien als Abschnitte mit „+ Leitfaden“ und Karten (Titel, kurzer Auszug, 1–3 Sterne).
+// Klick öffnet das Lesefenster, „Bearbeiten“ das Bearbeiten-Fenster. Die alte Detailseite (/leitfaeden/:id) bleibt für Statistik,
+// Vorschau mit Lead und alle Felder. `?id=` öffnet einen Leitfaden direkt.
+import { Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router'
-import { PFADE } from '@/app/pfade'
+import { useSearchParams } from 'react-router'
 import { Button } from '@/components/ui/Button'
 import { Chip } from '@/components/ui/Chip'
 import { EmptyState } from '@/components/ui/EmptyState'
-import { Input } from '@/components/ui/Input'
 import { Segment } from '@/components/ui/Segment'
 import { SeitenKopf } from '@/components/ui/SeitenKopf'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { cn } from '@/components/ui/cn'
 import { fehlerMeldung } from '@/data/errors'
 import { useSequences } from '@/data/sequences'
-import { useTemplatePerformance, useTemplates } from '@/data/templates'
-import { useHotkeys } from '@/lib/keyboard'
-import { LEER } from '@/texte/de'
-import type { Channel, TemplatePerformance, TemplatePhase } from '@/types/domain'
-import { MEDIEN, useMediaQuery } from '@/lib/useMediaQuery'
-import { Baum, type Verwendung } from './Baum'
-import { baumGruppen, baumReihenfolge, kanalAusParam } from './helfer'
-import { LeitfadenDetail } from './LeitfadenDetail'
-import { BEREICHE, phaseDef, phasenFuer, LEITFADEN_LABEL } from './phasen'
+import { useTemplatePerformance, useTemplates, useTemplateSave } from '@/data/templates'
+import { auszug } from '@/lib/leitfadenFormat'
+import type { Template, TemplatePerformance } from '@/types/domain'
+import { nutzung, nutzungText, standardChip } from './helfer'
+import {
+  BEREICHE_UEBERSICHT,
+  bereichAusParam,
+  kartenVon,
+  kategorienFuer,
+  phaseHinweis,
+  zielWert,
+  type Bereich,
+  type Kategorie,
+  type Ziel,
+} from './kategorien'
+import { LeitfadenBearbeiten } from './LeitfadenBearbeiten'
+import { LeitfadenLesen } from './LeitfadenLesen'
+import { Sterne } from './Sterne'
+
+type Verwendung = { sequenzName: string; position: number }
+type Bearbeiten = { vorlage: Template | null; ziel: Ziel }
+
+function Karte({
+  t,
+  perf,
+  standard,
+  onOeffnen,
+  onBewerten,
+}: {
+  t: Template
+  perf: TemplatePerformance | undefined
+  standard: string | null
+  onOeffnen: () => void
+  onBewerten: (r: number | null) => void
+}) {
+  const n = nutzung(perf)
+  const hinweis = phaseHinweis(t)
+  return (
+    <div
+      onClick={onOeffnen}
+      data-leitfaden={t.id}
+      className={cn(
+        'border-line bg-surface-raised shadow-card hover:shadow-float flex min-w-0 cursor-pointer flex-col rounded-md border px-4 py-3.5 transition-shadow',
+        t.active === false && 'opacity-60',
+      )}
+    >
+      {hinweis ? <span className="text-ink-3 mb-0.5 text-[11.5px]">{hinweis}</span> : null}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onOeffnen()
+        }}
+        className="text-ink-bright line-clamp-2 text-left text-[15px] leading-snug font-semibold"
+      >
+        {t.name}
+      </button>
+      <p className="text-ink-2 mt-1.5 line-clamp-3 text-[13px] leading-relaxed">{auszug(t.body) || '–'}</p>
+      <div className="mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 pt-3">
+        <Sterne wert={t.rating} onChange={onBewerten} groesse={16} />
+        {t.active === false ? <Chip ton="ended">inaktiv</Chip> : null}
+        {standard ? (
+          <Chip ton="neutral" className="ml-auto">
+            {standard}
+          </Chip>
+        ) : null}
+      </div>
+      {n ? <span className="text-ink-3 mt-1 text-[11.5px]">{nutzungText(n)}</span> : null}
+    </div>
+  )
+}
+
+function Abschnitt({
+  k,
+  karten,
+  perf,
+  verwendungen,
+  onOeffnen,
+  onNeu,
+  onBewerten,
+}: {
+  k: Kategorie
+  karten: Template[]
+  perf: Map<string, TemplatePerformance>
+  verwendungen: Map<string, Verwendung[]>
+  onOeffnen: (t: Template) => void
+  onNeu: () => void
+  onBewerten: (t: Template, r: number | null) => void
+}) {
+  return (
+    <section aria-label={k.label} data-kategorie={k.key} className="mb-9">
+      <div className="mb-3 flex items-center gap-3">
+        <h2 className="text-ink-bright text-[17px] font-semibold">
+          {k.label} <span className="text-ink-3 text-[13px] font-normal">({karten.length})</span>
+        </h2>
+        <Button variante="quiet" groesse="S" icon={Plus} className="ml-auto" onClick={onNeu}>
+          Leitfaden
+        </Button>
+      </div>
+      {karten.length === 0 ? (
+        <p className="bg-sidebar text-ink-3 rounded-md px-4 py-6 text-center text-[13px]">
+          Noch keine Leitfäden in dieser Kategorie.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {karten.map((t) => (
+            <Karte
+              key={t.id}
+              t={t}
+              perf={perf.get(t.id)}
+              standard={standardChip(verwendungen.get(t.id) ?? [])?.text ?? null}
+              onOeffnen={() => onOeffnen(t)}
+              onBewerten={(r) => onBewerten(t, r)}
+            />
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
 
 export function Component() {
-  const navigate = useNavigate()
   const [params, setParams] = useSearchParams()
-  const kanal = kanalAusParam(params.get('kanal'))
-  const phaseParam = params.get('phase') as TemplatePhase | null
-  const phase = phaseParam && phasenFuer(kanal).some((p) => p.key === phaseParam) ? phaseParam : null
-  const vorschau = params.get('vorschau')
-  const desktop = useMediaQuery(MEDIEN.desktop)
+  const bereich = bereichAusParam(params.get('kanal'))
+  const offenId = params.get('id')
 
   const { data: vorlagen, isPending, isError, error, refetch } = useTemplates()
   const { data: perfListe } = useTemplatePerformance()
   const { data: sequenzen } = useSequences()
-  const [q, setQ] = useState('')
-  const [cursorWunsch, setCursorWunsch] = useState<string | null>(null)
+  const speichern = useTemplateSave()
+  const [bearbeiten, setBearbeiten] = useState<Bearbeiten | null>(null)
 
   const perf = useMemo(() => {
     const m = new Map<string, TemplatePerformance>()
@@ -52,16 +160,17 @@ export function Component() {
     return m
   }, [sequenzen])
 
-  const gruppen = useMemo(() => baumGruppen(vorlagen ?? [], kanal, q, phase), [vorlagen, kanal, q, phase])
-  const reihenfolge = useMemo(() => baumReihenfolge(gruppen), [gruppen])
+  const kategorien = kategorienFuer(bereich)
+  const alle = useMemo(() => vorlagen ?? [], [vorlagen])
   const zaehler = useMemo(() => {
-    const z: Record<Channel, number> = { linkedin: 0, telefon: 0, email: 0, sonstiges: 0 }
-    for (const t of vorlagen ?? []) z[t.channel]++
+    const z: Record<Bereich, number> = { telefon: 0, linkedin: 0, email: 0 }
+    for (const b of BEREICHE_UEBERSICHT) z[b.key] = alle.filter((t) => b.kanaele.includes(t.channel)).length
     return z
-  }, [vorlagen])
-
-  // Cursor: Wunsch, solange der Eintrag sichtbar ist; sonst erster Eintrag (abgeleitet, kein Effekt)
-  const cursorId = cursorWunsch && reihenfolge.includes(cursorWunsch) ? cursorWunsch : (reihenfolge[0] ?? null)
+  }, [alle])
+  const offen = offenId ? (alle.find((t) => t.id === offenId) ?? null) : null
+  const offenKategorie = offen
+    ? kategorien.find((k) => k.kanal === offen.channel && k.phasen.includes(offen.phase))
+    : null
 
   const setzeParam = (key: string, wert: string | null) => {
     const p = new URLSearchParams(params)
@@ -69,71 +178,38 @@ export function Component() {
     else p.delete(key)
     setParams(p, { replace: true })
   }
-
-  const oeffnen = (id: string) =>
-    navigate(vorschau ? `${PFADE.leitfaden(id)}?vorschau=${encodeURIComponent(vorschau)}` : PFADE.leitfaden(id))
-  const bewege = (delta: number) => {
-    if (reihenfolge.length === 0) return
-    const i = cursorId ? reihenfolge.indexOf(cursorId) : -1
-    const n = (i + delta + reihenfolge.length) % reihenfolge.length
-    setCursorWunsch(reihenfolge[n] ?? null)
+  const ersteZiel = (): Ziel => {
+    const k = kategorien[0]
+    return zielWert(k?.kanal ?? 'linkedin', k?.phasen[0] ?? 'eroeffnung')
   }
-
-  useHotkeys(
-    'liste',
-    {
-      j: () => bewege(1),
-      k: () => bewege(-1),
-      arrowdown: () => bewege(1),
-      arrowup: () => bewege(-1),
-      enter: (e) => {
-        // ↵ auf einem Button/Link/Menü gehört dem Element, nicht dem Baum
-        if ((e.target as HTMLElement | null)?.closest?.('button, a, [role="dialog"], [role="menu"], [role="listbox"]'))
-          return
-        if (cursorId) oeffnen(cursorId)
-      },
-    },
-    [reihenfolge, cursorId, vorschau],
-  )
-
-  const anzahl = zaehler[kanal]
-  const kontext = `${LEITFADEN_LABEL[kanal]} · ${phasenFuer(kanal).length} Phasen · ${anzahl} ${anzahl === 1 ? 'Leitfaden' : 'Leitfäden'}`
-  const neuAnlegen = () => navigate(PFADE.leitfadenNeu(kanal))
+  const verwendet = (t: Template) => (perf.get(t.id)?.gesendet ?? 0) > 0 || (verwendungen.get(t.id)?.length ?? 0) > 0
 
   return (
     <>
       <SeitenKopf
         titel="Leitfäden"
-        kontext={kontext}
+        kontext="Wissen & Gesprächsführung"
+        voice="Deine Leitfäden für Akquise, Gespräche und Einwände."
         rechts={
           <>
-            {/* Feedback 9959e426: zwei Bereiche – Outreach (LinkedIn · Telefon · E-Mail) und Sales */}
-            {BEREICHE.map((b) => (
-              <span key={b.key} className="flex items-center gap-2" data-bereich={b.key}>
-                <span className="label">{b.label}</span>
-                <Segment<Channel>
-                  ariaLabel={b.label}
-                  optionen={b.kanaele.map((k) => ({
-                    key: k,
-                    label: b.kanaele.length === 1 ? 'Leitfäden' : LEITFADEN_LABEL[k],
-                    zaehler: zaehler[k],
-                  }))}
-                  wert={(b.kanaele as readonly Channel[]).includes(kanal) ? kanal : null}
-                  onChange={(k) => {
-                    const p = new URLSearchParams(params)
-                    p.set('kanal', k)
-                    p.delete('phase')
-                    setParams(p, { replace: true })
-                  }}
-                />
-              </span>
-            ))}
-            <Button variante="primary" icon={Plus} onClick={neuAnlegen}>
-              Leitfaden anlegen
+            <Segment<Bereich>
+              ariaLabel="Bereich"
+              optionen={BEREICHE_UEBERSICHT.map((b) => ({ key: b.key, label: b.label, zaehler: zaehler[b.key] }))}
+              wert={bereich}
+              onChange={(b) => {
+                const p = new URLSearchParams(params)
+                p.set('kanal', b)
+                p.delete('id')
+                setParams(p, { replace: true })
+              }}
+            />
+            <Button variante="primary" icon={Plus} onClick={() => setBearbeiten({ vorlage: null, ziel: ersteZiel() })}>
+              Leitfaden schreiben
             </Button>
           </>
         }
       />
+
       {isPending ? (
         <Skeleton zeilen={6} />
       ) : isError ? (
@@ -142,69 +218,47 @@ export function Component() {
           satz={fehlerMeldung(error).meldung}
           primaer={{ label: 'Erneut versuchen', onClick: () => void refetch(), kbd: 'R' }}
         />
-      ) : anzahl === 0 ? (
-        <EmptyState
-          titel={LEER.leitfaedenKanal(LEITFADEN_LABEL[kanal]).titel}
-          primaer={{ label: LEER.leitfaedenKanal(LEITFADEN_LABEL[kanal]).aktion, onClick: neuAnlegen }}
-        />
       ) : (
-        // minmax(0, …): sonst wächst die Spur auf die min-content-Breite langer Namen und der Baum läuft unter das Detail
-        <div className={desktop ? 'grid grid-cols-[280px_minmax(0,1fr)] items-start gap-8' : 'grid grid-cols-1 gap-5'}>
-          <aside aria-label="Baum" className="grid min-w-0 grid-cols-1 content-start gap-3">
-            <Input
-              aria-label="Leitfaden suchen"
-              placeholder="Suchen …"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              data-suche
-              rechts={
-                <span className="inline-flex items-center gap-1.5">
-                  <Search size={14} strokeWidth={1.75} aria-hidden className="text-ink-3" />
-                  <kbd className="kbd">/</kbd>
-                </span>
-              }
-            />
-            {phase ? (
-              <div className="flex items-center gap-1.5">
-                <Chip ton="neutral" onRemove={() => setzeParam('phase', null)}>
-                  {phaseDef(kanal, phase).label}
-                </Chip>
-              </div>
-            ) : null}
-            <Baum
-              kanal={kanal}
-              vorlagen={vorlagen ?? []}
-              perf={perf}
-              verwendungen={verwendungen}
-              q={q}
-              phase={phase}
-              cursorId={cursorId}
-              onCursor={(id) => {
-                setCursorWunsch(id)
-                if (!desktop) oeffnen(id)
-              }}
-              onOeffnen={oeffnen}
-            />
-          </aside>
-          {desktop ? (
-            <div className="min-w-0" data-tour="leitfaden-detail">
-              {cursorId ? (
-                <LeitfadenDetail
-                  key={cursorId}
-                  id={cursorId}
-                  vorschauLeadId={vorschau}
-                  onVorschauLead={(lid) => setzeParam('vorschau', lid)}
-                />
-              ) : (
-                <EmptyState
-                  titel="Kein Leitfaden gewählt."
-                  satz="Wähle links einen Eintrag – J und K bewegen den Cursor."
-                />
-              )}
-            </div>
-          ) : null}
-        </div>
+        kategorien.map((k) => (
+          <Abschnitt
+            key={k.key}
+            k={k}
+            karten={kartenVon(alle, k)}
+            perf={perf}
+            verwendungen={verwendungen}
+            onOeffnen={(t) => setzeParam('id', t.id)}
+            onNeu={() => setBearbeiten({ vorlage: null, ziel: zielWert(k.kanal, k.phasen[0] ?? 'gatekeeper') })}
+            onBewerten={(t, rating) => speichern.mutate({ ...t, rating })}
+          />
+        ))
       )}
+
+      {offen && !bearbeiten ? (
+        <LeitfadenLesen
+          key={offen.id}
+          t={offen}
+          oberzeile={[offenKategorie?.label, phaseHinweis(offen)].filter(Boolean).join(' · ')}
+          nutzung={nutzung(perf.get(offen.id)) ? nutzungText(nutzung(perf.get(offen.id))!) : null}
+          standard={standardChip(verwendungen.get(offen.id) ?? [])?.text ?? null}
+          verwendet={verwendet(offen)}
+          onBearbeiten={() => setBearbeiten({ vorlage: offen, ziel: zielWert(offen.channel, offen.phase) })}
+          onClose={() => setzeParam('id', null)}
+        />
+      ) : null}
+      {bearbeiten ? (
+        <LeitfadenBearbeiten
+          key={bearbeiten.vorlage?.id ?? 'neu'}
+          vorlage={bearbeiten.vorlage}
+          ziel={bearbeiten.ziel}
+          bereich={bereich}
+          keys={alle.map((t) => t.key)}
+          onClose={() => setBearbeiten(null)}
+          onGespeichert={(t) => {
+            setBearbeiten(null)
+            setzeParam('id', t.id)
+          }}
+        />
+      ) : null}
     </>
   )
 }
