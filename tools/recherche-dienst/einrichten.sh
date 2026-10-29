@@ -63,5 +63,7 @@ cat > "$PLIST" <<EOF
 EOF
 
 launchctl bootout "$ZIEL/$LABEL" 2>/dev/null || true
+# bootout kehrt sofort zurück; der alte Dienst meldet seine Agenten noch ab – erst danach neu laden
+for _ in $(seq 1 30); do launchctl print "$ZIEL/$LABEL" >/dev/null 2>&1 || break; sleep 0.5; done
 launchctl bootstrap "$ZIEL" "$PLIST"
 echo "Recherche-Dienst läuft$([[ "${RECHERCHE_PROBE:-0}" == 1 ]] && echo ' (Probebetrieb)'). Protokoll: $LOGS/dienst.log"
