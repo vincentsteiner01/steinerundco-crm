@@ -415,7 +415,7 @@ export const THEMEN: readonly Thema[] = [
       {
         art: 'liste',
         punkte: [
-          'Vor dem Vernetzen fragt ChatGPT gesammelt nach: Am blauen Knopf und auf der Laufseite steht „Freigabe nötig“ mit Name, Position, Firma und Grund. „Freigeben“ oder „Nicht freigeben“, gern mit Anmerkung – zusätzlich kommt eine Mitteilung auf dem Mac.',
+          'Vor dem Vernetzen fragt ChatGPT einmal für den ganzen Lauf nach: Am blauen Knopf und auf der Laufseite steht „Freigabe nötig“ mit Name, Position, Firma und Grund aller gefundenen Personen. „Freigeben“ oder „Nicht freigeben“, gern mit Anmerkung, auch vom iPhone aus – zusätzlich kommt eine Mitteilung auf dem Mac.',
           'Jede Person wird Lead mit der Quelle des Laufs. Dubletten (CRM, Sperrliste, bestehende Verbindungen, frühere Absagen) erkennt das CRM selbst, die KPIs zählen mit.',
           '„Pausieren“ hält ChatGPT sofort an, „Fortsetzen“ startet es neu – Eingetragenes bleibt, niemand wird doppelt angefragt.',
           'Zeigt LinkedIn eine Warnung oder ein Limit, hält der Lauf an und zeigt den Wortlaut.',

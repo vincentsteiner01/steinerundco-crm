@@ -218,6 +218,7 @@ describe('Agent-Auftrag (ChatGPT)', () => {
       expect(t).toContain(w)
     expect(t).toContain(`„${FREIGABE_PRAEFIX} N Vernetzungsanfragen“`)
     expect(t).toContain('im Namen von Mike')
+    expect(t).toContain('einmal für den ganzen Lauf, nicht je Person')
     expect(t).toMatch(/nie über Webformulare/)
   })
 

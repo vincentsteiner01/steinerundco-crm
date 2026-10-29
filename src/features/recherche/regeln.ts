@@ -203,12 +203,12 @@ export function agentAuftrag(p: { person: string }): string {
     ),
     [
       '## Freigabe vor dem Vernetzen',
-      `- Vernetzen geschieht im Namen von ${p.person}, deshalb holst du vorher die Freigabe ein – gesammelt.`,
-      '- Sammle bis zu 10 Personen, die qualifiziert sind und bei profil_pruefen frei waren. Nicht passende Profile trägst du sofort mit profil_eintragen ein (nicht_qualifiziert, unklar, dublette).',
+      `- Vernetzen geschieht im Namen von ${p.person}, deshalb holst du vorher die Freigabe ein – einmal für den ganzen Lauf, nicht je Person.`,
+      '- Recherchiere zuerst so viele qualifizierte Personen, wie noch offen sind (lauf_status → noch), jede bei profil_pruefen frei. Nicht passende Profile trägst du sofort mit profil_eintragen ein (nicht_qualifiziert, unklar, dublette). Findest du nach gründlicher Suche weniger, frag mit der Liste, die du hast.',
       `- Dann beende deine Antwort so: erste Zeile „${FREIGABE_PRAEFIX} N Vernetzungsanfragen“, danach je Person eine Zeile „Vorname Nachname · Position · Firma · Kategorie · Grund · Profil-URL“. Die Antwort kommt als nächste Nachricht aus dem CRM.`,
-      '- „Freigegeben.“: jede genannte Person vernetzen (Vernetzen → Ohne Notiz senden; geklappt hat es nur, wenn danach „Ausstehend“ steht) und direkt danach profil_eintragen mit ergebnis gesendet und allen Angaben. Steht hinter „Freigegeben.“ eine Einschränkung, halte dich daran.',
+      '- „Freigegeben.“ gilt für genau diese Liste: alle genannten Personen nacheinander vernetzen (Vernetzen → Ohne Notiz senden; geklappt hat es nur, wenn danach „Ausstehend“ steht) und direkt danach jeweils profil_eintragen mit ergebnis gesendet und allen Angaben – ohne weitere Rückfrage. Steht hinter „Freigegeben.“ eine Einschränkung, halte dich daran.',
       '- „Nicht freigegeben …“: niemanden aus der Liste vernetzen; trage sie mit nicht_qualifiziert und dem Grund aus der Antwort ein.',
-      '- Danach weiter recherchieren, bis das Ziel erreicht ist. Brauchst du aus einem anderen Grund eine Entscheidung, beende deine Antwort mit „Frage: …“.',
+      '- Ist das Ziel danach nicht erreicht (zu wenige gefunden, Senden fehlgeschlagen), recherchiere weiter und frag mit der nächsten Liste. Brauchst du aus einem anderen Grund eine Entscheidung, beende deine Antwort mit „Frage: …“.',
     ].join('\n'),
     [
       '## Kontrollpunkt',
