@@ -1,11 +1,13 @@
-// Startkarte auf /auftrag (29.10.2026): Play-Button für den LinkedIn-Recherchelauf. Läuft schon ein Lauf, öffnet der Knopf
-// diesen statt einen zweiten anzulegen (die Datenbank lässt ohnehin nur einen aktiven Lauf je Person zu).
+// Startkarte auf /auftrag (29.10.2026): Play-Button für den LinkedIn-Recherchelauf. Der Start fordert zugleich den Agenten an,
+// den der Recherche-Dienst auf dem Mac startet (Migration 18). Läuft schon ein Lauf, öffnet der Knopf diesen statt einen zweiten
+// anzulegen (die Datenbank lässt ohnehin nur einen aktiven Lauf je Person zu).
 import { Play } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { PFADE } from '@/app/pfade'
 import { Button, Chip } from '@/components/ui'
 import { useMeineLaeufe, useRechercheStarten } from '@/data/recherche'
 import { fmtDatumZeit } from '@/lib/format'
+import { agentZustand } from './logik'
 import { STATUS_LABEL } from './regeln'
 
 export function RechercheStart({ me }: { me: string | null }) {
@@ -25,9 +27,10 @@ export function RechercheStart({ me }: { me: string | null }) {
         <div className="grid max-w-[60ch] min-w-0 gap-1">
           <h2 className="text-ink-bright text-[15px] font-semibold">Neue Leads recherchieren und vernetzen</h2>
           <p className="text-small text-ink-2">
-            Der Agent sucht passende Energie- und Solarbetriebe, prüft Firma und Rolle, gleicht jedes Profil mit dem CRM
+            Ein Agent sucht passende Energie- und Solarbetriebe, prüft Firma und Rolle, gleicht jedes Profil mit dem CRM
             ab und sendet bis zu 30 Vernetzungsanfragen ohne Nachricht. Jede Person landet als Lead im CRM, die KPIs
-            zählen mit. Voraussetzung: du bist in Chrome bei LinkedIn angemeldet.
+            zählen mit. Er startet von selbst in deinem Chrome – dafür muss der Mac wach sein, Chrome offen und du bei
+            LinkedIn angemeldet.
           </p>
         </div>
         <Button
@@ -45,8 +48,8 @@ export function RechercheStart({ me }: { me: string | null }) {
       </div>
       {aktiv ? (
         <p className="text-small text-ink-2" role="status">
-          {STATUS_LABEL[aktiv.status]} seit {fmtDatumZeit(aktiv.started_at)} · {aktiv.gesendet} von {aktiv.ziel}{' '}
-          gesendet · {aktiv.geprueft} Profile geprüft
+          {STATUS_LABEL[aktiv.status]} seit {fmtDatumZeit(aktiv.started_at)} · {agentZustand(aktiv).titel} ·{' '}
+          {aktiv.gesendet} von {aktiv.ziel} gesendet · {aktiv.geprueft} Profile geprüft
         </p>
       ) : null}
       {fruehere.length ? (

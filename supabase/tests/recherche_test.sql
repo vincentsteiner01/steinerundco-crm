@@ -1,4 +1,4 @@
--- Integrationstest Recherchelauf (Migration 17) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
+-- Integrationstest Recherchelauf (Migrationen 17 + 18) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
 -- per Exception zurückgerollt wird (es bleibt nichts zurück). Aufruf: bash tools/db-query.sh -f supabase/tests/recherche_test.sql
 -- Ergebnis steht in der Fehlermeldung „TESTERGEBNIS: …“ (oder „FEHLER: …“ bei einer verletzten Annahme).
 do $$
@@ -22,12 +22,15 @@ begin
   -- als angemeldetes Mitglied (RLS, auth.uid())
   perform set_config('request.jwt.claims', json_build_object('sub', v_me, 'role', 'authenticated')::text, true);
   execute 'set local role authenticated';
+  -- ein echter aktiver Lauf stört den Test nicht: innerhalb der (zurückgerollten) Transaktion beiseitelegen
+  update crm.recherche_laeufe set status = 'abgebrochen', finished_at = now() where member_id = v_me and status in ('laeuft', 'pausiert');
 
   -- 1. Start + Doppelstart
   r := crm.recherche_starten(30);
   r2 := crm.recherche_starten(30);
   if r2.id <> r.id then raise exception 'FEHLER: zweiter Start legte einen zweiten Lauf an'; end if;
   if r.status <> 'laeuft' or r.ziel <> 30 or r.batch_id is null then raise exception 'FEHLER: Startwerte %', row_to_json(r); end if;
+  if r.agent_status <> 'wartet' or r.agent_angefordert is null then raise exception 'FEHLER: Start fordert keinen Agenten an %', row_to_json(r); end if;
   out := out || '1 Start/Doppelstart ok; ';
 
   -- 2. Prüfen: neu · ungültig · bestehende Verbindung · gleicher Name+Firma
@@ -113,7 +116,19 @@ begin
   exception when others then
     if sqlerrm like 'FEHLER:%' then raise; end if;
   end;
+  begin
+    perform crm.recherche_agent_starten(r.id);
+    raise exception 'FEHLER: Agent im pausierten Lauf angefordert';
+  exception when others then
+    if sqlerrm like 'FEHLER:%' then raise; end if;
+  end;
+  -- Dienst meldet „arbeitet“ (als postgres): zählt nicht als Bearbeitung
+  execute 'reset role';
+  update crm.recherche_laeufe set agent_status = 'beendet', agent_heartbeat = now() - interval '1 hour', agent_meldung = 'gestoppt'
+   where id = r.id returning * into r;
+  execute 'set local role authenticated';
   r := crm.recherche_status(r.id, 'laeuft');
+  if r.agent_status <> 'wartet' or r.agent_meldung is not null then raise exception 'FEHLER: Fortsetzen fordert Agent nicht neu an %', row_to_json(r); end if;
   out := out || '7 Pause/Fortsetzen ok; ';
 
   -- 8. Ziel erreicht → abgeschlossen, danach nichts mehr
@@ -154,7 +169,39 @@ begin
   exception when others then
     if sqlerrm like 'FEHLER:%' then raise; end if;
   end;
-  out := out || '10 Abbruch behält 3 Leads, Lauf bleibt beendet ok';
+  out := out || '10 Abbruch behält 3 Leads, Lauf bleibt beendet ok; ';
+
+  -- 11. Agent anfordern: nur eigener laufender Lauf, nicht doppelt, Lebenszeichen ändern updated_at nicht
+  r := crm.recherche_starten(30);
+  execute 'reset role';
+  -- now() ist in der Transaktion konstant: updated_at am Trigger vorbei zurückdatieren, dann vergleichen
+  execute 'alter table crm.recherche_laeufe disable trigger recherche_laeufe_set_updated_at';
+  update crm.recherche_laeufe set updated_at = now() - interval '1 day' where id = r.id;
+  execute 'alter table crm.recherche_laeufe enable trigger recherche_laeufe_set_updated_at';
+  update crm.recherche_laeufe set agent_status = 'arbeitet', agent_heartbeat = now(), agent_rechner = 'Testrechner' where id = r.id returning * into r2;
+  if r2.updated_at > now() - interval '1 hour' then raise exception 'FEHLER: Lebenszeichen setzt updated_at %', r2.updated_at; end if;
+  update crm.recherche_laeufe set aktuelles_profil = 'Test' where id = r.id returning * into r2;
+  if r2.updated_at <> now() then raise exception 'FEHLER: echte Änderung setzt updated_at nicht %', r2.updated_at; end if;
+  execute 'set local role authenticated';
+  begin
+    perform crm.recherche_agent_starten(r.id);
+    raise exception 'FEHLER: zweiter Agent für arbeitenden Lauf angefordert';
+  exception when others then
+    if sqlerrm like 'FEHLER:%' then raise; end if;
+  end;
+  execute 'reset role';
+  update crm.recherche_laeufe set agent_heartbeat = now() - interval '5 minutes' where id = r.id;
+  execute 'set local role authenticated';
+  r := crm.recherche_agent_starten(r.id);
+  if r.agent_status <> 'wartet' then raise exception 'FEHLER: Neustart bei stillem Agenten %', r.agent_status; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', (select id from crm.members where id <> v_me limit 1), 'role', 'authenticated')::text, true);
+  begin
+    perform crm.recherche_agent_starten(r.id);
+    raise exception 'FEHLER: fremder Lauf angefordert';
+  exception when others then
+    if sqlerrm like 'FEHLER:%' then raise; end if;
+  end;
+  out := out || '11 Agent anfordern (Pause, doppelt, fremd, Lebenszeichen) ok';
 
   raise exception 'TESTERGEBNIS: %', out;
 end

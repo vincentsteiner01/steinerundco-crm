@@ -1563,6 +1563,12 @@ export type Database = {
       recherche_laeufe: {
         Row: {
           abgelehnt: number
+          agent_angefordert: string | null
+          agent_heartbeat: string | null
+          agent_meldung: string | null
+          agent_rechner: string | null
+          agent_starts: number
+          agent_status: string
           aktuelles_profil: string | null
           batch_id: string | null
           dubletten: number
@@ -1583,6 +1589,12 @@ export type Database = {
         }
         Insert: {
           abgelehnt?: number
+          agent_angefordert?: string | null
+          agent_heartbeat?: string | null
+          agent_meldung?: string | null
+          agent_rechner?: string | null
+          agent_starts?: number
+          agent_status?: string
           aktuelles_profil?: string | null
           batch_id?: string | null
           dubletten?: number
@@ -1603,6 +1615,12 @@ export type Database = {
         }
         Update: {
           abgelehnt?: number
+          agent_angefordert?: string | null
+          agent_heartbeat?: string | null
+          agent_meldung?: string | null
+          agent_rechner?: string | null
+          agent_starts?: number
+          agent_status?: string
           aktuelles_profil?: string | null
           batch_id?: string | null
           dubletten?: number
@@ -2870,6 +2888,41 @@ export type Database = {
         }
         Returns: undefined
       }
+      recherche_agent_starten: {
+        Args: { p_lauf: string }
+        Returns: {
+          abgelehnt: number
+          agent_angefordert: string | null
+          agent_heartbeat: string | null
+          agent_meldung: string | null
+          agent_rechner: string | null
+          agent_starts: number
+          agent_status: string
+          aktuelles_profil: string | null
+          batch_id: string | null
+          dubletten: number
+          fehler: number
+          finished_at: string | null
+          geprueft: number
+          gesendet: number
+          id: string
+          kontrollen: number
+          meldung: string | null
+          member_id: string
+          qualifiziert: number
+          started_at: string
+          status: string
+          unklar: number
+          updated_at: string
+          ziel: number
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'recherche_laeufe'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       recherche_eintragen: {
         Args: {
           p_ausgangspunkt?: string
@@ -2886,6 +2939,12 @@ export type Database = {
         }
         Returns: {
           abgelehnt: number
+          agent_angefordert: string | null
+          agent_heartbeat: string | null
+          agent_meldung: string | null
+          agent_rechner: string | null
+          agent_starts: number
+          agent_status: string
           aktuelles_profil: string | null
           batch_id: string | null
           dubletten: number
@@ -2915,6 +2974,12 @@ export type Database = {
         Args: { p_lauf: string }
         Returns: {
           abgelehnt: number
+          agent_angefordert: string | null
+          agent_heartbeat: string | null
+          agent_meldung: string | null
+          agent_rechner: string | null
+          agent_starts: number
+          agent_status: string
           aktuelles_profil: string | null
           batch_id: string | null
           dubletten: number
@@ -2958,6 +3023,12 @@ export type Database = {
         Args: { p_ziel?: number }
         Returns: {
           abgelehnt: number
+          agent_angefordert: string | null
+          agent_heartbeat: string | null
+          agent_meldung: string | null
+          agent_rechner: string | null
+          agent_starts: number
+          agent_status: string
           aktuelles_profil: string | null
           batch_id: string | null
           dubletten: number
@@ -2987,6 +3058,12 @@ export type Database = {
         Args: { p_lauf: string; p_meldung?: string; p_status: string }
         Returns: {
           abgelehnt: number
+          agent_angefordert: string | null
+          agent_heartbeat: string | null
+          agent_meldung: string | null
+          agent_rechner: string | null
+          agent_starts: number
+          agent_status: string
           aktuelles_profil: string | null
           batch_id: string | null
           dubletten: number

@@ -1,5 +1,6 @@
-// /auftrag/recherche/:id – LinkedIn-Recherchelauf (29.10.2026, Entwicklungsauftrag Vincent). Steuerzentrale für einen
-// beaufsichtigten Browser-Agenten: Fortschritt, Kontrollpunkt alle 10 Profile, „Profil prüfen und eintragen“, Ausgangspunkte
+// /auftrag/recherche/:id – LinkedIn-Recherchelauf (29.10.2026, Entwicklungsauftrag Vincent). Steuerzentrale für den
+// Browser-Agenten, den der Recherche-Dienst nach „Recherche starten“ selbst startet (Agent-Zustand oben, Migration 18):
+// Fortschritt, Kontrollpunkt alle 10 Profile, „Profil prüfen und eintragen“, Ausgangspunkte
 // aus dem CRM, die vollständigen Regeln und alle Profile des Laufs. Wie /auftrag ohne Tastenkürzel und mit beschrifteten
 // Knöpfen; die Datenbank erzwingt Ziel, Dubletten, Pflichtangaben und Kontrollpunkt (Migration 17).
 import { Copy, ExternalLink, Pause, Play, Search, TriangleAlert } from 'lucide-react'
@@ -28,6 +29,7 @@ import {
   useAusgangspunkte,
   useLauf,
   useLaufProfile,
+  useRechercheAgentStarten,
   useRechercheEintragen,
   useRechercheKontrolle,
   useRechercheStarten,
@@ -42,12 +44,14 @@ import { anzeigeName } from '@/lib/mitglied'
 import { kopieren } from '@/lib/zwischenablage'
 import { Kachel, Kacheln } from '@/features/telefon/ansichten/Teile'
 import {
+  agentZustand,
   ausgangspunkteFuer,
   fehlerText,
   formularFehler,
   gesendetErlaubt,
   LEERES_FORMULAR,
   verbleibend,
+  type AgentZustand,
   type Formular,
 } from './logik'
 import {
@@ -90,6 +94,72 @@ function Abschnitt({ nr, titel, id, children }: { nr: number; titel: string; id?
 }
 
 // ── Kontrollpunkt ──────────────────────────────────────────────────────────────────────────────────────────
+
+const AGENT_PUNKT: Record<AgentZustand['art'], string> = {
+  startet: 'bg-signal animate-pulse',
+  arbeitet: 'bg-done animate-pulse',
+  kein_dienst: 'bg-overdue',
+  still: 'bg-overdue',
+  fehler: 'bg-danger',
+  beendet: 'bg-deco',
+  manuell: 'bg-deco',
+  angehalten: 'bg-deco',
+  aus: 'bg-deco',
+}
+
+/** Was der Agent gerade tut – plus „Agent (neu) starten“ und die Start-Anweisung für den Weg ohne Recherche-Dienst. */
+function AgentPanel({ lauf, fremd, prompt }: { lauf: RechercheLauf; fremd: boolean; prompt: string }) {
+  const agent = useRechercheAgentStarten()
+  const [promptOffen, setPromptOffen] = useState(false)
+  const z = agentZustand(lauf)
+  if (z.art === 'aus' && !z.text) return null
+  return (
+    <section
+      className="bg-sidebar mb-6 grid max-w-[880px] gap-2 rounded-md px-4 py-3.5 md:px-5"
+      aria-label="Agent"
+      data-agent={z.art}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className={cn('size-2 shrink-0 rounded-full', AGENT_PUNKT[z.art])} aria-hidden />
+          <h2 className="text-ink-bright text-[15px] font-semibold" role="status">
+            {z.titel}
+          </h2>
+        </div>
+        {!fremd && z.starten ? (
+          <Button variante="primary" icon={Play} busy={agent.isPending} onClick={() => agent.mutate(lauf.id)}>
+            {z.starten === 'neu' ? 'Agent neu starten' : 'Agent starten'}
+          </Button>
+        ) : null}
+      </div>
+      {z.text ? <p className="text-small text-ink-2 max-w-[75ch] whitespace-pre-line">{z.text}</p> : null}
+      {!fremd && lauf.status === 'laeuft' ? (
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-2 pt-0.5">
+          <span className="text-small text-ink-3 mr-1">Ohne Recherche-Dienst:</span>
+          <Button
+            variante="quiet"
+            icon={Copy}
+            onClick={() =>
+              void kopieren(prompt).then((r) =>
+                toast(r === 'ok' ? 'Start-Anweisung kopiert – in den Agenten einfügen.' : 'Text markiert – ⌘C'),
+              )
+            }
+          >
+            Start-Anweisung kopieren
+          </Button>
+          <Button variante="quiet" onClick={() => setPromptOffen((o) => !o)} aria-expanded={promptOffen}>
+            {promptOffen ? 'Anweisung ausblenden' : 'Anweisung ansehen'}
+          </Button>
+        </div>
+      ) : null}
+      {promptOffen ? (
+        <pre className="bg-surface-hover border-line text-ink-2 rounded-sm border px-3.5 py-3 font-mono text-[12.5px] whitespace-pre-wrap">
+          {prompt}
+        </pre>
+      ) : null}
+    </section>
+  )
+}
 
 function Kontrollpunkt({ lauf }: { lauf: RechercheLauf }) {
   const kontrolle = useRechercheKontrolle()
@@ -365,7 +435,6 @@ export function Component() {
   const [melden, setMelden] = useState(false)
   const [meldung, setMeldung] = useState('')
   const [beenden, setBeenden] = useState(false)
-  const [promptOffen, setPromptOffen] = useState(false)
 
   const start = useMemo(() => ausgangspunkteFuer(punkte ?? [], id ?? ''), [punkte, id])
   if (laufQ.isError)
@@ -441,6 +510,8 @@ export function Component() {
         }
       />
 
+      <AgentPanel lauf={lauf} fremd={fremd} prompt={prompt} />
+
       <Kacheln>
         <Kachel
           label="Geprüfte Profile"
@@ -488,35 +559,6 @@ export function Component() {
           >
             {lauf.meldung}
           </p>
-        ) : null}
-      </div>
-
-      <div className="mt-6 grid max-w-[880px] gap-2.5">
-        <p className="text-body text-ink-2">
-          Ausgeführt wird der Lauf von einem Browser-Agenten in deinem angemeldeten LinkedIn (z. B. Claude in Chrome
-          oder der ChatGPT-Agent). Ihm reicht diese Start-Anweisung – Regeln, Ausgangspunkte und Knöpfe stehen auf
-          dieser Seite.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variante="secondary"
-            icon={Copy}
-            onClick={() =>
-              void kopieren(prompt).then((r) =>
-                toast(r === 'ok' ? 'Start-Anweisung kopiert – in den Agenten einfügen.' : 'Text markiert – ⌘C'),
-              )
-            }
-          >
-            Start-Anweisung kopieren
-          </Button>
-          <Button variante="quiet" onClick={() => setPromptOffen((o) => !o)} aria-expanded={promptOffen}>
-            {promptOffen ? 'Anweisung ausblenden' : 'Anweisung ansehen'}
-          </Button>
-        </div>
-        {promptOffen ? (
-          <pre className="bg-surface-hover border-line text-ink-2 rounded-sm border px-3.5 py-3 font-mono text-[12.5px] whitespace-pre-wrap">
-            {prompt}
-          </pre>
         ) : null}
       </div>
 

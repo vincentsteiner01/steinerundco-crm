@@ -1,6 +1,14 @@
 // Reine Logik der Rechercheseite (29.10.2026): Ausgangspunkte je Lauf (rotierend, damit nicht jeder Lauf bei denselben Profilen
-// anfängt), Formularprüfung wie in recherche_eintragen und die Sperre „Gesendet nur nach Prüfen derselben URL“.
-import type { Ausgangspunkt, PruefErgebnis, RechercheErgebnis, RechercheKategorie } from '@/data/recherche'
+// anfängt), Formularprüfung wie in recherche_eintragen, die Sperre „Gesendet nur nach Prüfen derselben URL“ und der Zustand des
+// Agenten aus den Meldungen des Recherche-Diensts (Migration 18).
+import type {
+  Ausgangspunkt,
+  PruefErgebnis,
+  RechercheErgebnis,
+  RechercheKategorie,
+  RechercheLauf,
+} from '@/data/recherche'
+import { fmtZeit } from '@/lib/format'
 import { normalizeLinkedinUrl } from '@/lib/url'
 
 /** Kleine, stabile Zahl aus einer ID (gleicher Lauf → gleiche Auswahl). */
@@ -100,4 +108,90 @@ export const verbleibend = (l: { ziel: number; gesendet: number }) => Math.max(0
 export function fehlerText(e: unknown): string {
   const m = e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : String(e)
   return m.replace(/^Error:\s*/, '')
+}
+
+/** Ohne Übernahme durch den Dienst nach so vielen Sekunden: „kein Agent“. Ohne Lebenszeichen: „antwortet nicht“. */
+export const AGENT_UEBERNAHME_S = 45
+export const AGENT_STILL_S = 120
+
+export type AgentZustand = {
+  art: 'startet' | 'kein_dienst' | 'arbeitet' | 'still' | 'beendet' | 'fehler' | 'manuell' | 'angehalten' | 'aus'
+  titel: string
+  text: string
+  /** Knopf anbieten: „Agent starten“ bzw. „Agent neu starten“ */
+  starten: 'starten' | 'neu' | null
+}
+
+type AgentFelder = Pick<
+  RechercheLauf,
+  'status' | 'agent_status' | 'agent_angefordert' | 'agent_heartbeat' | 'agent_rechner' | 'agent_meldung'
+>
+
+const sekundenSeit = (t: string | null, jetzt: number) => (t ? (jetzt - new Date(t).getTime()) / 1000 : Infinity)
+
+/** Was der Agent gerade tut – aus Laufstatus und den Meldungen des Recherche-Diensts. */
+export function agentZustand(l: AgentFelder, jetzt = Date.now()): AgentZustand {
+  if (l.status === 'pausiert' || l.status === 'fehler')
+    return {
+      art: 'angehalten',
+      titel: 'Agent angehalten',
+      text:
+        l.status === 'pausiert'
+          ? 'Der Lauf ist pausiert. „Fortsetzen“ startet den Agenten wieder – bereits Eingetragenes bleibt.'
+          : 'Erst die Einschränkung klären, dann „Fortsetzen“ – der Agent startet dann wieder.',
+      starten: null,
+    }
+  if (l.status !== 'laeuft') return { art: 'aus', titel: 'Lauf beendet', text: l.agent_meldung ?? '', starten: null }
+
+  switch (l.agent_status) {
+    case 'wartet':
+      return sekundenSeit(l.agent_angefordert, jetzt) < AGENT_UEBERNAHME_S
+        ? {
+            art: 'startet',
+            titel: 'Agent startet …',
+            text: 'Der Recherche-Dienst auf deinem Mac öffnet gleich eine eigene Tab-Gruppe in Chrome.',
+            starten: null,
+          }
+        : {
+            art: 'kein_dienst',
+            titel: 'Kein Agent hat den Lauf übernommen',
+            text: 'Der Recherche-Dienst antwortet nicht. Ist der Mac wach und Chrome geöffnet? Ohne Dienst die Start-Anweisung unten kopieren und selbst an einen Agenten geben.',
+            starten: 'neu',
+          }
+    case 'arbeitet':
+      return sekundenSeit(l.agent_heartbeat, jetzt) <= AGENT_STILL_S
+        ? {
+            art: 'arbeitet',
+            titel: l.agent_rechner ? `Agent arbeitet auf ${l.agent_rechner}` : 'Agent arbeitet',
+            text: 'Er arbeitet in deinem Chrome in einer eigenen Tab-Gruppe – du kannst zuschauen. „Pausieren“ hält ihn an.',
+            starten: null,
+          }
+        : {
+            art: 'still',
+            titel: 'Agent antwortet nicht',
+            text: `Letztes Lebenszeichen ${l.agent_heartbeat ? `um ${fmtZeit(l.agent_heartbeat)}` : 'unbekannt'}. Schläft der Mac? Sonst neu starten – niemand wird doppelt angefragt.`,
+            starten: 'neu',
+          }
+    case 'beendet':
+      return {
+        art: 'beendet',
+        titel: 'Agent beendet',
+        text: l.agent_meldung ?? 'Ohne Bericht beendet.',
+        starten: 'neu',
+      }
+    case 'fehler':
+      return {
+        art: 'fehler',
+        titel: 'Agent mit Fehler beendet',
+        text: l.agent_meldung ?? 'Ohne Fehlermeldung beendet.',
+        starten: 'neu',
+      }
+    default:
+      return {
+        art: 'manuell',
+        titel: 'Für diesen Lauf arbeitet noch kein Agent',
+        text: '„Agent starten“ übergibt den Lauf an den Recherche-Dienst auf deinem Mac.',
+        starten: 'starten',
+      }
+  }
 }

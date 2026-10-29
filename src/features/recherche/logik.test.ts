@@ -1,7 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import type { Ausgangspunkt } from '@/data/recherche'
-import { ausgangspunkteFuer, formularFehler, gesendetErlaubt, LEERES_FORMULAR, verbleibend } from './logik'
-import { kontrolleFaellig, startAnweisung } from './regeln'
+import {
+  agentZustand,
+  AGENT_STILL_S,
+  AGENT_UEBERNAHME_S,
+  ausgangspunkteFuer,
+  formularFehler,
+  gesendetErlaubt,
+  LEERES_FORMULAR,
+  verbleibend,
+} from './logik'
+import { agentAuftrag, ALLE_ABSCHNITTE, KATEGORIEN, kontrolleFaellig, startAnweisung } from './regeln'
 
 const p = (i: number, firma = `Firma ${i % 5}`): Ausgangspunkt => ({
   id: `l${i}`,
@@ -99,5 +108,86 @@ describe('Start-Anweisung', () => {
     ])
       expect(t).toContain(teil)
     expect(t).not.toMatch(/!/)
+  })
+})
+
+describe('Agent-Zustand', () => {
+  const jetzt = Date.parse('2026-10-29T12:00:00Z')
+  const vor = (s: number) => new Date(jetzt - s * 1000).toISOString()
+  const l = (p: Partial<Parameters<typeof agentZustand>[0]>) =>
+    agentZustand(
+      {
+        status: 'laeuft',
+        agent_status: 'wartet',
+        agent_angefordert: vor(5),
+        agent_heartbeat: null,
+        agent_rechner: null,
+        agent_meldung: null,
+        ...p,
+      },
+      jetzt,
+    )
+
+  it('angefordert: erst „startet“, ohne Übernahme „kein Agent“ mit Neustart', () => {
+    expect(l({}).art).toBe('startet')
+    expect(l({}).starten).toBeNull()
+    const k = l({ agent_angefordert: vor(AGENT_UEBERNAHME_S + 1) })
+    expect(k.art).toBe('kein_dienst')
+    expect(k.starten).toBe('neu')
+  })
+
+  it('arbeitet mit Lebenszeichen, sonst „antwortet nicht“', () => {
+    const a = l({ agent_status: 'arbeitet', agent_heartbeat: vor(20), agent_rechner: 'MacBook Pro' })
+    expect(a).toMatchObject({ art: 'arbeitet', titel: 'Agent arbeitet auf MacBook Pro', starten: null })
+    expect(l({ agent_status: 'arbeitet', agent_heartbeat: vor(AGENT_STILL_S + 5) })).toMatchObject({
+      art: 'still',
+      starten: 'neu',
+    })
+  })
+
+  it('beendet/fehler zeigen den Bericht; manuell bietet „starten“; Pause und Ende ohne Knopf', () => {
+    expect(l({ agent_status: 'beendet', agent_meldung: 'Fertig: 3 gesendet' })).toMatchObject({
+      text: 'Fertig: 3 gesendet',
+      starten: 'neu',
+    })
+    expect(l({ agent_status: 'fehler', agent_meldung: 'Abbruch: Nicht bei LinkedIn angemeldet' }).art).toBe('fehler')
+    expect(l({ agent_status: 'manuell' }).starten).toBe('starten')
+    expect(l({ status: 'pausiert', agent_status: 'beendet' })).toMatchObject({ art: 'angehalten', starten: null })
+    expect(l({ status: 'abgeschlossen', agent_status: 'beendet', agent_meldung: 'Fertig: 30 gesendet' })).toMatchObject(
+      {
+        art: 'aus',
+        text: 'Fertig: 30 gesendet',
+        starten: null,
+      },
+    )
+  })
+})
+
+describe('Agent-Auftrag', () => {
+  const t = agentAuftrag({
+    url: 'https://crm.steinerundco.de/auftrag/recherche/abc',
+    person: 'Mike',
+    ziel: 30,
+    gesendet: 4,
+  })
+
+  it('enthält Lauf, alle Regelabschnitte und die Knöpfe der Seite wörtlich', () => {
+    expect(t).toContain('https://crm.steinerundco.de/auftrag/recherche/abc')
+    expect(t).toContain('4 von 30')
+    for (const a of ALLE_ABSCHNITTE) expect(t).toContain(a.titel)
+    for (const k of KATEGORIEN) expect(t).toContain(`„${k.label}“`)
+    for (const knopf of [
+      '„Prüfen“',
+      '„Vernetzungsanfrage gesendet“',
+      '„Als Dublette eintragen“',
+      '„Kriterien geprüft – weiter“',
+    ])
+      expect(t).toContain(knopf)
+  })
+
+  it('verbietet Nachrichten, Anmelden und Umgehen', () => {
+    expect(t).toMatch(/Nachrichten, Notizen/)
+    expect(t).toMatch(/CAPTCHAs lösen/)
+    expect(t).toMatch(/nicht anmelden/)
   })
 })

@@ -14,6 +14,7 @@ const m = vi.hoisted(() => ({
   eintragen: vi.fn(),
   status: vi.fn(),
   kontrolle: vi.fn(),
+  agent: vi.fn(),
 }))
 
 vi.mock('@/data/members', () => ({
@@ -28,6 +29,7 @@ vi.mock('@/data/recherche', () => ({
   useRechercheStatus: () => ({ mutate: m.status, isPending: false }),
   useRechercheStarten: () => ({ mutate: vi.fn(), isPending: false }),
   useRechercheKontrolle: () => ({ mutate: m.kontrolle, isPending: false }),
+  useRechercheAgentStarten: () => ({ mutate: m.agent, isPending: false }),
   useRechercheEintragen: () => ({ mutate: m.eintragen, isPending: false }),
   recherchePruefen: m.pruefen,
 }))
@@ -53,6 +55,12 @@ const LAUF: RechercheLauf = {
   started_at: '2026-10-29T10:00:00Z',
   finished_at: null,
   updated_at: '2026-10-29T10:05:00Z',
+  agent_status: 'arbeitet',
+  agent_angefordert: '2026-10-29T10:00:00Z',
+  agent_heartbeat: new Date().toISOString(),
+  agent_rechner: 'MacBook Pro',
+  agent_meldung: null,
+  agent_starts: 1,
 }
 
 function rendern(p: Partial<RechercheLauf> = {}) {
@@ -79,6 +87,7 @@ beforeEach(() => {
   m.eintragen.mockReset()
   m.status.mockReset()
   m.kontrolle.mockReset()
+  m.agent.mockReset()
 })
 
 describe('RechercheSeite', () => {
@@ -160,6 +169,20 @@ describe('RechercheSeite', () => {
     expect(screen.getByText(/Ziel erreicht: 30/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Neuen Lauf starten' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Pausieren' })).toBeNull()
+  })
+
+  it('Agent-Zustand oben: arbeitet ohne Knopf, beendet mit „Agent neu starten“', () => {
+    rendern()
+    const panel = screen.getByRole('region', { name: 'Agent' })
+    expect(panel).toHaveTextContent('Agent arbeitet auf MacBook Pro')
+    expect(screen.queryByRole('button', { name: /Agent (neu )?starten/ })).toBeNull()
+  })
+
+  it('beendeter Agent zeigt seinen Bericht und lässt sich neu starten', () => {
+    rendern({ agent_status: 'beendet', agent_meldung: 'Fertig: 4 gesendet, 12 geprüft' })
+    expect(screen.getByRole('region', { name: 'Agent' })).toHaveTextContent('Fertig: 4 gesendet, 12 geprüft')
+    fireEvent.click(screen.getByRole('button', { name: 'Agent neu starten' }))
+    expect(m.agent).toHaveBeenCalledWith('lauf-1')
   })
 
   it('LinkedIn-Einschränkung melden hält den Lauf mit Wortlaut an', () => {

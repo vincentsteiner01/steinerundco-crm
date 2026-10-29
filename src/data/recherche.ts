@@ -1,5 +1,6 @@
 // LinkedIn-Recherchelauf (Migration 17, 29.10.2026): Läufe, geprüfte Profile, Ausgangspunkte aus dem CRM und die RPCs
-// recherche_starten · _pruefen · _eintragen · _kontrolle · _status. Die Regeln erzwingt die Datenbank; diese Hooks rufen nur auf.
+// recherche_starten · _pruefen · _eintragen · _kontrolle · _status · _agent_starten (Migration 18). Die Regeln erzwingt die
+// Datenbank; diese Hooks rufen nur auf.
 // Fortschritt per Abfrage alle 4 s, solange ein Lauf aktiv ist (die Seite ist auch für einen zuschauenden Menschen gedacht).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Database } from '@/types/database'
@@ -216,6 +217,17 @@ export function useRechercheKontrolle() {
   return useMutation({
     mutationFn: async (lauf: string): Promise<RechercheLauf> =>
       pruefe(await supabase.rpc('recherche_kontrolle', { p_lauf: lauf })) as unknown as RechercheLauf,
+    onError: mutationFehler,
+    onSettled: inval,
+  })
+}
+
+/** „Agent starten“ / „Agent neu starten“ – der Recherche-Dienst auf dem Mac übernimmt den Lauf. */
+export function useRechercheAgentStarten() {
+  const inval = useInvalidieren()
+  return useMutation({
+    mutationFn: async (lauf: string): Promise<RechercheLauf> =>
+      pruefe(await supabase.rpc('recherche_agent_starten', { p_lauf: lauf })) as unknown as RechercheLauf,
     onError: mutationFehler,
     onSettled: inval,
   })
