@@ -24,6 +24,10 @@ import { RealtimePunkt } from './RealtimePunkt'
 
 // Eingang-Zähler (LinkedIn-Mails) am Eintrag „Einstellungen“ – nachgeladen, nicht im Start-Bundle (E22)
 const EingangZahl = lazy(() => import('./EingangZahl').then((m) => ({ default: m.EingangZahl })))
+// Blauer Play-Knopf „Recherche starten“ unter der Suche (29.10.2026) – ebenfalls nachgeladen
+const RechercheKnopf = lazy(() =>
+  import('@/features/recherche/RechercheKnopf').then((m) => ({ default: m.RechercheKnopf })),
+)
 
 /** DESIGN-SYSTEM § 4.1: Sidebar 232 px, canvas, Haarlinie rechts, padding 22 12 16; Marke · ⌘K-Trigger · Navigation + Zähler · Fuß (Ich, Abmelden, ?). */
 export function Sidebar() {
@@ -58,12 +62,15 @@ export function Sidebar() {
       <button
         type="button"
         onClick={() => setPaletteOffen(true)}
-        className="border-line bg-canvas text-ink-3 ease-brand hover:text-ink shadow-card mb-3.5 flex h-[34px] w-full items-center gap-2 rounded-sm border px-2.5 text-left text-[13px] transition-[color,background] duration-[var(--t-1)]"
+        className="border-line bg-canvas text-ink-3 ease-brand hover:text-ink shadow-card mb-2 flex h-[34px] w-full items-center gap-2 rounded-sm border px-2.5 text-left text-[13px] transition-[color,background] duration-[var(--t-1)]"
       >
         <Search size={14} strokeWidth={1.75} aria-hidden />
         <span className="min-w-0 flex-1 truncate">{ALLGEMEIN.suchenOderBefehl}</span>
         <Kbd>⌘K</Kbd>
       </button>
+      <Suspense fallback={<div className="mb-3.5 h-[34px]" aria-hidden />}>
+        <RechercheKnopf />
+      </Suspense>
 
       {/* Scrollt bei kleiner Fensterhöhe, statt den Fuß (Ich, Feedback) zu verdrängen */}
       <nav className="-mx-1 grid min-h-0 content-start gap-0.5 overflow-y-auto px-1 pb-2" aria-label="Hauptnavigation">

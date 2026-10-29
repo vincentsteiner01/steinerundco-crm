@@ -5,12 +5,15 @@ import {
   AGENT_STILL_S,
   AGENT_UEBERNAHME_S,
   ausgangspunkteFuer,
+  dienstLage,
+  DIENST_VERBUNDEN_S,
+  type DienstLage,
   formularFehler,
   gesendetErlaubt,
   LEERES_FORMULAR,
   verbleibend,
 } from './logik'
-import { agentAuftrag, ALLE_ABSCHNITTE, KATEGORIEN, kontrolleFaellig, startAnweisung } from './regeln'
+import { agentAuftrag, ALLE_ABSCHNITTE, FREIGABE_PRAEFIX, kontrolleFaellig, startAnweisung } from './regeln'
 
 const p = (i: number, firma = `Firma ${i % 5}`): Ausgangspunkt => ({
   id: `l${i}`,
@@ -114,7 +117,7 @@ describe('Start-Anweisung', () => {
 describe('Agent-Zustand', () => {
   const jetzt = Date.parse('2026-10-29T12:00:00Z')
   const vor = (s: number) => new Date(jetzt - s * 1000).toISOString()
-  const l = (p: Partial<Parameters<typeof agentZustand>[0]>) =>
+  const l = (p: Partial<Parameters<typeof agentZustand>[0]>, dienst: DienstLage | undefined = 'verbunden') =>
     agentZustand(
       {
         status: 'laeuft',
@@ -123,9 +126,11 @@ describe('Agent-Zustand', () => {
         agent_heartbeat: null,
         agent_rechner: null,
         agent_meldung: null,
+        agent_frage: null,
         ...p,
       },
       jetzt,
+      dienst,
     )
 
   it('angefordert: erst „startet“, ohne Übernahme „kein Agent“ mit Neustart', () => {
@@ -136,6 +141,15 @@ describe('Agent-Zustand', () => {
     expect(k.starten).toBe('neu')
   })
 
+  it('ohne verbundenen Recherche-Dienst sofort „kein Dienst“ – mit dem passenden Hinweis', () => {
+    expect(l({}, 'keiner')).toMatchObject({
+      art: 'kein_dienst',
+      text: expect.stringMatching(/noch kein Recherche-Dienst/),
+    })
+    expect(l({}, 'getrennt').text).toMatch(/meldet sich nicht/)
+    expect(l({}, undefined).art).toBe('startet') // Dienste laden noch
+  })
+
   it('arbeitet mit Lebenszeichen, sonst „antwortet nicht“', () => {
     const a = l({ agent_status: 'arbeitet', agent_heartbeat: vor(20), agent_rechner: 'MacBook Pro' })
     expect(a).toMatchObject({ art: 'arbeitet', titel: 'Agent arbeitet auf MacBook Pro', starten: null })
@@ -143,6 +157,21 @@ describe('Agent-Zustand', () => {
       art: 'still',
       starten: 'neu',
     })
+  })
+
+  it('Frage: Freigabe-Liste mit Überschrift, andere Fragen als freie Antwort; nach der Antwort „macht weiter“', () => {
+    const f = l({
+      agent_status: 'frage',
+      agent_frage: 'Freigabe nötig: 2 Vernetzungsanfragen\nA B · GF · X GmbH\nC D · PL · Y GmbH',
+    })
+    expect(f).toMatchObject({ art: 'frage', titel: 'Freigabe nötig: 2 Vernetzungsanfragen', freigabe: true })
+    expect(f.text).toBe('A B · GF · X GmbH\nC D · PL · Y GmbH')
+    expect(l({ agent_status: 'frage', agent_frage: 'Frage: Auch Großhändler?' })).toMatchObject({
+      titel: 'Der Agent hat eine Frage',
+      text: 'Frage: Auch Großhändler?',
+      freigabe: false,
+    })
+    expect(l({ agent_status: 'antwort' }).titel).toMatch(/Antwort übermittelt/)
   })
 
   it('beendet/fehler zeigen den Bericht; manuell bietet „starten“; Pause und Ende ohne Knopf', () => {
@@ -161,33 +190,42 @@ describe('Agent-Zustand', () => {
       },
     )
   })
+
+  it('Dienst-Lage: verbunden bei Meldung in der letzten Minute', () => {
+    expect(dienstLage(undefined, jetzt)).toBeUndefined()
+    expect(dienstLage([], jetzt)).toBe('keiner')
+    expect(dienstLage([{ zuletzt_gesehen: null }], jetzt)).toBe('keiner')
+    expect(dienstLage([{ zuletzt_gesehen: vor(DIENST_VERBUNDEN_S + 30) }], jetzt)).toBe('getrennt')
+    expect(dienstLage([{ zuletzt_gesehen: vor(DIENST_VERBUNDEN_S + 30) }, { zuletzt_gesehen: vor(8) }], jetzt)).toBe(
+      'verbunden',
+    )
+  })
 })
 
-describe('Agent-Auftrag', () => {
-  const t = agentAuftrag({
-    url: 'https://crm.steinerundco.de/auftrag/recherche/abc',
-    person: 'Mike',
-    ziel: 30,
-    gesendet: 4,
-  })
+describe('Agent-Auftrag (ChatGPT)', () => {
+  const t = agentAuftrag({ person: 'Mike' })
 
-  it('enthält Lauf, alle Regelabschnitte und die Knöpfe der Seite wörtlich', () => {
-    expect(t).toContain('https://crm.steinerundco.de/auftrag/recherche/abc')
-    expect(t).toContain('4 von 30')
+  it('enthält alle Regelabschnitte, die CRM-Werkzeuge und das Freigabe-Format', () => {
     for (const a of ALLE_ABSCHNITTE) expect(t).toContain(a.titel)
-    for (const k of KATEGORIEN) expect(t).toContain(`„${k.label}“`)
-    for (const knopf of [
-      '„Prüfen“',
-      '„Vernetzungsanfrage gesendet“',
-      '„Als Dublette eintragen“',
-      '„Kriterien geprüft – weiter“',
+    for (const w of [
+      'lauf_status',
+      'ausgangspunkte',
+      'profil_pruefen',
+      'profil_eintragen',
+      'kontrollpunkt_bestaetigen',
+      'einschraenkung_melden',
     ])
-      expect(t).toContain(knopf)
+      expect(t).toContain(w)
+    expect(t).toContain(`„${FREIGABE_PRAEFIX} N Vernetzungsanfragen“`)
+    expect(t).toContain('im Namen von Mike')
+    expect(t).toMatch(/nie über Webformulare/)
   })
 
-  it('verbietet Nachrichten, Anmelden und Umgehen', () => {
+  it('verbietet Nachrichten, Anmelden und Umgehen; Ende mit Fertig/Abbruch', () => {
     expect(t).toMatch(/Nachrichten, Notizen/)
     expect(t).toMatch(/CAPTCHAs lösen/)
     expect(t).toMatch(/nicht anmelden/)
+    expect(t).toMatch(/„Fertig: X gesendet, Y geprüft“ oder „Abbruch: <Grund>“/)
+    expect(t).not.toMatch(/!/)
   })
 })

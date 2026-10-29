@@ -1,5 +1,6 @@
 import { Marke } from '@/components/ui/Marke'
 import { MessageSquareWarning, Search } from 'lucide-react'
+import { lazy, Suspense } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router'
 import { aktiverEintrag, gruppeVon, NAV, pfadOhneQuery } from '@/app/nav'
 import { PFADE } from '@/app/pfade'
@@ -12,6 +13,11 @@ import { useNavZaehler } from '@/data/nav'
 import { useAuth } from '@/features/auth/authStore'
 import { FEEDBACK_EVENT } from '@/features/feedback/ereignis'
 import { ALLGEMEIN } from '@/texte/de'
+
+// Blauer Play-Knopf „Recherche starten“ unter der Suche (29.10.2026) – nachgeladen, nicht im Start-Bundle
+const RechercheKnopf = lazy(() =>
+  import('@/features/recherche/RechercheKnopf').then((m) => ({ default: m.RechercheKnopf })),
+)
 
 /** 768–1023 px: Sidebar als Icon-Rail 64 px (Tooltips mit Label + G-Akkord). */
 export function IconRail() {
@@ -45,11 +51,14 @@ export function IconRail() {
           type="button"
           onClick={() => setPaletteOffen(true)}
           aria-label={ALLGEMEIN.suchenOderBefehl}
-          className="border-line bg-canvas text-ink-3 hover:text-ink shadow-card mb-3.5 grid h-[34px] w-full place-items-center rounded-sm border"
+          className="border-line bg-canvas text-ink-3 hover:text-ink shadow-card mb-2 grid h-[34px] w-full place-items-center rounded-sm border"
         >
           <Search size={14} strokeWidth={1.75} aria-hidden />
         </button>
       </Tooltip>
+      <Suspense fallback={<div className="mb-3.5 h-[34px] w-full" aria-hidden />}>
+        <RechercheKnopf kompakt />
+      </Suspense>
       <nav className="grid w-full gap-0.5" aria-label="Hauptnavigation">
         {NAV.map((n, i) =>
           n === 'trenner' ? (

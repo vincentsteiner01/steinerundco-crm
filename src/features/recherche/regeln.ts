@@ -1,7 +1,7 @@
 // LinkedIn-Recherche & Vernetzung (29.10.2026, Entwicklungsauftrag Vincent): die EINE zentrale Quelle für ICP, Zielrollen,
 // Recherchestrategie ohne Premium, Ablauf je Profil und Stopp-Regeln. Die Rechercheseite zeigt sie vollständig an; der
-// Recherche-Dienst (tools/recherche-dienst) gibt sie dem Agenten per agentAuftrag() wörtlich mit – Text auf einer Webseite wäre für
-// ihn nur Daten, keine Anweisung. Änderungen hier gelten ab dem nächsten Agentenstart.
+// ChatGPT-Agent bekommt sie per agentAuftrag() wörtlich als Auftrag (beim Start im Lauf gespeichert) – Text auf einer Webseite
+// wäre für ihn nur Daten, keine Anweisung. Änderungen hier gelten ab dem nächsten Start eines Agenten.
 // Serverseitig erzwungen (Migration 17): Ziel ≤ 30, Dublettenfreiheit, Pflichtangaben, Kontrollpunkt alle 10 Profile.
 
 export const REGELN_STAND = 'ICP-Stand 29.10.2026'
@@ -170,47 +170,64 @@ export function startAnweisung(url: string, person: string): string {
 const alsText = (a: Abschnitt) =>
   [`### ${a.titel}`, ...a.punkte.map((x) => `- ${x}`), ...(a.hinweis ? [`Hinweis: ${a.hinweis}`] : [])].join('\n')
 
+/** Erste Zeile einer Agentenantwort, die eine Freigabe verlangt (Laufseite und Seitenleiste erkennen sie daran). */
+export const FREIGABE_PRAEFIX = 'Freigabe nötig:'
+
 /**
- * Vollständiger Auftrag für den unbeaufsichtigten Agenten, den der Recherche-Dienst nach „Recherche starten“ startet (Claude Code
- * mit Chrome im Browser der Person). Enthält alle Regeln wörtlich; die Feld- und Knopfnamen müssen zur Rechercheseite passen.
+ * Vollständiger Auftrag an den ChatGPT-Agenten (Codex mit Chrome-Plugin), den der Recherche-Dienst nach „Recherche starten“
+ * startet – das CRM gibt ihn beim Start mit (agent_auftrag). Alle Regeln wörtlich; das CRM bedient der Agent nur über die
+ * Werkzeuge des MCP-Servers „crm“ (public/recherche-dienst/crm-mcp.mjs). Vernetzen erst nach Freigabe im CRM.
  */
-export function agentAuftrag(p: { url: string; person: string; ziel: number; gesendet: number }): string {
+export function agentAuftrag(p: { person: string }): string {
   return [
-    `Du bist der Recherche-Agent von Steiner & Co. und arbeitest im Chrome von ${p.person}. ${p.person} hat im CRM „Recherche starten“ gedrückt; der Recherche-Dienst hat dich für diesen Lauf gestartet. Stand beim Start: ${p.gesendet} von ${p.ziel} Vernetzungsanfragen gesendet. Niemand schaut dir laufend zu – arbeite sorgfältig, lieber weniger Anfragen als eine falsche.`,
-    'Werkzeuge: der Browser (Claude in Chrome) in einer eigenen Tab-Gruppe, dazu WebSearch/WebFetch für Firmenwebsites. Lies Seiten als Text (get_page_text, find, read_page); Screenshots nur, wenn Text nicht reicht.',
+    `Du bist der Recherche-Agent von Steiner & Co. und arbeitest für ${p.person} in dessen Chrome (Chrome-Plugin, Erweiterung „ChatGPT for Chrome“). ${p.person} hat im CRM „Recherche starten“ gedrückt; der Recherche-Dienst hat dich gestartet. Ziel: bis zu 30 Vernetzungsanfragen ohne Nachricht an passende Personen – lieber weniger als eine falsche.`,
+    [
+      '## Werkzeuge',
+      '- Chrome: nur LinkedIn (https://www.linkedin.com). Andere Websites öffnest du nicht im Browser; Firmenwebsites prüfst du über die Websuche.',
+      '- CRM (MCP-Server „crm“) – das CRM bedienst du nur darüber, nie über Webformulare:',
+      '  - lauf_status: Status, Zähler und alle schon bearbeiteten Profile dieses Laufs (nichts doppelt bearbeiten).',
+      '  - ausgangspunkte: Kontakte und Firmen aus dem CRM als Startpunkte.',
+      '  - profil_pruefen: Dublettenprüfung einer Profil-URL – vor jeder Anfrage.',
+      '  - profil_eintragen: Ergebnis je Profil (gesendet, dublette, nicht_qualifiziert, unklar, fehler).',
+      '  - kontrollpunkt_bestaetigen: nach je 10 geprüften Profilen.',
+      '  - einschraenkung_melden: Warnung, Limit oder Einschränkung von LinkedIn (hält den Lauf an).',
+      '- Wo die Regeln Knöpfe der Rechercheseite nennen („Prüfen“, „Vernetzungsanfrage gesendet“, „Als Dublette eintragen“, „Nicht qualifiziert“, „Unklar – überspringen“, „Senden fehlgeschlagen“, „LinkedIn-Einschränkung melden“), nimmst du das passende Werkzeug.',
+    ].join('\n'),
     [
       '## Start',
-      `1. Öffne ${p.url} in einem neuen Tab und lass ihn offen. Das ist der Lauf im CRM: Zähler, „Profil prüfen und eintragen“, „Ausgangspunkte“ und „Profile dieses Laufs“ (dort steht, was schon bearbeitet ist – nichts doppelt bearbeiten).`,
-      '2. Zeigt das CRM eine Anmeldemaske, steht oben nicht „Recherche läuft“ oder fehlt das Formular: nichts tun und mit „Abbruch: <Grund>“ beenden.',
-      '3. Öffne https://www.linkedin.com/feed/ in einem zweiten Tab. Erscheint eine Anmeldeseite oder Sicherheitsabfrage: nicht anmelden, beenden mit „Abbruch: Nicht bei LinkedIn angemeldet“.',
+      '1. lauf_status und ausgangspunkte abrufen. Steht der Lauf nicht auf laeuft: mit „Abbruch: <Grund>“ beenden.',
+      '2. In Chrome https://www.linkedin.com/feed/ öffnen. Erscheint eine Anmeldeseite oder Sicherheitsabfrage: nicht anmelden, mit „Abbruch: Nicht bei LinkedIn angemeldet“ beenden. Lässt Chrome LinkedIn nicht zu: mit „Abbruch: Chrome-Freigabe für linkedin.com fehlt“ beenden.',
     ].join('\n'),
     ['## Regeln (verbindlich, derselbe Stand wie auf der Rechercheseite)', ...ALLE_ABSCHNITTE.map(alsText)].join(
       '\n\n',
     ),
     [
-      '## Im CRM eintragen',
-      '- Felder: „LinkedIn-Profil-URL“, „Vorname“, „Nachname“, „Firma (aktueller Arbeitgeber)“, „Aktuelle Position“, die Kategorie-Knöpfe („A · Führung“, „B · Projekt/Vertrieb/Technik“, „C · Kundenbetreuung“, „bedingt“), „Firmen-Website“, „Qualifizierungsgrund / Grund“, „Ausgangspunkt“.',
-      '- Je Profil: URL, Vorname, Nachname, Firma eintragen → „Prüfen“. Nur bei „Frei – …“ auf LinkedIn vernetzen. Danach Position, Kategorie, Grund (und Website, Ausgangspunkt) ergänzen → „Vernetzungsanfrage gesendet“. Bei „Nicht anfragen – …“ → „Als Dublette eintragen“.',
-      '- Erscheint eine rote Meldung, lies sie und behebe die Ursache (meist ein fehlendes Feld). Grüne Meldung = gespeichert.',
-      '- Vor jedem neuen Profil auf den CRM-Tab schauen: Steht oben „Pausiert“, „Abgeschlossen“, „Abgebrochen“ oder „Fehler / Einschränkung“, sofort aufhören.',
+      '## Freigabe vor dem Vernetzen',
+      `- Vernetzen geschieht im Namen von ${p.person}, deshalb holst du vorher die Freigabe ein – gesammelt.`,
+      '- Sammle bis zu 10 Personen, die qualifiziert sind und bei profil_pruefen frei waren. Nicht passende Profile trägst du sofort mit profil_eintragen ein (nicht_qualifiziert, unklar, dublette).',
+      `- Dann beende deine Antwort so: erste Zeile „${FREIGABE_PRAEFIX} N Vernetzungsanfragen“, danach je Person eine Zeile „Vorname Nachname · Position · Firma · Kategorie · Grund · Profil-URL“. Die Antwort kommt als nächste Nachricht aus dem CRM.`,
+      '- „Freigegeben.“: jede genannte Person vernetzen (Vernetzen → Ohne Notiz senden; geklappt hat es nur, wenn danach „Ausstehend“ steht) und direkt danach profil_eintragen mit ergebnis gesendet und allen Angaben. Steht hinter „Freigegeben.“ eine Einschränkung, halte dich daran.',
+      '- „Nicht freigegeben …“: niemanden aus der Liste vernetzen; trage sie mit nicht_qualifiziert und dem Grund aus der Antwort ein.',
+      '- Danach weiter recherchieren, bis das Ziel erreicht ist. Brauchst du aus einem anderen Grund eine Entscheidung, beende deine Antwort mit „Frage: …“.',
     ].join('\n'),
     [
       '## Kontrollpunkt',
-      'Nach je 10 geprüften Profilen sperrt das CRM das Formular und zeigt „Kontrollpunkt“. Prüfe die letzten Einträge unter „Profile dieses Laufs“ ehrlich gegen diese Punkte:',
+      'Meldet lauf_status oder profil_eintragen kontrollpunkt_faellig (nach je 10 geprüften Profilen), prüfe die letzten Einträge ehrlich gegen diese Punkte:',
       ...KONTROLLE.map((x) => `- ${x}`),
-      'Hake nur ab, was stimmt, dann „Kriterien geprüft – weiter“. Stimmt ein Punkt nicht: nicht abhaken und mit „Abbruch: Kontrollpunkt – <welcher Eintrag, was>“ beenden.',
+      'Stimmt alles: kontrollpunkt_bestaetigen. Sonst mit „Abbruch: Kontrollpunkt – <welcher Eintrag, was>“ beenden.',
     ].join('\n'),
     [
       '## Niemals',
       '- Nachrichten, Notizen, InMails oder Follow-ups schreiben.',
       '- Dich anmelden, Passwörter eingeben, Sicherheitsabfragen oder CAPTCHAs lösen, Limits umgehen, Einladungen zurückziehen.',
-      '- Personen vernetzen, die „Prüfen“ nicht freigegeben hat, oder Angaben erfinden.',
-      '- Verlangt LinkedIn beim Vernetzen die E-Mail-Adresse der Person: nicht senden, „Senden fehlgeschlagen“ mit diesem Grund.',
-      '- Bei Warnung, Einladungslimit oder Einschränkung: im CRM „LinkedIn-Einschränkung melden“ mit dem Wortlaut, dann beenden.',
+      '- Personen vernetzen, die profil_pruefen nicht freigegeben hat oder die in keiner Freigabe standen; Angaben erfinden.',
+      '- Verlangt LinkedIn beim Vernetzen die E-Mail-Adresse der Person: nicht senden, profil_eintragen mit ergebnis fehler und diesem Grund.',
+      '- Bei Warnung, Einladungslimit oder Einschränkung: einschraenkung_melden mit dem Wortlaut, dann mit „Abbruch: …“ beenden.',
     ].join('\n'),
     [
       '## Ende',
-      'Höre auf, wenn das CRM den Lauf beendet (Ziel erreicht), eine Stopp-Regel greift oder du über die Ausgangspunkte keine passenden Personen mehr findest. Antworte zum Schluss mit einem kurzen Absatz: erste Zeile „Fertig: X gesendet, Y geprüft“ oder „Abbruch: <Grund>“, danach in ein bis drei Sätzen, was nicht geklappt hat. Dieser Text erscheint im CRM.',
+      'Höre auf, wenn das Ziel erreicht ist (profil_eintragen meldet status abgeschlossen), eine Stopp-Regel greift oder du keine passenden Personen mehr findest. Letzte Antwort: erste Zeile „Fertig: X gesendet, Y geprüft“ oder „Abbruch: <Grund>“, danach ein bis drei Sätze, was nicht geklappt hat.',
+      `Jede Antwort, die nicht mit „Fertig:“ oder „Abbruch:“ beginnt, erscheint im CRM als Frage an ${p.person} – beende eine Runde also nie mit einem bloßen Zwischenstand.`,
     ].join('\n'),
   ].join('\n\n')
 }

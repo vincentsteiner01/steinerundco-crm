@@ -1,20 +1,18 @@
-// Startkarte auf /auftrag (29.10.2026): Play-Button für den LinkedIn-Recherchelauf. Der Start fordert zugleich den Agenten an,
-// den der Recherche-Dienst auf dem Mac startet (Migration 18). Läuft schon ein Lauf, öffnet der Knopf diesen statt einen zweiten
-// anzulegen (die Datenbank lässt ohnehin nur einen aktiven Lauf je Person zu).
+// Startkarte auf /auftrag (29.10.2026): Play-Button für den LinkedIn-Recherchelauf (derselbe Start wie der blaue Knopf in der
+// Seitenleiste). Der Start fordert zugleich den ChatGPT-Agenten an, den der Recherche-Dienst auf dem Mac startet (Migrationen
+// 18/19). Läuft schon ein Lauf, öffnet der Knopf diesen statt einen zweiten anzulegen.
 import { Play } from 'lucide-react'
-import { Link, useNavigate } from 'react-router'
+import { Link } from 'react-router'
 import { PFADE } from '@/app/pfade'
 import { Button, Chip } from '@/components/ui'
-import { useMeineLaeufe, useRechercheStarten } from '@/data/recherche'
 import { fmtDatumZeit } from '@/lib/format'
 import { agentZustand } from './logik'
+import { DienstZeile } from './RechercheDienst'
+import { useRechercheOeffnen } from './start'
 import { STATUS_LABEL } from './regeln'
 
 export function RechercheStart({ me }: { me: string | null }) {
-  const navigate = useNavigate()
-  const { data: laeufe } = useMeineLaeufe(me)
-  const starten = useRechercheStarten()
-  const aktiv = laeufe?.find((l) => l.status === 'laeuft' || l.status === 'pausiert')
+  const { laeufe, aktiv, los, busy } = useRechercheOeffnen()
   const fruehere = (laeufe ?? []).filter((l) => l !== aktiv).slice(0, 3)
 
   return (
@@ -27,25 +25,17 @@ export function RechercheStart({ me }: { me: string | null }) {
         <div className="grid max-w-[60ch] min-w-0 gap-1">
           <h2 className="text-ink-bright text-[15px] font-semibold">Neue Leads recherchieren und vernetzen</h2>
           <p className="text-small text-ink-2">
-            Ein Agent sucht passende Energie- und Solarbetriebe, prüft Firma und Rolle, gleicht jedes Profil mit dem CRM
-            ab und sendet bis zu 30 Vernetzungsanfragen ohne Nachricht. Jede Person landet als Lead im CRM, die KPIs
-            zählen mit. Er startet von selbst in deinem Chrome – dafür muss der Mac wach sein, Chrome offen und du bei
-            LinkedIn angemeldet.
+            ChatGPT sucht passende Energie- und Solarbetriebe, prüft Firma und Rolle, gleicht jedes Profil mit dem CRM
+            ab und vernetzt dich mit bis zu 30 Personen – ohne Nachricht und erst nach deiner Freigabe. Jede Person
+            landet als Lead im CRM, die KPIs zählen mit. Es startet von selbst in deinem Chrome, sobald der
+            Recherche-Dienst auf deinem Mac eingerichtet ist.
           </p>
         </div>
-        <Button
-          variante="primary"
-          icon={Play}
-          busy={starten.isPending}
-          onClick={() =>
-            aktiv
-              ? navigate(PFADE.recherche(aktiv.id))
-              : starten.mutate(undefined, { onSuccess: (l) => navigate(PFADE.recherche(l.id)) })
-          }
-        >
+        <Button variante="primary" icon={Play} busy={busy} onClick={los}>
           {aktiv ? 'Laufenden Lauf öffnen' : 'Recherche starten'}
         </Button>
       </div>
+      <DienstZeile memberId={me} />
       {aktiv ? (
         <p className="text-small text-ink-2" role="status">
           {STATUS_LABEL[aktiv.status]} seit {fmtDatumZeit(aktiv.started_at)} · {agentZustand(aktiv).titel} ·{' '}

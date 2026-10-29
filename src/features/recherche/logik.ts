@@ -10,6 +10,7 @@ import type {
 } from '@/data/recherche'
 import { fmtZeit } from '@/lib/format'
 import { normalizeLinkedinUrl } from '@/lib/url'
+import { FREIGABE_PRAEFIX } from './regeln'
 
 /** Kleine, stabile Zahl aus einer ID (gleicher Lauf → gleiche Auswahl). */
 function saat(id: string): number {
@@ -113,24 +114,58 @@ export function fehlerText(e: unknown): string {
 /** Ohne Übernahme durch den Dienst nach so vielen Sekunden: „kein Agent“. Ohne Lebenszeichen: „antwortet nicht“. */
 export const AGENT_UEBERNAHME_S = 45
 export const AGENT_STILL_S = 120
+/** Ein Recherche-Dienst gilt als verbunden, wenn er sich so kürzlich gemeldet hat (er fragt alle 10 s). */
+export const DIENST_VERBUNDEN_S = 60
+
+export type DienstLage = 'verbunden' | 'getrennt' | 'keiner'
+
+/** Befehl fürs Terminal: lädt public/recherche-dienst/einrichten.sh und übergibt den persönlichen Dienst-Schlüssel. */
+export const einrichtungsBefehl = (schluessel: string, origin: string) =>
+  `curl -fsSL ${origin}/recherche-dienst/einrichten.sh | bash -s -- ${schluessel}`
+
+/** Lage der Recherche-Dienste einer Person – `undefined`, solange sie lädt. */
+export function dienstLage(
+  dienste: readonly { zuletzt_gesehen: string | null }[] | undefined,
+  jetzt = Date.now(),
+): DienstLage | undefined {
+  if (!dienste) return undefined
+  const gesehen = dienste.filter((d) => d.zuletzt_gesehen)
+  if (!gesehen.length) return 'keiner'
+  return gesehen.some((d) => sekundenSeit(d.zuletzt_gesehen, jetzt) <= DIENST_VERBUNDEN_S) ? 'verbunden' : 'getrennt'
+}
 
 export type AgentZustand = {
-  art: 'startet' | 'kein_dienst' | 'arbeitet' | 'still' | 'beendet' | 'fehler' | 'manuell' | 'angehalten' | 'aus'
+  art:
+    'startet' | 'kein_dienst' | 'arbeitet' | 'frage' | 'still' | 'beendet' | 'fehler' | 'manuell' | 'angehalten' | 'aus'
   titel: string
   text: string
   /** Knopf anbieten: „Agent starten“ bzw. „Agent neu starten“ */
   starten: 'starten' | 'neu' | null
+  /** bei art 'frage': verlangt der Agent eine Freigabe (ja/nein) oder eine freie Antwort? */
+  freigabe?: boolean
 }
 
 type AgentFelder = Pick<
   RechercheLauf,
-  'status' | 'agent_status' | 'agent_angefordert' | 'agent_heartbeat' | 'agent_rechner' | 'agent_meldung'
+  | 'status'
+  | 'agent_status'
+  | 'agent_angefordert'
+  | 'agent_heartbeat'
+  | 'agent_rechner'
+  | 'agent_meldung'
+  | 'agent_frage'
 >
 
 const sekundenSeit = (t: string | null, jetzt: number) => (t ? (jetzt - new Date(t).getTime()) / 1000 : Infinity)
 
-/** Was der Agent gerade tut – aus Laufstatus und den Meldungen des Recherche-Diensts. */
-export function agentZustand(l: AgentFelder, jetzt = Date.now()): AgentZustand {
+const KEIN_DIENST: Record<DienstLage, string> = {
+  keiner: 'Auf deinem Mac ist noch kein Recherche-Dienst eingerichtet – einmalig „Recherche-Dienst einrichten“.',
+  getrennt: 'Der Recherche-Dienst auf deinem Mac meldet sich nicht. Ist der Mac wach und angemeldet?',
+  verbunden: 'Der Recherche-Dienst hat den Lauf nicht übernommen. Läuft gerade ein anderer Agent?',
+}
+
+/** Was der Agent gerade tut – aus Laufstatus, den Meldungen des Recherche-Diensts und ob ein Dienst verbunden ist. */
+export function agentZustand(l: AgentFelder, jetzt = Date.now(), dienst?: DienstLage): AgentZustand {
   if (l.status === 'pausiert' || l.status === 'fehler')
     return {
       art: 'angehalten',
@@ -145,25 +180,46 @@ export function agentZustand(l: AgentFelder, jetzt = Date.now()): AgentZustand {
 
   switch (l.agent_status) {
     case 'wartet':
+    case 'antwort': {
+      const fortsetzen = l.agent_status === 'antwort'
+      if (dienst !== 'verbunden' && dienst !== undefined)
+        return {
+          art: 'kein_dienst',
+          titel: 'Kein Recherche-Dienst verbunden',
+          text: KEIN_DIENST[dienst],
+          starten: 'neu',
+        }
       return sekundenSeit(l.agent_angefordert, jetzt) < AGENT_UEBERNAHME_S
         ? {
             art: 'startet',
-            titel: 'Agent startet …',
-            text: 'Der Recherche-Dienst auf deinem Mac öffnet gleich eine eigene Tab-Gruppe in Chrome.',
+            titel: fortsetzen ? 'Antwort übermittelt – Agent macht weiter …' : 'Agent startet …',
+            text: 'Der Recherche-Dienst auf deinem Mac startet ChatGPT gleich in deinem Chrome.',
             starten: null,
           }
         : {
             art: 'kein_dienst',
             titel: 'Kein Agent hat den Lauf übernommen',
-            text: 'Der Recherche-Dienst antwortet nicht. Ist der Mac wach und Chrome geöffnet? Ohne Dienst die Start-Anweisung unten kopieren und selbst an einen Agenten geben.',
+            text: KEIN_DIENST[dienst ?? 'getrennt'],
             starten: 'neu',
           }
+    }
+    case 'frage': {
+      const frage = l.agent_frage ?? ''
+      const freigabe = frage.startsWith(FREIGABE_PRAEFIX)
+      return {
+        art: 'frage',
+        titel: freigabe ? frage.split('\n')[0]! : 'Der Agent hat eine Frage',
+        text: freigabe ? frage.split('\n').slice(1).join('\n').trim() : frage,
+        starten: null,
+        freigabe,
+      }
+    }
     case 'arbeitet':
       return sekundenSeit(l.agent_heartbeat, jetzt) <= AGENT_STILL_S
         ? {
             art: 'arbeitet',
             titel: l.agent_rechner ? `Agent arbeitet auf ${l.agent_rechner}` : 'Agent arbeitet',
-            text: 'Er arbeitet in deinem Chrome in einer eigenen Tab-Gruppe – du kannst zuschauen. „Pausieren“ hält ihn an.',
+            text: 'ChatGPT arbeitet in deinem Chrome – du kannst zuschauen. Vor dem Vernetzen fragt es hier nach deiner Freigabe.',
             starten: null,
           }
         : {

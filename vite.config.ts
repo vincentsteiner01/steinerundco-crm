@@ -1,5 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -21,9 +21,30 @@ const cspMeta = {
   },
 }
 
+// Recherche-Dienst (public/recherche-dienst): Verbindungsdaten für den Dienst auf dem Mac – dieselben öffentlichen Werte wie im
+// JS-Bundle (Projekt-URL, Publishable Key), damit die Einrichtung nur den persönlichen Dienst-Schlüssel braucht.
+function rechercheDienstVerbindung(): Plugin {
+  let env: Record<string, string> = {}
+  return {
+    name: 'recherche-dienst-verbindung',
+    apply: 'build',
+    configResolved(c) {
+      env = c.env
+    },
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'recherche-dienst/verbindung.json',
+        source: JSON.stringify({ url: env.VITE_SUPABASE_URL, key: env.VITE_SUPABASE_KEY }),
+      })
+    },
+  }
+}
+
 export default defineConfig({
   plugins: [
     cspMeta,
+    rechercheDienstVerbindung(),
     react(),
     tailwindcss(),
     VitePWA({

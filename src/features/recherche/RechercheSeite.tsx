@@ -1,5 +1,6 @@
 // /auftrag/recherche/:id – LinkedIn-Recherchelauf (29.10.2026, Entwicklungsauftrag Vincent). Steuerzentrale für den
-// Browser-Agenten, den der Recherche-Dienst nach „Recherche starten“ selbst startet (Agent-Zustand oben, Migration 18):
+// ChatGPT-Agenten, den der Recherche-Dienst nach „Recherche starten“ selbst startet (Agent-Zustand und Freigaben oben,
+// Migrationen 18/19):
 // Fortschritt, Kontrollpunkt alle 10 Profile, „Profil prüfen und eintragen“, Ausgangspunkte
 // aus dem CRM, die vollständigen Regeln und alle Profile des Laufs. Wie /auftrag ohne Tastenkürzel und mit beschrifteten
 // Knöpfen; die Datenbank erzwingt Ziel, Dubletten, Pflichtangaben und Kontrollpunkt (Migration 17).
@@ -29,7 +30,9 @@ import {
   useAusgangspunkte,
   useLauf,
   useLaufProfile,
+  useRechercheAgentAntworten,
   useRechercheAgentStarten,
+  useRechercheDienste,
   useRechercheEintragen,
   useRechercheKontrolle,
   useRechercheStarten,
@@ -46,6 +49,7 @@ import { Kachel, Kacheln } from '@/features/telefon/ansichten/Teile'
 import {
   agentZustand,
   ausgangspunkteFuer,
+  dienstLage,
   fehlerText,
   formularFehler,
   gesendetErlaubt,
@@ -54,7 +58,9 @@ import {
   type AgentZustand,
   type Formular,
 } from './logik'
+import { DienstZeile } from './RechercheDienst'
 import {
+  agentAuftrag,
   ALLE_ABSCHNITTE,
   ERGEBNIS_LABEL,
   KATEGORIEN,
@@ -98,6 +104,7 @@ function Abschnitt({ nr, titel, id, children }: { nr: number; titel: string; id?
 const AGENT_PUNKT: Record<AgentZustand['art'], string> = {
   startet: 'bg-signal animate-pulse',
   arbeitet: 'bg-done animate-pulse',
+  frage: 'bg-signal',
   kein_dienst: 'bg-overdue',
   still: 'bg-overdue',
   fehler: 'bg-danger',
@@ -107,15 +114,32 @@ const AGENT_PUNKT: Record<AgentZustand['art'], string> = {
   aus: 'bg-deco',
 }
 
-/** Was der Agent gerade tut – plus „Agent (neu) starten“ und die Start-Anweisung für den Weg ohne Recherche-Dienst. */
-function AgentPanel({ lauf, fremd, prompt }: { lauf: RechercheLauf; fremd: boolean; prompt: string }) {
+/**
+ * Was der Agent gerade tut – mit „Agent (neu) starten“, der Freigabe auf seine Frage, der Lage des Recherche-Diensts und der
+ * Start-Anweisung für den Weg ohne Dienst.
+ */
+function AgentPanel({
+  lauf,
+  fremd,
+  person,
+  prompt,
+}: {
+  lauf: RechercheLauf
+  fremd: boolean
+  person: string
+  prompt: string
+}) {
   const agent = useRechercheAgentStarten()
+  const { data: dienste } = useRechercheDienste(lauf.member_id, lauf.status === 'laeuft')
   const [promptOffen, setPromptOffen] = useState(false)
-  const z = agentZustand(lauf)
+  const z = agentZustand(lauf, undefined, dienstLage(dienste))
   if (z.art === 'aus' && !z.text) return null
   return (
     <section
-      className="bg-sidebar mb-6 grid max-w-[880px] gap-2 rounded-md px-4 py-3.5 md:px-5"
+      className={cn(
+        'mb-6 grid max-w-[880px] gap-2 rounded-md px-4 py-3.5 md:px-5',
+        z.art === 'frage' ? 'bg-signal-tint' : 'bg-sidebar',
+      )}
       aria-label="Agent"
       data-agent={z.art}
     >
@@ -127,14 +151,24 @@ function AgentPanel({ lauf, fremd, prompt }: { lauf: RechercheLauf; fremd: boole
           </h2>
         </div>
         {!fremd && z.starten ? (
-          <Button variante="primary" icon={Play} busy={agent.isPending} onClick={() => agent.mutate(lauf.id)}>
+          <Button
+            variante="primary"
+            icon={Play}
+            busy={agent.isPending}
+            onClick={() => agent.mutate({ lauf: lauf.id, auftrag: agentAuftrag({ person }) })}
+          >
             {z.starten === 'neu' ? 'Agent neu starten' : 'Agent starten'}
           </Button>
         ) : null}
       </div>
-      {z.text ? <p className="text-small text-ink-2 max-w-[75ch] whitespace-pre-line">{z.text}</p> : null}
+      {z.art === 'frage' ? (
+        <Antworten lauf={lauf} zustand={z} fremd={fremd} />
+      ) : z.text ? (
+        <p className="text-small text-ink-2 max-w-[75ch] whitespace-pre-line">{z.text}</p>
+      ) : null}
+      {lauf.status === 'laeuft' ? <DienstZeile memberId={lauf.member_id} fremd={fremd} /> : null}
       {!fremd && lauf.status === 'laeuft' ? (
-        <div className="flex flex-wrap items-center gap-x-1 gap-y-2 pt-0.5">
+        <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
           <span className="text-small text-ink-3 mr-1">Ohne Recherche-Dienst:</span>
           <Button
             variante="quiet"
@@ -158,6 +192,76 @@ function AgentPanel({ lauf, fremd, prompt }: { lauf: RechercheLauf; fremd: boole
         </pre>
       ) : null}
     </section>
+  )
+}
+
+/** Frage des Agenten: Freigabe (ja/nein, optional mit Anmerkung) oder freie Antwort – geht zurück in dieselbe Sitzung. */
+function Antworten({ lauf, zustand, fremd }: { lauf: RechercheLauf; zustand: AgentZustand; fremd: boolean }) {
+  const antworten = useRechercheAgentAntworten()
+  const [text, setText] = useState('')
+  const senden = (freigabe: boolean | null, t = text) => antworten.mutate({ lauf: lauf.id, freigabe, text: t.trim() })
+  return (
+    <div className="grid gap-2.5" data-recherche-frage>
+      {zustand.text ? (
+        <ul
+          className="bg-surface-raised border-line text-ink divide-line grid divide-y rounded-sm border px-3.5 text-[13.5px] break-words"
+          aria-label={zustand.freigabe ? 'Zur Freigabe' : 'Frage'}
+        >
+          {zustand.text
+            .split('\n')
+            .filter((z) => z.trim())
+            .map((z, i) => (
+              <li key={i} className="py-2">
+                {z}
+              </li>
+            ))}
+        </ul>
+      ) : null}
+      {fremd ? (
+        <p className="text-small text-ink-3">Antworten kann nur die Person, deren Lauf das ist.</p>
+      ) : (
+        <>
+          <FormField
+            label={zustand.freigabe ? 'Anmerkung an den Agenten (optional)' : 'Deine Antwort'}
+            htmlFor="r-antwort"
+          >
+            <Textarea
+              id="r-antwort"
+              rows={2}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={zustand.freigabe ? 'z. B. nur die ersten fünf' : ''}
+            />
+          </FormField>
+          <div className="flex flex-wrap gap-2">
+            {zustand.freigabe ? (
+              <>
+                <Button variante="primary" busy={antworten.isPending} onClick={() => senden(true)}>
+                  Freigeben
+                </Button>
+                <Button variante="secondary" disabled={antworten.isPending} onClick={() => senden(false)}>
+                  Nicht freigeben
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variante="primary"
+                  busy={antworten.isPending}
+                  disabled={!text.trim()}
+                  onClick={() => senden(null)}
+                >
+                  Antworten
+                </Button>
+                <Button variante="secondary" disabled={antworten.isPending} onClick={() => senden(null, 'Weiter so.')}>
+                  Weitermachen
+                </Button>
+              </>
+            )}
+          </div>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -445,7 +549,8 @@ export function Component() {
   const fremd = !!meId && lauf.member_id !== meId
   const url =
     typeof window !== 'undefined' ? `${window.location.origin}${PFADE.recherche(lauf.id)}` : PFADE.recherche(lauf.id)
-  const prompt = startAnweisung(url, anzeigeName(me) || 'Vincent')
+  const person = anzeigeName(me) || 'Vincent'
+  const prompt = startAnweisung(url, person)
   const faellig = kontrolleFaellig(lauf)
   const gesperrt = fremd
     ? 'Dieser Lauf gehört einer anderen Person – nur ansehen.'
@@ -461,7 +566,8 @@ export function Component() {
               ? 'Ziel erreicht.'
               : null
 
-  const neuStarten = () => starten.mutate(undefined, { onSuccess: (l) => navigate(PFADE.recherche(l.id)) })
+  const neuStarten = () =>
+    starten.mutate(agentAuftrag({ person }), { onSuccess: (l) => navigate(PFADE.recherche(l.id)) })
 
   return (
     <div className="pb-24" data-recherche-seite data-status={lauf.status}>
@@ -510,7 +616,7 @@ export function Component() {
         }
       />
 
-      <AgentPanel lauf={lauf} fremd={fremd} prompt={prompt} />
+      <AgentPanel lauf={lauf} fremd={fremd} person={person} prompt={prompt} />
 
       <Kacheln>
         <Kachel

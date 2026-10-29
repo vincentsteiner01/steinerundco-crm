@@ -124,7 +124,7 @@ describe('Hilfe', () => {
       within(liste)
         .getAllByRole('link')
         .map((a) => a.textContent),
-    ).toEqual(['08E-Mail', '06Verbindungen einrichten'])
+    ).toEqual(['09E-Mail', '06Verbindungen einrichten'])
     fireEvent.keyDown(feld, { key: 'Enter' })
     expect(router.state.location.pathname).toBe('/hilfe/email')
     fireEvent.change(screen.getByRole('searchbox', { name: 'Hilfe durchsuchen' }), { target: { value: 'xyzzy' } })

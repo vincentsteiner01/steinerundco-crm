@@ -1,4 +1,4 @@
--- Integrationstest Recherchelauf (Migrationen 17 + 18) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
+-- Integrationstest Recherchelauf (Migrationen 17–19) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
 -- per Exception zurückgerollt wird (es bleibt nichts zurück). Aufruf: bash tools/db-query.sh -f supabase/tests/recherche_test.sql
 -- Ergebnis steht in der Fehlermeldung „TESTERGEBNIS: …“ (oder „FEHLER: …“ bei einer verletzten Annahme).
 do $$
@@ -18,6 +18,8 @@ declare
   out text := '';
   i int;
   fehler text;
+  schluessel text;
+  fremd uuid;
 begin
   -- als angemeldetes Mitglied (RLS, auth.uid())
   perform set_config('request.jwt.claims', json_build_object('sub', v_me, 'role', 'authenticated')::text, true);
@@ -201,7 +203,55 @@ begin
   exception when others then
     if sqlerrm like 'FEHLER:%' then raise; end if;
   end;
-  out := out || '11 Agent anfordern (Pause, doppelt, fremd, Lebenszeichen) ok';
+  out := out || '11 Agent anfordern (Pause, doppelt, fremd, Lebenszeichen) ok; ';
+
+  -- 12. Dienst-Schlüssel + Schnittstelle (ChatGPT-Agent): abholen, übernehmen, Werkzeuge, Frage/Freigabe, fremde Läufe
+  perform set_config('request.jwt.claims', json_build_object('sub', v_me, 'role', 'authenticated')::text, true);
+  schluessel := crm.recherche_dienst_einrichten();
+  begin
+    perform crm.recherche_dienst('rd_falsch', 'abholen', '{}');
+    raise exception 'FEHLER: falscher Schlüssel angenommen';
+  exception when others then
+    if sqlerrm like 'FEHLER:%' then raise; end if;
+  end;
+  chk := crm.recherche_dienst(schluessel, 'abholen', '{}');
+  if not (chk -> 'laeufe') @> jsonb_build_array(jsonb_build_object('id', r.id, 'agent_status', 'wartet')) then raise exception 'FEHLER: abholen %', chk; end if;
+  chk := crm.recherche_dienst(schluessel, 'uebernehmen', jsonb_build_object('lauf', r.id, 'rechner', 'Testrechner'));
+  if chk ->> 'art' <> 'neu' then raise exception 'FEHLER: übernehmen %', chk; end if;
+  chk := crm.recherche_dienst(schluessel, 'pruefen', jsonb_build_object('lauf', r.id, 'url', 'https://www.linkedin.com/in/claude-recherche-test-dienst'));
+  if not (chk ->> 'frei')::boolean then raise exception 'FEHLER: prüfen über Dienst %', chk; end if;
+  chk := crm.recherche_dienst(schluessel, 'eintragen', jsonb_build_object('lauf', r.id,
+    'url', 'https://www.linkedin.com/in/claude-recherche-test-dienst', 'ergebnis', 'gesendet', 'vorname', 'Teste',
+    'nachname', 'Recherchetest', 'firma', 'Dienst Solar GmbH', 'position', 'Geschäftsführer', 'kategorie', 'A', 'grund', 'PV für Privatkunden'));
+  if (chk ->> 'gesendet')::int <> 1 then raise exception 'FEHLER: eintragen über Dienst %', chk; end if;
+  select * into l from crm.leads where linkedin_url_norm = crm.normalize_linkedin_url('https://www.linkedin.com/in/claude-recherche-test-dienst');
+  if l.created_by <> v_me or l.source <> 'recherche' then raise exception 'FEHLER: Lead über Dienst %', row_to_json(l); end if;
+  chk := crm.recherche_dienst(schluessel, 'lauf_status', jsonb_build_object('lauf', r.id));
+  if (chk ->> 'gesendet')::int <> 1 or jsonb_array_length(chk -> 'bearbeitete_profile') <> 1 then raise exception 'FEHLER: lauf_status %', chk; end if;
+  chk := crm.recherche_dienst(schluessel, 'melden', jsonb_build_object('lauf', r.id, 'agent_status', 'frage',
+    'frage', 'Freigabe nötig: 2 Vernetzungsanfragen', 'sitzung', 'thread-test'));
+  r := crm.recherche_agent_antworten(r.id, true, 'Bitte nur die erste');
+  if r.agent_status <> 'antwort' or r.agent_antwort <> 'Freigegeben. Bitte nur die erste' then raise exception 'FEHLER: Antwort %', row_to_json(r); end if;
+  begin
+    perform crm.recherche_agent_antworten(r.id, true, null);
+    raise exception 'FEHLER: doppelte Antwort angenommen';
+  exception when others then
+    if sqlerrm like 'FEHLER:%' then raise; end if;
+  end;
+  chk := crm.recherche_dienst(schluessel, 'uebernehmen', jsonb_build_object('lauf', r.id, 'rechner', 'Testrechner'));
+  if chk ->> 'art' <> 'weiter' or chk ->> 'sitzung' <> 'thread-test' or chk ->> 'antwort' not like 'Freigegeben.%' then
+    raise exception 'FEHLER: weiter %', chk;
+  end if;
+  execute 'reset role';
+  insert into crm.recherche_laeufe (member_id, ziel) values ((select id from crm.members where id <> v_me limit 1), 30) returning id into fremd;
+  execute 'set local role authenticated';
+  begin
+    perform crm.recherche_dienst(schluessel, 'lauf_status', jsonb_build_object('lauf', fremd));
+    raise exception 'FEHLER: fremder Lauf über eigenen Schlüssel lesbar';
+  exception when others then
+    if sqlerrm like 'FEHLER:%' then raise; end if;
+  end;
+  out := out || '12 Dienst-Schnittstelle (Schlüssel, Werkzeuge, Frage/Freigabe, fremd) ok';
 
   raise exception 'TESTERGEBNIS: %', out;
 end

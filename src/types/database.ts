@@ -1560,13 +1560,47 @@ export type Database = {
           },
         ]
       }
+      recherche_dienste: {
+        Row: {
+          created_at: string
+          id: string
+          member_id: string
+          rechner: string | null
+          schluessel_hash: string
+          version: string | null
+          zuletzt_gesehen: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          member_id?: string
+          rechner?: string | null
+          schluessel_hash: string
+          version?: string | null
+          zuletzt_gesehen?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          member_id?: string
+          rechner?: string | null
+          schluessel_hash?: string
+          version?: string | null
+          zuletzt_gesehen?: string | null
+        }
+        Relationships: []
+      }
       recherche_laeufe: {
         Row: {
           abgelehnt: number
           agent_angefordert: string | null
+          agent_antwort: string | null
+          agent_auftrag: string | null
+          agent_frage: string | null
           agent_heartbeat: string | null
           agent_meldung: string | null
           agent_rechner: string | null
+          agent_sitzung: string | null
           agent_starts: number
           agent_status: string
           aktuelles_profil: string | null
@@ -1590,9 +1624,13 @@ export type Database = {
         Insert: {
           abgelehnt?: number
           agent_angefordert?: string | null
+          agent_antwort?: string | null
+          agent_auftrag?: string | null
+          agent_frage?: string | null
           agent_heartbeat?: string | null
           agent_meldung?: string | null
           agent_rechner?: string | null
+          agent_sitzung?: string | null
           agent_starts?: number
           agent_status?: string
           aktuelles_profil?: string | null
@@ -1616,9 +1654,13 @@ export type Database = {
         Update: {
           abgelehnt?: number
           agent_angefordert?: string | null
+          agent_antwort?: string | null
+          agent_auftrag?: string | null
+          agent_frage?: string | null
           agent_heartbeat?: string | null
           agent_meldung?: string | null
           agent_rechner?: string | null
+          agent_sitzung?: string | null
           agent_starts?: number
           agent_status?: string
           aktuelles_profil?: string | null
@@ -2888,14 +2930,18 @@ export type Database = {
         }
         Returns: undefined
       }
-      recherche_agent_starten: {
-        Args: { p_lauf: string }
+      recherche_agent_antworten: {
+        Args: { p_freigabe: boolean; p_lauf: string; p_text?: string }
         Returns: {
           abgelehnt: number
           agent_angefordert: string | null
+          agent_antwort: string | null
+          agent_auftrag: string | null
+          agent_frage: string | null
           agent_heartbeat: string | null
           agent_meldung: string | null
           agent_rechner: string | null
+          agent_sitzung: string | null
           agent_starts: number
           agent_status: string
           aktuelles_profil: string | null
@@ -2923,6 +2969,50 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      recherche_agent_starten: {
+        Args: { p_auftrag?: string; p_lauf: string }
+        Returns: {
+          abgelehnt: number
+          agent_angefordert: string | null
+          agent_antwort: string | null
+          agent_auftrag: string | null
+          agent_frage: string | null
+          agent_heartbeat: string | null
+          agent_meldung: string | null
+          agent_rechner: string | null
+          agent_sitzung: string | null
+          agent_starts: number
+          agent_status: string
+          aktuelles_profil: string | null
+          batch_id: string | null
+          dubletten: number
+          fehler: number
+          finished_at: string | null
+          geprueft: number
+          gesendet: number
+          id: string
+          kontrollen: number
+          meldung: string | null
+          member_id: string
+          qualifiziert: number
+          started_at: string
+          status: string
+          unklar: number
+          updated_at: string
+          ziel: number
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'recherche_laeufe'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      recherche_dienst: {
+        Args: { p_aktion: string; p_daten?: Json; p_schluessel: string }
+        Returns: Json
+      }
+      recherche_dienst_einrichten: { Args: never; Returns: string }
       recherche_eintragen: {
         Args: {
           p_ausgangspunkt?: string
@@ -2940,9 +3030,13 @@ export type Database = {
         Returns: {
           abgelehnt: number
           agent_angefordert: string | null
+          agent_antwort: string | null
+          agent_auftrag: string | null
+          agent_frage: string | null
           agent_heartbeat: string | null
           agent_meldung: string | null
           agent_rechner: string | null
+          agent_sitzung: string | null
           agent_starts: number
           agent_status: string
           aktuelles_profil: string | null
@@ -2975,9 +3069,13 @@ export type Database = {
         Returns: {
           abgelehnt: number
           agent_angefordert: string | null
+          agent_antwort: string | null
+          agent_auftrag: string | null
+          agent_frage: string | null
           agent_heartbeat: string | null
           agent_meldung: string | null
           agent_rechner: string | null
+          agent_sitzung: string | null
           agent_starts: number
           agent_status: string
           aktuelles_profil: string | null
@@ -3020,13 +3118,17 @@ export type Database = {
         Returns: Database['crm']['Enums']['lead_role']
       }
       recherche_starten: {
-        Args: { p_ziel?: number }
+        Args: { p_auftrag?: string; p_ziel?: number }
         Returns: {
           abgelehnt: number
           agent_angefordert: string | null
+          agent_antwort: string | null
+          agent_auftrag: string | null
+          agent_frage: string | null
           agent_heartbeat: string | null
           agent_meldung: string | null
           agent_rechner: string | null
+          agent_sitzung: string | null
           agent_starts: number
           agent_status: string
           aktuelles_profil: string | null
@@ -3059,9 +3161,13 @@ export type Database = {
         Returns: {
           abgelehnt: number
           agent_angefordert: string | null
+          agent_antwort: string | null
+          agent_auftrag: string | null
+          agent_frage: string | null
           agent_heartbeat: string | null
           agent_meldung: string | null
           agent_rechner: string | null
+          agent_sitzung: string | null
           agent_starts: number
           agent_status: string
           aktuelles_profil: string | null

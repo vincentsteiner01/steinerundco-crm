@@ -329,6 +329,10 @@ export const THEMEN: readonly Thema[] = [
         geplant: true,
         text: 'Annahmen aus dem LinkedIn-Datenexport (Connections.csv) importieren, statt sie abzuhaken.',
       },
+      {
+        art: 'hinweis',
+        text: 'Ausnahme auf euren Wunsch: Bei der LinkedIn-Recherche (blauer Knopf unter der Suche) arbeitet ChatGPT in deinem Chrome und vernetzt dich – aber erst nach deiner Freigabe im CRM.',
+      },
     ],
   },
   {
@@ -382,6 +386,44 @@ export const THEMEN: readonly Thema[] = [
           'Übertragen werden nur Mails von linkedin.com. Gespeichert werden höchstens 2000 Zeichen Nachrichtentext je Annahme oder Nachricht, nie die ganze Mail; Werbung und Job-Mails löscht das CRM nach 30 Tagen.',
           'Der Schlüssel liegt nur in deinen Skripteigenschaften, das CRM kennt nur einen nicht umkehrbaren Abdruck.',
         ],
+      },
+    ],
+  },
+  {
+    key: 'recherche',
+    titel: 'LinkedIn-Recherche mit ChatGPT',
+    kurz: 'Der blaue Knopf unter der Suche: ChatGPT findet passende Energie- und Solarbetriebe und vernetzt dich nach deiner Freigabe – alles landet im CRM.',
+    stichworte:
+      'play recherche starten agent chatgpt codex vernetzen leads finden icp dienst einrichten freigabe automatisch terminal mac',
+    tour: 'recherche',
+    bloecke: [
+      {
+        art: 'absatz',
+        text: 'Ein Klick auf den blauen Knopf unter der Suche startet einen Recherchelauf. ChatGPT arbeitet in deinem Chrome auf dem Mac: Es sucht über eure vernetzten Kontakte passende Personen in Energie- und Solarbetrieben, prüft Firma und Rolle nach dem ICP, gleicht jedes Profil mit dem CRM ab und vernetzt dich mit bis zu 30 Personen – ohne Nachricht.',
+      },
+      { art: 'zwischentitel', text: 'Einmal einrichten, je Mac' },
+      {
+        art: 'schritte',
+        punkte: [
+          'ChatGPT-App für Mac installieren und anmelden.',
+          'In der ChatGPT-App bei Codex das Plugin „Chrome“ einschalten und in Chrome die Erweiterung „ChatGPT for Chrome“ installieren.',
+          'In Codex einmal „Öffne https://www.linkedin.com/feed/ in Chrome“ schreiben und LinkedIn dauerhaft erlauben.',
+          'Auf [Auftrag](/auftrag) „Recherche-Dienst einrichten“ wählen, den Befehl erzeugen, im Programm Terminal einfügen und Enter drücken. Danach steht dort „Recherche-Dienst verbunden“.',
+        ],
+      },
+      { art: 'zwischentitel', text: 'Während des Laufs' },
+      {
+        art: 'liste',
+        punkte: [
+          'Vor dem Vernetzen fragt ChatGPT gesammelt nach: Am blauen Knopf und auf der Laufseite steht „Freigabe nötig“ mit Name, Position, Firma und Grund. „Freigeben“ oder „Nicht freigeben“, gern mit Anmerkung – zusätzlich kommt eine Mitteilung auf dem Mac.',
+          'Jede Person wird Lead mit der Quelle des Laufs. Dubletten (CRM, Sperrliste, bestehende Verbindungen, frühere Absagen) erkennt das CRM selbst, die KPIs zählen mit.',
+          '„Pausieren“ hält ChatGPT sofort an, „Fortsetzen“ startet es neu – Eingetragenes bleibt, niemand wird doppelt angefragt.',
+          'Zeigt LinkedIn eine Warnung oder ein Limit, hält der Lauf an und zeigt den Wortlaut.',
+        ],
+      },
+      {
+        art: 'hinweis',
+        text: 'Der Mac muss wach sein, Chrome offen und du bei LinkedIn angemeldet. LinkedIn sieht Automatisierung nicht gern – deshalb kleine Mengen und deine Freigabe vor jedem Vernetzen.',
       },
     ],
   },

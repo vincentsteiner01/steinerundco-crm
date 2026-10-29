@@ -81,6 +81,25 @@ describe('Autostart', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
+  it('Recherche-Tour: startet einmal beim ersten Besuch von Auftrag und merkt sich „Fertig“ getrennt von der Einführung', async () => {
+    me = { ...VINCENT, preferences: { onboarding_v1: 'done' } }
+    rendern('/auftrag')
+    expect(await dialog()).toHaveTextContent('Neu: Recherche per Knopfdruck')
+    expect(zaehler()).toBe('1 / 4')
+    for (let i = 1; i < 4; i++) fireEvent.click(screen.getByRole('button', { name: /Weiter/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Fertig/ }))
+    expect(mutate).toHaveBeenCalledTimes(1)
+    expect(mutate.mock.calls[0]![0].preferences).toEqual({ onboarding_v1: 'done', tour_recherche_v1: 'done' })
+  })
+
+  it('Recherche-Tour startet nicht, wenn sie schon gesehen wurde – und nicht auf Heute', async () => {
+    vi.useFakeTimers()
+    me = { ...VINCENT, preferences: { onboarding_v1: 'done', tour_recherche_v1: 'skipped' } }
+    rendern('/auftrag')
+    await act(async () => void vi.advanceTimersByTime(3000))
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
   it('startet nicht, solange das Profil lädt', async () => {
     vi.useFakeTimers()
     me = undefined

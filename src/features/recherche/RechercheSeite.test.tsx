@@ -15,6 +15,8 @@ const m = vi.hoisted(() => ({
   status: vi.fn(),
   kontrolle: vi.fn(),
   agent: vi.fn(),
+  antworten: vi.fn(),
+  dienste: [{ zuletzt_gesehen: new Date().toISOString(), rechner: 'MacBook Pro' }] as unknown[],
 }))
 
 vi.mock('@/data/members', () => ({
@@ -30,6 +32,9 @@ vi.mock('@/data/recherche', () => ({
   useRechercheStarten: () => ({ mutate: vi.fn(), isPending: false }),
   useRechercheKontrolle: () => ({ mutate: m.kontrolle, isPending: false }),
   useRechercheAgentStarten: () => ({ mutate: m.agent, isPending: false }),
+  useRechercheAgentAntworten: () => ({ mutate: m.antworten, isPending: false }),
+  useRechercheDienste: () => ({ data: m.dienste }),
+  useRechercheDienstEinrichten: () => ({ mutate: vi.fn(), isPending: false }),
   useRechercheEintragen: () => ({ mutate: m.eintragen, isPending: false }),
   recherchePruefen: m.pruefen,
 }))
@@ -61,6 +66,10 @@ const LAUF: RechercheLauf = {
   agent_rechner: 'MacBook Pro',
   agent_meldung: null,
   agent_starts: 1,
+  agent_auftrag: 'Auftrag',
+  agent_sitzung: null,
+  agent_frage: null,
+  agent_antwort: null,
 }
 
 function rendern(p: Partial<RechercheLauf> = {}) {
@@ -88,6 +97,8 @@ beforeEach(() => {
   m.status.mockReset()
   m.kontrolle.mockReset()
   m.agent.mockReset()
+  m.antworten.mockReset()
+  m.dienste = [{ zuletzt_gesehen: new Date().toISOString(), rechner: 'MacBook Pro' }]
 })
 
 describe('RechercheSeite', () => {
@@ -182,7 +193,37 @@ describe('RechercheSeite', () => {
     rendern({ agent_status: 'beendet', agent_meldung: 'Fertig: 4 gesendet, 12 geprüft' })
     expect(screen.getByRole('region', { name: 'Agent' })).toHaveTextContent('Fertig: 4 gesendet, 12 geprüft')
     fireEvent.click(screen.getByRole('button', { name: 'Agent neu starten' }))
-    expect(m.agent).toHaveBeenCalledWith('lauf-1')
+    expect(m.agent).toHaveBeenCalledWith({ lauf: 'lauf-1', auftrag: expect.stringContaining('profil_pruefen') })
+  })
+
+  it('Freigabe: Liste sichtbar, „Freigeben“ mit Anmerkung und „Nicht freigeben“ antworten dem Agenten', () => {
+    rendern({
+      agent_status: 'frage',
+      agent_frage:
+        'Freigabe nötig: 2 Vernetzungsanfragen\nAnna Beispiel · GF · Sonne GmbH · A · B2C · https://www.linkedin.com/in/x',
+    })
+    const panel = screen.getByRole('region', { name: 'Agent' })
+    expect(panel).toHaveTextContent('Freigabe nötig: 2 Vernetzungsanfragen')
+    expect(panel).toHaveTextContent('Anna Beispiel · GF · Sonne GmbH')
+    feld('Anmerkung an den Agenten (optional)', 'nur die erste')
+    fireEvent.click(screen.getByRole('button', { name: 'Freigeben' }))
+    expect(m.antworten).toHaveBeenCalledWith({ lauf: 'lauf-1', freigabe: true, text: 'nur die erste' })
+    fireEvent.click(screen.getByRole('button', { name: 'Nicht freigeben' }))
+    expect(m.antworten).toHaveBeenLastCalledWith({ lauf: 'lauf-1', freigabe: false, text: 'nur die erste' })
+  })
+
+  it('andere Frage: freie Antwort oder „Weitermachen“', () => {
+    rendern({ agent_status: 'frage', agent_frage: 'Frage: Zählen Großhändler mit Montage?' })
+    expect(screen.getByRole('button', { name: 'Antworten' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Weitermachen' }))
+    expect(m.antworten).toHaveBeenCalledWith({ lauf: 'lauf-1', freigabe: null, text: 'Weiter so.' })
+  })
+
+  it('ohne eingerichteten Recherche-Dienst: Hinweis und „Recherche-Dienst einrichten“', () => {
+    m.dienste = []
+    rendern({ agent_status: 'wartet', agent_angefordert: new Date().toISOString() })
+    expect(screen.getByRole('region', { name: 'Agent' })).toHaveTextContent('Kein Recherche-Dienst verbunden')
+    expect(screen.getByRole('button', { name: 'Recherche-Dienst einrichten' })).toBeInTheDocument()
   })
 
   it('LinkedIn-Einschränkung melden hält den Lauf mit Wortlaut an', () => {

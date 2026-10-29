@@ -1,6 +1,6 @@
 // LinkedIn-Recherchelauf (Migration 17, 29.10.2026): Läufe, geprüfte Profile, Ausgangspunkte aus dem CRM und die RPCs
-// recherche_starten · _pruefen · _eintragen · _kontrolle · _status · _agent_starten (Migration 18). Die Regeln erzwingt die
-// Datenbank; diese Hooks rufen nur auf.
+// recherche_starten · _pruefen · _eintragen · _kontrolle · _status · _agent_starten · _agent_antworten, dazu die Recherche-Dienste
+// je Mac (Migrationen 18/19). Die Regeln erzwingt die Datenbank; diese Hooks rufen nur auf.
 // Fortschritt per Abfrage alle 4 s, solange ein Lauf aktiv ist (die Seite ist auch für einen zuschauenden Menschen gedacht).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Database } from '@/types/database'
@@ -72,6 +72,8 @@ export function useMeineLaeufe(memberId: string | null) {
           .order('started_at', { ascending: false })
           .range(0, 4),
       ),
+    // Seitenleiste zeigt Fortschritt und „Freigabe nötig“ – nur abfragen, solange ein Lauf aktiv ist
+    refetchInterval: (q) => (q.state.data?.some((l) => aktiv(l.status)) ? 10_000 : false),
   })
 }
 
@@ -145,11 +147,12 @@ function useInvalidieren() {
   }
 }
 
+/** Startet einen Lauf (oder liefert den aktiven) und fordert den Agenten mit diesem Auftrag an (regeln.ts → agentAuftrag). */
 export function useRechercheStarten() {
   const inval = useInvalidieren()
   return useMutation({
-    mutationFn: async (): Promise<RechercheLauf> =>
-      pruefe(await supabase.rpc('recherche_starten', { p_ziel: 30 })) as unknown as RechercheLauf,
+    mutationFn: async (auftrag: string): Promise<RechercheLauf> =>
+      pruefe(await supabase.rpc('recherche_starten', { p_ziel: 30, p_auftrag: auftrag })) as unknown as RechercheLauf,
     onError: mutationFehler,
     onSettled: inval,
   })
@@ -222,12 +225,60 @@ export function useRechercheKontrolle() {
   })
 }
 
-/** „Agent starten“ / „Agent neu starten“ – der Recherche-Dienst auf dem Mac übernimmt den Lauf. */
+/** „Agent starten“ / „Agent neu starten“ – frische Sitzung mit aktuellem Auftrag; der Recherche-Dienst übernimmt den Lauf. */
 export function useRechercheAgentStarten() {
   const inval = useInvalidieren()
   return useMutation({
-    mutationFn: async (lauf: string): Promise<RechercheLauf> =>
-      pruefe(await supabase.rpc('recherche_agent_starten', { p_lauf: lauf })) as unknown as RechercheLauf,
+    mutationFn: async (p: { lauf: string; auftrag: string }): Promise<RechercheLauf> =>
+      pruefe(
+        await supabase.rpc('recherche_agent_starten', { p_lauf: p.lauf, p_auftrag: p.auftrag }),
+      ) as unknown as RechercheLauf,
+    onError: mutationFehler,
+    onSettled: inval,
+  })
+}
+
+/** Antwort auf die Frage des Agenten: Freigabe ja/nein (mit Anmerkung) oder – bei einer anderen Frage – nur Text. */
+export function useRechercheAgentAntworten() {
+  const inval = useInvalidieren()
+  return useMutation({
+    mutationFn: async (p: { lauf: string; freigabe: boolean | null; text?: string }): Promise<RechercheLauf> =>
+      pruefe(
+        await supabase.rpc('recherche_agent_antworten', {
+          p_lauf: p.lauf,
+          p_freigabe: p.freigabe as boolean,
+          p_text: p.text || undefined,
+        }),
+      ) as unknown as RechercheLauf,
+    onError: mutationFehler,
+    onSettled: inval,
+  })
+}
+
+export type RechercheDienst = Database['crm']['Tables']['recherche_dienste']['Row']
+
+/** Recherche-Dienste (je Mac) der Person – „verbunden“, wenn einer sich in der letzten Minute gemeldet hat. */
+export function useRechercheDienste(memberId: string | null | undefined, abfragen = false) {
+  return useQuery({
+    queryKey: [...KEY, 'dienste', memberId],
+    enabled: !!memberId,
+    queryFn: async (): Promise<RechercheDienst[]> =>
+      pruefe(
+        await supabase
+          .from('recherche_dienste')
+          .select('*')
+          .eq('member_id', memberId as string)
+          .order('zuletzt_gesehen', { ascending: false, nullsFirst: false }),
+      ),
+    refetchInterval: abfragen ? 10_000 : false,
+  })
+}
+
+/** Neuer Dienst-Schlüssel für diesen Mac – der Klartext kommt nur hier zurück (Einrichtungsbefehl). */
+export function useRechercheDienstEinrichten() {
+  const inval = useInvalidieren()
+  return useMutation({
+    mutationFn: async (): Promise<string> => pruefe(await supabase.rpc('recherche_dienst_einrichten')) as string,
     onError: mutationFehler,
     onSettled: inval,
   })

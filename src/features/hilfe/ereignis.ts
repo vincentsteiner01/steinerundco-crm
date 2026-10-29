@@ -15,6 +15,7 @@ export const TOUR_KEYS = [
   'kpis',
   'import',
   'feedback',
+  'recherche',
 ] as const
 
 export type TourKey = (typeof TOUR_KEYS)[number]

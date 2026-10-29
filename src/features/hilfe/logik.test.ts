@@ -166,6 +166,7 @@ describe('Touren', () => {
       '/team',
       '/leitfaeden',
       '/import',
+      '/auftrag',
     ]
     for (const t of Object.values(TOUREN)) {
       expect(new Set(t.schritte.map((s) => s.id)).size).toBe(t.schritte.length)

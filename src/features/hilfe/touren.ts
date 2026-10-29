@@ -383,6 +383,40 @@ const FEEDBACK_TOUR: Tour = {
   schritte: [{ ...ONBOARDING.schritte[ONBOARDING.schritte.length - 1]!, id: 'feedback-allein' }],
 }
 
+// 29.10.2026: Recherche per Knopfdruck – startet einmal je Person beim ersten Besuch von Auftrag (OnboardingTour)
+const RECHERCHE: Tour = {
+  key: 'recherche',
+  titel: 'LinkedIn-Recherche',
+  schritte: [
+    {
+      id: 'knopf',
+      pfad: PFADE.auftrag,
+      ziele: ['[data-tour="recherche-play"]', '[data-recherche-start]'],
+      titel: 'Neu: Recherche per Knopfdruck',
+      text: 'Der blaue Knopf unter der Suche startet einen Recherchelauf: ChatGPT sucht passende Energie- und Solarbetriebe auf LinkedIn und vernetzt dich mit bis zu 30 Personen, ohne Nachricht. Läuft schon ein Lauf, öffnet der Knopf ihn.',
+    },
+    {
+      id: 'dienst',
+      pfad: PFADE.auftrag,
+      ziele: ['[data-recherche-start] [data-dienst]', '[data-recherche-start]'],
+      titel: 'Einmal einrichten',
+      text: 'ChatGPT arbeitet in deinem Chrome auf dem Mac – dafür richtest du hier einmalig den Recherche-Dienst ein. Du brauchst die ChatGPT-App und die Chrome-Erweiterung ChatGPT for Chrome.',
+    },
+    {
+      id: 'freigabe',
+      titel: 'Du gibst frei',
+      text: 'Bevor ChatGPT jemanden anfragt, steht am blauen Knopf und auf der Laufseite „Freigabe nötig“ mit der Liste der Personen. Ein Klick auf „Freigeben“, und es geht weiter.',
+    },
+    {
+      id: 'crm',
+      pfad: PFADE.auftrag,
+      ziele: ['[data-recherche-start]'],
+      titel: 'Alles landet im CRM',
+      text: 'Jede Person wird Lead mit der Quelle LinkedIn-Recherche, Dubletten erkennt das CRM selbst und die KPIs zählen mit. „Pausieren“ hält ChatGPT sofort an.',
+    },
+  ],
+}
+
 export const TOUREN: Record<TourKey, Tour> = {
   onboarding: ONBOARDING,
   heute: HEUTE,
@@ -394,6 +428,7 @@ export const TOUREN: Record<TourKey, Tour> = {
   kpis: KPIS,
   import: IMPORT,
   feedback: FEEDBACK_TOUR,
+  recherche: RECHERCHE,
 }
 
 /** `{name}` im Titel durch den Vornamen ersetzen (ohne Namen: „Willkommen.“). */
