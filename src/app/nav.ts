@@ -2,18 +2,21 @@
 // 23.10.2026 (Mike: „weniger Ablenkung, mehr Klarheit“): Gruppen statt 13 gleichrangiger Punkte – Telefon klappt Mikes
 // Unterpunkte aus seinem Sales Hub auf (Anrufliste · Kontakte · Deal-Pipeline · Follow-ups · Sales-KPIs · Leitfäden),
 // LinkedIn bündelt Auftrag · Pipeline · KPIs · Vorlagen, Verwaltung liegt unter „Mehr“. Für alle gleich (Vincent).
+// 29.10.2026 (Vincent ea07159a): Telefon als Rubrik vorerst raus. Erhalten: Deal-Pipeline (unter Leads, alle Kanäle),
+// Leitfäden (eigener Punkt, Bereich Telefon & Sales), Umsatz. Anrufen bleibt im Lead (Telefon-Karte → Anruf-Screen);
+// die Telefon-Seiten (/telefon …) bestehen weiter, stehen aber nicht mehr im Menü.
 import {
   BarChart3,
   BookOpen,
   Columns3,
   Ellipsis,
   Euro,
+  Kanban,
   LifeBuoy,
   ListChecks,
   Mail,
   MessageSquareWarning,
   MessagesSquare,
-  Phone,
   Settings,
   Sun,
   Upload,
@@ -36,7 +39,7 @@ export type NavEintrag = {
   aktivBei?: { param: string; werte: readonly (string | null)[] }
 }
 export type NavGruppe = {
-  gruppe: 'telefon' | 'linkedin' | 'mehr'
+  gruppe: 'leads' | 'linkedin' | 'mehr'
   label: string
   icon: LucideIcon
   /** Zähler am Gruppenkopf, solange die Gruppe zu ist */
@@ -51,25 +54,16 @@ export const istGruppe = (k: NavKnoten): k is NavGruppe => typeof k === 'object'
 
 export const NAV_BAUM: NavKnoten[] = [
   { pfad: '/heute', label: 'Heute', icon: Sun, akkord: 'G H', zaehler: 'heute' },
-  { pfad: '/leads', label: 'Leads', icon: Users, akkord: 'G L', zaehler: 'leads' },
   {
-    gruppe: 'telefon',
-    label: 'Telefon',
-    icon: Phone,
-    zaehler: 'telefon',
+    // 29.10.2026 (Mike f748ff17/cc3b6a1e): eine Deal-Pipeline für alle Kanäle ab „EG vereinbart“, unter Leads
+    gruppe: 'leads',
+    label: 'Leads',
+    icon: Users,
+    zaehler: 'leads',
     offenStandard: true,
     kinder: [
-      { pfad: '/telefon', label: 'Anrufliste', akkord: 'G T', zaehler: 'telefon' },
-      { pfad: '/telefon/kontakte', label: 'Kontakte' },
-      { pfad: '/telefon/pipeline', label: 'Deal-Pipeline' },
-      { pfad: '/telefon/follow-ups', label: 'Follow-ups' },
-      { pfad: '/telefon/kpis', label: 'Sales-KPIs' },
-      {
-        pfad: '/leitfaeden?kanal=telefon',
-        label: 'Leitfäden',
-        akkord: 'G F',
-        aktivBei: { param: 'kanal', werte: ['telefon', 'sonstiges'] },
-      },
+      { pfad: '/leads', label: 'Alle Leads', akkord: 'G L', zaehler: 'leads' },
+      { pfad: '/leads/pipeline', label: 'Deal-Pipeline' },
     ],
   },
   {
@@ -80,15 +74,13 @@ export const NAV_BAUM: NavKnoten[] = [
     kinder: [
       { pfad: '/auftrag', label: 'Auftrag', akkord: 'G U' },
       { pfad: '/pipeline', label: 'Pipeline', akkord: 'G P' },
-      { pfad: '/kpis', label: 'KPIs', akkord: 'G K' },
-      {
-        pfad: '/leitfaeden?kanal=linkedin',
-        label: 'Vorlagen',
-        aktivBei: { param: 'kanal', werte: ['linkedin', 'email', null] },
-      },
+      // Mike 084628eb: LinkedIn-KPIs ohne Telefon-Kennzahlen
+      { pfad: '/kpis?kanal=linkedin', label: 'KPIs', akkord: 'G K' },
     ],
   },
   { pfad: '/email', label: 'E-Mail', icon: Mail, akkord: 'G M', zaehler: 'email' },
+  // Telefon & Sales · LinkedIn · E-Mail als Bereiche auf der Seite
+  { pfad: '/leitfaeden', label: 'Leitfäden', icon: BookOpen, akkord: 'G F' },
   { pfad: '/umsatz', label: 'Umsatz', icon: Euro },
   'trenner',
   {
@@ -159,13 +151,7 @@ export function gruppeVon(eintrag: NavEintrag | null): NavGruppe | null {
   return null
 }
 
-/** Unterpunkte von Telefon (Leiste auf den Telefon-Seiten unter 1024 px). */
-export const TELEFON_SEITEN: NavEintrag[] = (
-  NAV_BAUM.find((k) => k !== 'trenner' && istGruppe(k) && k.gruppe === 'telefon') as NavGruppe
-).kinder
-
-/** „Mehr“ in der Tab-Leiste < 768 (ux § 7.1): Umsatz · Auftrag · Pipeline · E-Mail · Leitfäden · … – die Telefon-Bereiche
- * erreicht man über die Leiste oben auf den Telefon-Seiten. */
+/** „Mehr“ in der Tab-Leiste < 768 (ux § 7.1): Umsatz · Auftrag · Pipeline · E-Mail · Leitfäden · … */
 export const MEHR_LEISTE: { pfad: string; label: string; icon: LucideIcon; bereich: string }[] = [
   { pfad: '/umsatz', label: 'Umsatz', icon: Euro, bereich: '/umsatz' },
   { pfad: '/auftrag', label: 'Auftrag', icon: ListChecks, bereich: '/auftrag' },
@@ -179,10 +165,10 @@ export const MEHR_LEISTE: { pfad: string; label: string; icon: LucideIcon; berei
   { pfad: '/feedback', label: 'Feedback', icon: MessageSquareWarning, bereich: '/feedback' },
 ]
 
-/** Tab-Leiste < 768 (ux § 7.1): Heute · Leads · Telefon · KPIs · Mehr */
+/** Tab-Leiste < 768 (ux § 7.1): Heute · Leads · Deals · KPIs · Mehr (Telefon seit 29.10.2026 nicht mehr als Bereich) */
 export const TAB_LEISTE: { pfad: string; label: string; icon: LucideIcon; zaehler?: 'heute' | 'telefon' }[] = [
   { pfad: '/heute', label: 'Heute', icon: Sun, zaehler: 'heute' },
   { pfad: '/leads', label: 'Leads', icon: Users },
-  { pfad: '/telefon', label: 'Telefon', icon: Phone, zaehler: 'telefon' },
-  { pfad: '/kpis', label: 'KPIs', icon: BarChart3 },
+  { pfad: '/leads/pipeline', label: 'Deals', icon: Kanban },
+  { pfad: '/kpis?kanal=linkedin', label: 'KPIs', icon: BarChart3 },
 ]

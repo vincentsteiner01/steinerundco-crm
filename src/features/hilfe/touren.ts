@@ -84,11 +84,11 @@ const ONBOARDING: Tour = {
       tasten: ['G P'],
     },
     {
-      id: 'telefon',
-      ziele: nav(PFADE.telefon),
-      titel: 'Telefon',
-      text: 'Anrufliste und Call-Block: Lead für Lead anrufen, das Ergebnis mit einem Klick – den nächsten Versuch plant das CRM.',
-      tasten: ['G T'],
+      // 29.10.2026: Telefon ist keine eigene Rubrik mehr – angerufen wird aus dem Lead; die Deals stehen unter Leads
+      id: 'deals',
+      ziele: nav(PFADE.dealPipeline),
+      titel: 'Deal-Pipeline',
+      text: 'Alle Deals ab dem Erstgespräch – egal ob aus LinkedIn, Telefon oder E-Mail. Die Spalte ergibt sich aus den Terminen im Lead.',
     },
     {
       id: 'kpis',

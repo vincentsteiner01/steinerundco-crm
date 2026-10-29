@@ -29,7 +29,7 @@ import {
   TELEFON_TYP,
   terminVon,
 } from './ansichten/logik'
-import { Kachel, Kacheln, TelefonUnterNav } from './ansichten/Teile'
+import { Kachel, Kacheln } from './ansichten/Teile'
 import { SchnellNotiz } from './SchnellNotiz'
 
 const STATUS_HINWEIS: Partial<Record<TelefonTermin['status'], string>> = {
@@ -125,7 +125,6 @@ export function Component() {
 
   return (
     <>
-      <TelefonUnterNav />
       <SeitenKopf
         titel="Kontakte"
         kontext="Telefon · alle Leads mit Nummer"

@@ -1,7 +1,7 @@
 import { MoreHorizontal } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
-import { NavLink, useLocation } from 'react-router'
-import { MEHR_LEISTE, TAB_LEISTE } from '@/app/nav'
+import { Link, NavLink, useLocation } from 'react-router'
+import { MEHR_LEISTE, pfadOhneQuery, TAB_LEISTE } from '@/app/nav'
 import { cn } from '@/components/ui/cn'
 import { useNavZaehler } from '@/data/nav'
 import { ALLGEMEIN } from '@/texte/de'
@@ -15,7 +15,7 @@ const tabKlasse = (aktiv: boolean) =>
   )
 
 /**
- * < 768 px: Tab-Leiste unten 56 px + safe-area (§ 1.5 Nr. 22): Heute · Leads · Telefon · KPIs · Mehr. „Mehr“ öffnet ein Menü mit
+ * < 768 px: Tab-Leiste unten 56 px + safe-area (§ 1.5 Nr. 22): Heute · Leads · Deals · KPIs · Mehr. „Mehr“ öffnet ein Menü mit
  * Pipeline · E-Mail · Leitfäden · Schnellimport · Einstellungen (ux § 7.1; vorher nur ein Link auf Einstellungen – Review).
  * Bewusst ohne Radix-Dropdown: die Leiste liegt im initialen Bundle (E22, PhoneTopbar lädt Radix erst unter 768 px).
  */
@@ -30,6 +30,10 @@ export function TabLeiste() {
   const knopf = useRef<HTMLButtonElement | null>(null)
   const menu = useRef<HTMLDivElement | null>(null)
   const mehrAktiv = MEHR_LEISTE.some((e) => pathname.startsWith(e.bereich))
+  // Genauester Treffer gewinnt: /leads/pipeline = „Deals“, nicht zusätzlich „Leads“ (29.10.2026)
+  const aktivTab = TAB_LEISTE.map((t) => pfadOhneQuery(t.pfad))
+    .filter((p) => pathname === p || pathname.startsWith(`${p}/`))
+    .sort((a, b) => b.length - a.length)[0]
 
   useEffect(() => {
     if (offen) menu.current?.querySelector<HTMLElement>('[role="menuitem"]')?.focus()
@@ -57,7 +61,13 @@ export function TabLeiste() {
       className="border-line bg-canvas/90 fixed inset-x-0 bottom-0 z-50 grid h-[calc(var(--spacing-tabbar)+env(safe-area-inset-bottom))] grid-cols-5 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
     >
       {TAB_LEISTE.map((t) => (
-        <NavLink key={t.pfad} to={t.pfad} data-tour={`nav:${t.pfad}`} className={({ isActive }) => tabKlasse(isActive)}>
+        <Link
+          key={t.pfad}
+          to={t.pfad}
+          data-tour={`nav:${pfadOhneQuery(t.pfad)}`}
+          aria-current={aktivTab === pfadOhneQuery(t.pfad) ? 'page' : undefined}
+          className={tabKlasse(aktivTab === pfadOhneQuery(t.pfad))}
+        >
           <t.icon size={18} strokeWidth={1.75} aria-hidden />
           {t.label}
           {t.zaehler && zaehler[t.zaehler] > 0 ? (
@@ -65,7 +75,7 @@ export function TabLeiste() {
               {zaehler[t.zaehler]}
             </span>
           ) : null}
-        </NavLink>
+        </Link>
       ))}
       <button
         ref={knopf}

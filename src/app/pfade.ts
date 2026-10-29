@@ -12,7 +12,7 @@ export const PFADE = {
   anruf: (leadId: string) => `/telefon/anruf/${leadId}`,
   // Telefon-Bereiche nach Mikes Sales Hub (23.10.2026)
   telefonKontakte: '/telefon/kontakte',
-  dealPipeline: '/telefon/pipeline',
+  dealPipeline: '/leads/pipeline',
   followUps: '/telefon/follow-ups',
   salesKpis: '/telefon/kpis',
   umsatz: '/umsatz',

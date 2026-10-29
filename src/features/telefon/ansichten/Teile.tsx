@@ -1,8 +1,6 @@
 // Gemeinsame Bausteine der Telefon-Ansichten und der Umsatzseite (23.10.2026, Mikes Sales Hub): Kennzahl-Kacheln oben,
-// Balkenzeile (Trichter, Conversions), Unternavigation Telefon für Tablet/iPhone (dort gibt es keine aufklappbare Sidebar).
+// Balkenzeile (Trichter, Conversions).
 import type { ReactNode } from 'react'
-import { Link, useLocation } from 'react-router'
-import { aktiverEintrag, TELEFON_SEITEN } from '@/app/nav'
 import { cn } from '@/components/ui/cn'
 
 export function Kacheln({ children }: { children: ReactNode }) {
@@ -65,32 +63,5 @@ export function Balkenzeile({
       </span>
       <span className="tnum text-ink text-right font-mono text-[12.5px]">{wert}</span>
     </li>
-  )
-}
-
-/** Telefon-Unterpunkte als Leiste – nur unter 1024 px (darüber klappt die Sidebar sie auf). */
-export function TelefonUnterNav() {
-  const { pathname, search } = useLocation()
-  const aktiv = aktiverEintrag(pathname, search, TELEFON_SEITEN)
-  return (
-    <nav aria-label="Telefon-Bereiche" className="[scrollbar-width:none] overflow-x-auto pt-4 lg:hidden">
-      <div className="flex w-max gap-1.5">
-        {TELEFON_SEITEN.map((e) => (
-          <Link
-            key={e.pfad}
-            to={e.pfad}
-            aria-current={aktiv === e ? 'page' : undefined}
-            className={cn(
-              'text-ui inline-flex h-8 items-center rounded-full border px-3 whitespace-nowrap',
-              aktiv === e
-                ? 'bg-surface-pressed text-ink-bright border-transparent font-medium'
-                : 'border-line text-ink-2 hover:bg-surface-hover',
-            )}
-          >
-            {e.label}
-          </Link>
-        ))}
-      </div>
-    </nav>
   )
 }

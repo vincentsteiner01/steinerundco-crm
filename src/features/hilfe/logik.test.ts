@@ -147,7 +147,7 @@ describe('Touren', () => {
       'zaehler',
       'leads',
       'pipeline',
-      'telefon',
+      'deals',
       'kpis',
       'hilfe',
       'feedback',
@@ -155,7 +155,18 @@ describe('Touren', () => {
   })
 
   it('Schritte: eindeutige IDs, ein bis zwei Sätze, Pfade nur auf echte Routen', () => {
-    const routen = ['/heute', '/leads', '/pipeline', '/telefon', '/email', '/kpis', '/team', '/leitfaeden', '/import']
+    const routen = [
+      '/heute',
+      '/leads',
+      '/leads/pipeline',
+      '/pipeline',
+      '/telefon',
+      '/email',
+      '/kpis',
+      '/team',
+      '/leitfaeden',
+      '/import',
+    ]
     for (const t of Object.values(TOUREN)) {
       expect(new Set(t.schritte.map((s) => s.id)).size).toBe(t.schritte.length)
       for (const s of t.schritte) {

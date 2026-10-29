@@ -82,6 +82,13 @@ describe('chatgptPrompt', () => {
       expect(p).toContain(teil)
     expect(p).not.toMatch(/!/)
   })
+
+  it('lässt beantwortete Chats auf LinkedIn wieder als ungelesen markieren (29.10.2026, Feedback 448a060a)', () => {
+    const p = chatgptPrompt()
+    const schrittB = p.split('\n').find((z) => z.trimStart().startsWith('b)')) ?? ''
+    expect(schrittB).toContain('„Hat geantwortet“')
+    expect(schrittB).toContain('„Als ungelesen markieren“')
+  })
 })
 
 describe('annahmenText', () => {

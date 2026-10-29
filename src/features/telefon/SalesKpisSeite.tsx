@@ -28,7 +28,7 @@ import {
   trichter,
   type KpiAnsicht,
 } from './ansichten/logik'
-import { Balkenzeile, Kachel, Kacheln, TelefonUnterNav } from './ansichten/Teile'
+import { Balkenzeile, Kachel, Kacheln } from './ansichten/Teile'
 
 const ANSICHTEN: { key: KpiAnsicht; label: string; spanne: string }[] = [
   { key: 'tage', label: 'Tage', spanne: 'letzte 14 Tage' },
@@ -131,7 +131,6 @@ export function Component() {
 
   return (
     <>
-      <TelefonUnterNav />
       <SeitenKopf
         titel="Sales-KPIs"
         kontext={`${personen.find((p) => p.key === person)?.label ?? 'Team'} · ${spannenText}`}

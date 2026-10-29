@@ -65,9 +65,9 @@ describe('CommandPalette', () => {
     useUiStore.getState().setPaletteOffen(true)
     const eingabe = await screen.findByPlaceholderText(/Lead, Aktion/)
     fireEvent.change(eingabe, { target: { value: 'pipe' } })
-    // Unterseiten tragen ihre Gruppe (23.10.2026): „LinkedIn · Pipeline“, „Telefon · Deal-Pipeline“
+    // Unterseiten tragen ihre Gruppe (23.10.2026): „LinkedIn · Pipeline“, „Leads · Deal-Pipeline“
     await waitFor(() => expect(screen.getByText('LinkedIn · Pipeline')).toBeInTheDocument())
-    expect(screen.getByText('Telefon · Deal-Pipeline')).toBeInTheDocument()
+    expect(screen.getByText('Leads · Deal-Pipeline')).toBeInTheDocument()
     expect(screen.queryByText('Lead anlegen')).not.toBeInTheDocument()
     fireEvent.change(eingabe, { target: { value: '>' } })
     await waitFor(() => expect(screen.getByText('Lead anlegen')).toBeInTheDocument())

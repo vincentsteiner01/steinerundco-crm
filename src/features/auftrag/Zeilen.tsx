@@ -18,8 +18,13 @@ import { fmtDatumKurz, fmtZeit, heuteBerlin } from '@/lib/format'
 import { kopieren } from '@/lib/zwischenablage'
 import type { QueueItem } from '@/types/domain'
 import { SCHRITT_TYPEN } from '@/features/heute/daten/nachlese'
+import { useKartenStore } from '@/features/heute/kartenStore'
 import { useKarteDaten } from '@/features/heute/useKarteDaten'
 import { profilUrl, type AuftragArt } from './auftrag'
+
+const istKompliment = (name: string) => /kompliment/i.test(name)
+const KOMPLIMENT_BEISPIEL =
+  'z. B. Spannend, dass Sie KI schon in Ihrem Betrieb einsetzen – das sehe ich bei Energie- und Solarunternehmen selten.'
 
 export type ZeilenStatus = {
   art: 'gesendet' | 'schon_gesendet' | 'geantwortet' | 'angenommen'
@@ -207,6 +212,12 @@ export function NachrichtZeile({
   const text = daten.ergebnis.text
   const anredeFehlt = daten.ergebnis.offen.includes('Anrede')
   const andereOffen = daten.ergebnis.offen.filter((o) => o !== 'Anrede')
+  // 29.10.2026 (Vincent adbd7d5f): frei zu formulierende Platzhalter (z. B. [Kurzes individuelles Kompliment]) schreibt der
+  // Agent hier hinein – das Feld bleibt stehen, solange daran getippt wird (nicht nur, solange der Platzhalter offen ist)
+  const setzeWert = useKartenStore((s) => s.setzeWert)
+  const freieFelder = daten.ergebnis.alle.filter(
+    (n) => n !== 'Anrede' && (daten.ergebnis.offen.includes(n) || daten.zustand.werte[n] !== undefined),
+  )
   const gesperrtGrund = !item.linkedin_url
     ? 'Kein LinkedIn-Link'
     : !daten.vorlage
@@ -318,6 +329,28 @@ export function NachrichtZeile({
               </Button>
             </div>
           ) : null}
+          {freieFelder.length ? (
+            <div className="mt-3 grid max-w-[64ch] gap-3" data-auftrag-platzhalter>
+              {freieFelder.map((name) => (
+                <label key={name} className="grid gap-1.5">
+                  <span className="label">{name}</span>
+                  <Textarea
+                    rows={2}
+                    value={daten.zustand.werte[name] ?? ''}
+                    onChange={(e) => setzeWert(daten.key, name, e.target.value)}
+                    placeholder={istKompliment(name) ? KOMPLIMENT_BEISPIEL : `${name} eintragen`}
+                    aria-label={name}
+                  />
+                  {istKompliment(name) ? (
+                    <span className="text-small text-ink-3">
+                      Ein kurzer Satz, ehrlich und konkret zu dieser Person oder Firma – nicht schmeicheln, nichts
+                      kopieren.
+                    </span>
+                  ) : null}
+                </label>
+              ))}
+            </div>
+          ) : null}
           <div className="mt-3 grid gap-1.5">
             <span className="label">Nachricht{daten.vorlage ? ` · Leitfaden ${daten.vorlage.name}` : ''}</span>
             <p
@@ -389,6 +422,9 @@ export function NachrichtZeile({
                   Antwort eintragen
                 </Button>
               </div>
+              <p className="text-small text-ink-3" data-auftrag-ungelesen>
+                Danach den Chat auf LinkedIn wieder als ungelesen markieren, damit Vincent die Antwort sieht.
+              </p>
             </div>
           ) : null}
         </>

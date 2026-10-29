@@ -1,4 +1,4 @@
-// Telefon › Deal-Pipeline (`/telefon/pipeline`, 23.10.2026): Mikes acht Phasen ab dem Erstgespräch (EG vereinbart · EG neu
+// Leads › Deal-Pipeline (`/leads/pipeline`, seit 29.10.2026 unter Leads für alle Kanäle; 23.10.2026): Mikes acht Phasen ab dem Erstgespräch (EG vereinbart · EG neu
 // terminieren · SG vereinbart · SG neu terminieren · SG Folgebesprechung · Follow-Up · Kunde · Beendet). Die Phase ergibt sich aus
 // Stufe und Terminen (logik.ts) – wer im Lead einen Termin bucht, auf No-Show setzt oder den Kunden gewinnt, verschiebt die Karte.
 // Deshalb kein Ziehen: Klick öffnet den Lead im Peek, dort passiert die Änderung.
@@ -23,7 +23,6 @@ import {
   TERMIN_LABEL,
   type DealPhase,
 } from './ansichten/logik'
-import { TelefonUnterNav } from './ansichten/Teile'
 
 type Wer = 'alle' | 'meine'
 
@@ -111,10 +110,9 @@ export function Component() {
 
   return (
     <>
-      <TelefonUnterNav />
       <SeitenKopf
         titel="Deal-Pipeline"
-        kontext="ab Erstgespräch · Phase aus den Terminen"
+        kontext="alle Kanäle · ab Erstgespräch · Phase aus den Terminen"
         rechts={
           <>
             <KopfStats

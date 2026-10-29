@@ -50,7 +50,6 @@ import {
 } from './nichtAnrufbar'
 import { verpasstDauer } from './anzeige'
 import { RueckrufPlanen } from './RueckrufPlanen'
-import { TelefonUnterNav } from './ansichten/Teile'
 import { useAnrufliste } from './useAnrufliste'
 import { blockZusammenfassung } from './zusammenfassung'
 import { anzeigeName } from '@/lib/mitglied'
@@ -253,7 +252,6 @@ export function Component() {
 
   return (
     <>
-      <TelefonUnterNav />
       <SeitenKopf
         titel="Anrufliste"
         kontext={anzeigeName(me) || undefined}

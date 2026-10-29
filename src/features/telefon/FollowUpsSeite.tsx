@@ -13,7 +13,6 @@ import { heuteBerlin } from '@/lib/format'
 import { fmtTelefon } from '@/lib/telefon'
 import { berlinTag } from '@/lib/zeit'
 import { arbeitsliste, kontaktText, TELEFON_TYP, telefonStatus, type NaechsterSchritt } from './ansichten/logik'
-import { TelefonUnterNav } from './ansichten/Teile'
 import { SchnellNotiz } from './SchnellNotiz'
 
 type Wer = 'alle' | 'meine'
@@ -60,7 +59,6 @@ export function Component() {
 
   return (
     <>
-      <TelefonUnterNav />
       <SeitenKopf
         titel="Follow-ups"
         kontext="Nummer abtippen · anrufen · Notiz"
