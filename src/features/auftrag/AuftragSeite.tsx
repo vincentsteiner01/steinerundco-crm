@@ -14,6 +14,7 @@ import { kopieren } from '@/lib/zwischenablage'
 import type { QueueItem } from '@/types/domain'
 import { itemKey } from '@/features/heute/sektionen'
 import { chatgptPrompt, gruppiere } from './auftrag'
+import { RechercheStart } from '@/features/recherche/RechercheStart'
 import { NeueAnnahmen } from './NeueAnnahmen'
 import { NachrichtZeile, type ZeilenStatus } from './Zeilen'
 
@@ -127,6 +128,8 @@ export function Component() {
           </pre>
         ) : null}
       </div>
+
+      <RechercheStart me={me} />
 
       <Abschnitt
         nr={1}

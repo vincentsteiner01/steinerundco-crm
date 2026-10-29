@@ -3,6 +3,8 @@ export const PFADE = {
   anmelden: '/anmelden',
   heute: '/heute',
   auftrag: '/auftrag',
+  /** LinkedIn-Recherchelauf (29.10.2026) */
+  recherche: (id: string) => `/auftrag/recherche/${id}`,
   leads: '/leads',
   leadNeu: '/leads/neu',
   papierkorb: '/leads/papierkorb',

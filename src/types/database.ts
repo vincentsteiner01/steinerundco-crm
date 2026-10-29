@@ -1560,6 +1560,156 @@ export type Database = {
           },
         ]
       }
+      recherche_laeufe: {
+        Row: {
+          abgelehnt: number
+          aktuelles_profil: string | null
+          batch_id: string | null
+          dubletten: number
+          fehler: number
+          finished_at: string | null
+          geprueft: number
+          gesendet: number
+          id: string
+          kontrollen: number
+          meldung: string | null
+          member_id: string
+          qualifiziert: number
+          started_at: string
+          status: string
+          unklar: number
+          updated_at: string
+          ziel: number
+        }
+        Insert: {
+          abgelehnt?: number
+          aktuelles_profil?: string | null
+          batch_id?: string | null
+          dubletten?: number
+          fehler?: number
+          finished_at?: string | null
+          geprueft?: number
+          gesendet?: number
+          id?: string
+          kontrollen?: number
+          meldung?: string | null
+          member_id?: string
+          qualifiziert?: number
+          started_at?: string
+          status?: string
+          unklar?: number
+          updated_at?: string
+          ziel?: number
+        }
+        Update: {
+          abgelehnt?: number
+          aktuelles_profil?: string | null
+          batch_id?: string | null
+          dubletten?: number
+          fehler?: number
+          finished_at?: string | null
+          geprueft?: number
+          gesendet?: number
+          id?: string
+          kontrollen?: number
+          meldung?: string | null
+          member_id?: string
+          qualifiziert?: number
+          started_at?: string
+          status?: string
+          unklar?: number
+          updated_at?: string
+          ziel?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'recherche_laeufe_batch_id_fkey'
+            columns: ['batch_id']
+            isOneToOne: false
+            referencedRelation: 'import_batches'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      recherche_profile: {
+        Row: {
+          ausgangspunkt: string | null
+          created_at: string
+          ergebnis: string
+          firma: string | null
+          firma_website: string | null
+          grund: string | null
+          id: string
+          kategorie: string | null
+          lauf_id: string
+          lead_id: string | null
+          linkedin_url: string
+          linkedin_url_norm: string | null
+          member_id: string
+          nachname: string | null
+          position: string | null
+          vorname: string | null
+        }
+        Insert: {
+          ausgangspunkt?: string | null
+          created_at?: string
+          ergebnis: string
+          firma?: string | null
+          firma_website?: string | null
+          grund?: string | null
+          id?: string
+          kategorie?: string | null
+          lauf_id: string
+          lead_id?: string | null
+          linkedin_url: string
+          linkedin_url_norm?: string | null
+          member_id?: string
+          nachname?: string | null
+          position?: string | null
+          vorname?: string | null
+        }
+        Update: {
+          ausgangspunkt?: string | null
+          created_at?: string
+          ergebnis?: string
+          firma?: string | null
+          firma_website?: string | null
+          grund?: string | null
+          id?: string
+          kategorie?: string | null
+          lauf_id?: string
+          lead_id?: string | null
+          linkedin_url?: string
+          linkedin_url_norm?: string | null
+          member_id?: string
+          nachname?: string | null
+          position?: string | null
+          vorname?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'recherche_profile_lauf_id_fkey'
+            columns: ['lauf_id']
+            isOneToOne: false
+            referencedRelation: 'recherche_laeufe'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'recherche_profile_lead_id_fkey'
+            columns: ['lead_id']
+            isOneToOne: false
+            referencedRelation: 'leads'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'recherche_profile_lead_id_fkey'
+            columns: ['lead_id']
+            isOneToOne: false
+            referencedRelation: 'v_leads_ohne_bewegung'
+            referencedColumns: ['lead_id']
+          },
+        ]
+      }
       saved_views: {
         Row: {
           columns: Json
@@ -2720,6 +2870,148 @@ export type Database = {
         }
         Returns: undefined
       }
+      recherche_eintragen: {
+        Args: {
+          p_ausgangspunkt?: string
+          p_ergebnis: string
+          p_firma?: string
+          p_firma_website?: string
+          p_grund?: string
+          p_kategorie?: string
+          p_lauf: string
+          p_nachname?: string
+          p_position?: string
+          p_url: string
+          p_vorname?: string
+        }
+        Returns: {
+          abgelehnt: number
+          aktuelles_profil: string | null
+          batch_id: string | null
+          dubletten: number
+          fehler: number
+          finished_at: string | null
+          geprueft: number
+          gesendet: number
+          id: string
+          kontrollen: number
+          meldung: string | null
+          member_id: string
+          qualifiziert: number
+          started_at: string
+          status: string
+          unklar: number
+          updated_at: string
+          ziel: number
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'recherche_laeufe'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      recherche_kontrolle: {
+        Args: { p_lauf: string }
+        Returns: {
+          abgelehnt: number
+          aktuelles_profil: string | null
+          batch_id: string | null
+          dubletten: number
+          fehler: number
+          finished_at: string | null
+          geprueft: number
+          gesendet: number
+          id: string
+          kontrollen: number
+          meldung: string | null
+          member_id: string
+          qualifiziert: number
+          started_at: string
+          status: string
+          unklar: number
+          updated_at: string
+          ziel: number
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'recherche_laeufe'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      recherche_pruefen: {
+        Args: {
+          p_firma?: string
+          p_lauf: string
+          p_nachname?: string
+          p_url: string
+          p_vorname?: string
+        }
+        Returns: Json
+      }
+      recherche_rolle: {
+        Args: { p_position: string }
+        Returns: Database['crm']['Enums']['lead_role']
+      }
+      recherche_starten: {
+        Args: { p_ziel?: number }
+        Returns: {
+          abgelehnt: number
+          aktuelles_profil: string | null
+          batch_id: string | null
+          dubletten: number
+          fehler: number
+          finished_at: string | null
+          geprueft: number
+          gesendet: number
+          id: string
+          kontrollen: number
+          meldung: string | null
+          member_id: string
+          qualifiziert: number
+          started_at: string
+          status: string
+          unklar: number
+          updated_at: string
+          ziel: number
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'recherche_laeufe'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      recherche_status: {
+        Args: { p_lauf: string; p_meldung?: string; p_status: string }
+        Returns: {
+          abgelehnt: number
+          aktuelles_profil: string | null
+          batch_id: string | null
+          dubletten: number
+          fehler: number
+          finished_at: string | null
+          geprueft: number
+          gesendet: number
+          id: string
+          kontrollen: number
+          meldung: string | null
+          member_id: string
+          qualifiziert: number
+          started_at: string
+          status: string
+          unklar: number
+          updated_at: string
+          ziel: number
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'recherche_laeufe'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       recompute_lead_next_action: {
         Args: { p_lead_id: string }
         Returns: undefined
@@ -3218,7 +3510,14 @@ export type Database = {
       phone_type: 'zentrale' | 'durchwahl' | 'mobil' | 'unbekannt'
       reached_person: 'niemand' | 'zentrale' | 'assistenz' | 'entscheider' | 'sonstige'
       record_source:
-        'app' | 'import_sheet' | 'import_csv' | 'schnellimport' | 'linkedin_export' | 'telefonie' | 'email_sync'
+        | 'app'
+        | 'import_sheet'
+        | 'import_csv'
+        | 'schnellimport'
+        | 'linkedin_export'
+        | 'telefonie'
+        | 'email_sync'
+        | 'recherche'
       reply_label:
         | 'interessiert'
         | 'frage'
@@ -3874,6 +4173,7 @@ export const Constants = {
         'linkedin_export',
         'telefonie',
         'email_sync',
+        'recherche',
       ],
       reply_label: [
         'interessiert',

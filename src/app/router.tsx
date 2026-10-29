@@ -30,6 +30,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="/heute" replace /> },
           { path: 'heute', lazy: () => import('@/features/heute/HeuteSeite') },
           { path: 'auftrag', lazy: () => import('@/features/auftrag/AuftragSeite') },
+          { path: 'auftrag/recherche/:id', lazy: () => import('@/features/recherche/RechercheSeite') },
           { path: 'leads', lazy: () => import('@/features/leads/LeadsSeite') },
           { path: 'leads/neu', lazy: () => import('@/features/leads/LeadNeuSeite') },
           { path: 'leads/papierkorb', lazy: () => import('@/features/leads/PapierkorbSeite') },
