@@ -122,13 +122,7 @@ export type DienstLage = 'verbunden' | 'getrennt' | 'keiner'
 export type System = 'mac' | 'windows'
 
 /** Seiten der geführten Windows-Einrichtung (WindowsAnleitung.tsx). */
-export const WINDOWS_TITEL = [
-  'Worum es geht',
-  'Deinen Befehl holen',
-  'PowerShell öffnen und einfügen',
-  'Dem Fenster folgen',
-  'Geschafft',
-] as const
+export const WINDOWS_TITEL = ['Befehl kopieren', 'In PowerShell einfügen', 'Dem Fenster folgen', 'Fertig'] as const
 
 /** Betriebssystem des Browsers – der Einrichtungsdialog schlägt das passende vor (Mike arbeitet mit Windows). */
 export const systemVon = (userAgent: string): System => (/Windows/i.test(userAgent) ? 'windows' : 'mac')

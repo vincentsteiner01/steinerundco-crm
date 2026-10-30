@@ -1,199 +1,282 @@
-// Einrichtung des Recherche-Diensts unter Windows als Schritt-für-Schritt-Anleitung (30.10.2026, Vincent: Mike „kennt sich mit
-// Computern nicht gut aus – so viel es geht vorkauen und sagen, WARUM“). Jede Seite sagt, was zu tun ist und warum; das
-// Einrichtungsfenster (public/recherche-dienst/einrichten.ps1) führt danach selbst durch App, Erweiterung und Computer Use.
-import { Check, Copy } from 'lucide-react'
-import type { ReactNode } from 'react'
-import { Button } from '@/components/ui'
+// Einrichtung des Recherche-Diensts unter Windows als freundliche Schritt-für-Schritt-Anleitung (30.10.2026, Vincent: Mike
+// „kennt sich mit Computern nicht gut aus“ – kein sichtbarer Code, „Kopieren“-Knöpfe, farbig, je Schritt ein „Warum?“).
+// Farben mit fester Bedeutung, gleich wie im PowerShell-Fenster (einrichten.ps1): Blau = das machst du, Gelb = warum,
+// Grün = erledigt, Rot = Foto an Vincent. Jeder Schritt hat zusätzlich seine eigene Farbe in der Fortschrittsleiste.
+import { AppWindow, Check, Copy, Globe, MousePointerClick, Puzzle, Store } from 'lucide-react'
+import { type ReactNode, useState } from 'react'
+import { Button, cn } from '@/components/ui'
+import { WINDOWS_TITEL } from './logik'
 
-function Warum({ children }: { children: ReactNode }) {
+/** Text, den Mike in der ChatGPT-App einfügt, damit LinkedIn einmal erlaubt wird (einrichten.ps1 kopiert ihn ebenfalls). */
+const LINKEDIN_TEXT = '@Chrome öffne https://www.linkedin.com/feed/'
+
+const SCHRITT_FARBE = [
+  { balken: 'bg-signal', zahl: 'bg-signal text-signal-ink' },
+  { balken: 'bg-tag-lila-ink', zahl: 'bg-tag-lila-ink text-signal-ink' },
+  { balken: 'bg-tag-orange-ink', zahl: 'bg-tag-orange-ink text-signal-ink' },
+  { balken: 'bg-done', zahl: 'bg-done text-signal-ink' },
+] as const
+
+/** Fortschritt: farbige Leiste je Schritt und die Überschrift mit Nummer. */
+export function Fortschritt({ seite }: { seite: number }) {
   return (
-    <p className="bg-surface-hover text-small text-ink-2 rounded-sm px-3 py-2">
-      <span className="text-ink font-semibold">Warum? </span>
-      {children}
-    </p>
+    <div className="grid gap-2.5">
+      <div className="grid grid-cols-4 gap-1.5" aria-hidden>
+        {SCHRITT_FARBE.map((f, i) => (
+          <span key={f.balken} className={cn('h-1.5 rounded-full', i <= seite ? f.balken : 'bg-line-strong')} />
+        ))}
+      </div>
+      <h3 className="text-ink-bright flex items-center gap-2.5 text-[17px] font-semibold" data-seite={seite}>
+        <span
+          className={cn('grid size-7 shrink-0 place-items-center rounded-full text-[14px]', SCHRITT_FARBE[seite]?.zahl)}
+          aria-hidden
+        >
+          {seite + 1}
+        </span>
+        <span>
+          <span className="sr-only">
+            Schritt {seite + 1} von {WINDOWS_TITEL.length}:{' '}
+          </span>
+          {WINDOWS_TITEL[seite]}
+        </span>
+      </h3>
+    </div>
   )
 }
 
-function Liste({ children }: { children: ReactNode }) {
-  return <ol className="text-body text-ink-2 grid list-decimal gap-2 pl-5">{children}</ol>
-}
+const Warum = ({ children }: { children: ReactNode }) => (
+  <p className="bg-tag-gelb text-tag-gelb-ink text-small rounded-md px-3.5 py-2.5">
+    <span className="font-semibold">Warum? </span>
+    {children}
+  </p>
+)
+
+const Tun = ({ children, className }: { children: ReactNode; className?: string }) => (
+  <div className={cn('bg-signal-tint text-ink grid gap-3 rounded-md px-4 py-3.5', className)}>{children}</div>
+)
+
+const Gut = ({ children }: { children: ReactNode }) => (
+  <p className="bg-done-tint text-done flex items-center gap-2 rounded-md px-3.5 py-2.5 font-semibold" role="status">
+    <Check size={18} strokeWidth={2.5} aria-hidden /> {children}
+  </p>
+)
 
 // Taste als Inhalt der Anleitung – kein <kbd>: das blendet tokens.css auf Touch-Geräten aus (dort sind es nur Kürzel-Hinweise)
 const Taste = ({ children }: { children: ReactNode }) => (
-  <span className="border-line-strong text-ink inline-block rounded-[4px] border px-1 py-px text-[12px] leading-tight font-semibold">
+  <span className="border-line-strong bg-surface-raised text-ink inline-block rounded-[6px] border border-b-2 px-2 py-0.5 text-[14px] leading-tight font-semibold">
     {children}
   </span>
 )
+
+/** Kleiner „Kopieren“-Knopf mit kurzer Bestätigung im Knopf selbst. */
+function KopierKnopf({ text, label, onKopieren }: { text: string; label: string; onKopieren: (t: string) => void }) {
+  const [fertig, setFertig] = useState(false)
+  return (
+    <Button
+      variante="secondary"
+      icon={fertig ? Check : Copy}
+      onClick={() => {
+        onKopieren(text)
+        setFertig(true)
+        setTimeout(() => setFertig(false), 2500)
+      }}
+    >
+      {fertig ? 'Kopiert' : label}
+    </Button>
+  )
+}
+
+/** Was im PowerShell-Fenster passieren kann – mit Symbol, Handlung und Grund. */
+const UNTERWEGS = [
+  {
+    icon: Store,
+    tun: 'Microsoft Store: „Herunterladen“ klicken, danach in der ChatGPT-App anmelden.',
+    warum: 'Die App erledigt die Recherche – über deinen ChatGPT-Zugang.',
+  },
+  {
+    icon: Puzzle,
+    tun: 'Chrome: „Hinzufügen“ klicken und die Rückfrage bestätigen.',
+    warum: 'So kann ChatGPT in Chrome lesen und klicken. Darum fragt Chrome auch nach.',
+  },
+  {
+    icon: AppWindow,
+    tun: 'ChatGPT-App: „Computer Use“ einschalten. Das Fenster sagt dir, wo.',
+    warum: 'Erst damit darf ChatGPT dein Chrome bedienen.',
+  },
+  {
+    icon: Globe,
+    tun: 'ChatGPT-App: diesen Text einfügen und LinkedIn erlauben.',
+    warum: 'ChatGPT fragt bei neuen Seiten einmal nach – später arbeitet es ohne Rückfrage.',
+    text: LINKEDIN_TEXT,
+  },
+] as const
+
+// Farben wie im PowerShell-Fenster (Windows-Konsolenfarben Cyan, DarkYellow, Green, Red im Standard-Farbschema)
+const LEGENDE = [
+  { farbe: 'bg-[#61d6d6]', text: 'Hellblau: das machst du' },
+  { farbe: 'bg-[#c19c00]', text: 'Gelb: warum' },
+  { farbe: 'bg-[#16c60c]', text: 'Grün: erledigt' },
+  { farbe: 'bg-[#e74856]', text: 'Rot: Foto an Vincent' },
+] as const
 
 /** Inhalt einer Seite (Index in WINDOWS_TITEL, logik.ts); „Weiter“/„Zurück“ stellt der Dialog. */
 export function WindowsSeite({
   seite,
   befehl,
   kopiert,
+  busy,
+  onBefehl,
   onKopieren,
   verbunden,
 }: {
   seite: number
   befehl: string | null
-  /** null, solange nicht versucht; false, wenn der Browser nur markieren konnte */
+  /** null, solange nicht versucht; false, wenn der Browser nicht kopieren durfte */
   kopiert: boolean | null
-  onKopieren: () => void
+  busy: boolean
+  /** erzeugt den Befehl und kopiert ihn – bzw. kopiert ihn erneut */
+  onBefehl: () => void
+  onKopieren: (text: string) => void
   verbunden: boolean | undefined
 }) {
+  const [zeigen, setZeigen] = useState(false)
   switch (seite) {
     case 0:
       return (
         <>
           <p className="text-body text-ink-2">
-            Wir richten einmal den Recherche-Dienst auf deinem Computer ein. Danach findet ChatGPT auf Knopfdruck
-            passende Leute auf LinkedIn – und vernetzt dich erst, wenn du die Liste freigegeben hast.
+            Hallo! In etwa 10 Minuten ist alles eingerichtet. Du wirst bei jedem Schritt geführt und kannst nichts
+            kaputt machen.
           </p>
+          <Tun className="justify-items-start">
+            <p className="font-semibold">Klick auf den Knopf – dein Befehl liegt dann in der Zwischenablage.</p>
+            <Button variante="primary" groesse="L" icon={Copy} busy={busy} onClick={onBefehl}>
+              {befehl ? 'Nochmal kopieren' : 'Befehl kopieren'}
+            </Button>
+          </Tun>
+          {kopiert ? <Gut>Kopiert! Weiter geht’s mit „Weiter“.</Gut> : null}
+          {kopiert === false ? (
+            <div className="bg-danger-tint text-danger text-small grid gap-2 rounded-md px-3.5 py-2.5">
+              <p>Das Kopieren hat nicht geklappt. Klick bitte noch einmal auf „Nochmal kopieren“.</p>
+              {befehl && !zeigen ? (
+                <button type="button" className="justify-self-start underline" onClick={() => setZeigen(true)}>
+                  Klappt immer noch nicht? Befehl anzeigen
+                </button>
+              ) : null}
+              {befehl && zeigen ? (
+                <pre className="text-ink bg-surface-raised rounded-sm px-2.5 py-2 font-mono text-[11px] break-all whitespace-pre-wrap select-all">
+                  {befehl}
+                </pre>
+              ) : null}
+            </div>
+          ) : null}
           <Warum>
-            ChatGPT arbeitet in deinem Chrome, weil du dort bei LinkedIn angemeldet bist. So sieht LinkedIn ganz normal
-            dich – du gibst kein Passwort weiter.
+            Der Befehl enthält deinen persönlichen Schlüssel. Damit darf nur dein Computer für dich im CRM arbeiten –
+            gib ihn nicht weiter.
           </Warum>
-          <p className="text-body text-ink-2">
-            <span className="text-ink font-semibold">Dauer:</span> etwa 10 Minuten.{' '}
-            <span className="text-ink font-semibold">Du brauchst:</span> Google Chrome, in dem du bei LinkedIn
-            angemeldet bist, und deine Zugangsdaten für ChatGPT.
-          </p>
-          <p className="text-small text-ink-3">
-            Du kannst nichts kaputt machen. Klemmt etwas: Foto vom Bildschirm an Vincent schicken.
-          </p>
         </>
       )
     case 1:
       return (
         <>
-          <p className="text-body text-ink-2">
-            Klick unten auf „Befehl erzeugen und kopieren“. Der Befehl landet automatisch in deiner Zwischenablage – du
-            musst nichts abschreiben.
+          <ol className="grid gap-2" aria-label="So geht’s">
+            {[
+              <>
+                <Taste>⊞ Windows</Taste>-Taste drücken
+              </>,
+              <>
+                <span className="font-semibold">PowerShell</span> tippen und <Taste>Enter</Taste>
+              </>,
+              <>
+                <Taste>Strg</Taste> + <Taste>V</Taste> drücken
+              </>,
+              <>
+                <Taste>Enter</Taste> drücken
+              </>,
+            ].map((inhalt, i) => (
+              <li key={i} className="bg-signal-tint text-ink flex items-center gap-3 rounded-md px-3.5 py-3">
+                <span className="bg-signal text-signal-ink grid size-6 shrink-0 place-items-center rounded-full text-[13px] font-semibold">
+                  {i + 1}
+                </span>
+                <span className="text-body flex flex-wrap items-center gap-1">{inhalt}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="text-small text-ink-2 flex items-start gap-2">
+            <MousePointerClick size={16} className="mt-0.5 shrink-0" aria-hidden />
+            Es geht ein dunkles Fenster auf – das ist richtig so. Klappt Strg + V nicht: einmal mit der rechten
+            Maustaste ins Fenster klicken.
           </p>
-          <Warum>
-            Der Befehl enthält einen Schlüssel nur für dich. Damit weiß das CRM, dass dieser Computer in deinem Namen
-            arbeiten darf. Gib ihn deshalb nicht weiter.
-          </Warum>
-          {befehl ? (
-            <div className="grid gap-1.5">
-              <pre
-                className="bg-surface-hover border-line text-ink rounded-sm border px-3 py-2.5 font-mono text-[12px] break-all whitespace-pre-wrap"
-                data-befehl
-              >
-                {befehl}
-              </pre>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                {kopiert ? (
-                  <span className="text-small text-done flex items-center gap-1.5">
-                    <Check size={14} aria-hidden /> Kopiert – weiter mit „Weiter“.
-                  </span>
-                ) : (
-                  <span className="text-small text-ink-2">
-                    Noch nicht kopiert – bitte auf „Nochmal kopieren“ klicken.
-                  </span>
-                )}
-                <Button variante="quiet" icon={Copy} onClick={onKopieren}>
-                  Nochmal kopieren
-                </Button>
-              </div>
-            </div>
-          ) : null}
+          <Warum>In diesem Fenster richtet sich alles von selbst ein. Du musst dort nichts selbst schreiben.</Warum>
         </>
       )
     case 2:
       return (
         <>
-          <p className="text-body text-ink-2">Jetzt fügst du den Befehl in Windows ein:</p>
-          <Liste>
-            <li>
-              Drück die <Taste>Windows</Taste>-Taste – unten links auf der Tastatur, die mit dem Fenster-Symbol.
-            </li>
-            <li>
-              Tippe <span className="text-ink font-semibold">PowerShell</span> und drück <Taste>Enter</Taste>. Ein
-              blaues oder schwarzes Fenster geht auf – das ist richtig so.
-            </li>
-            <li>
-              Klick einmal in das Fenster und drück <Taste>Strg</Taste> + <Taste>V</Taste>. Jetzt steht dein Befehl
-              darin. Klappt das nicht: Rechtsklick ins Fenster.
-            </li>
-            <li>
-              Drück <Taste>Enter</Taste>.
-            </li>
-          </Liste>
-          <Warum>
-            PowerShell ist das Windows-Werkzeug, mit dem man Programme einrichtet. Du musst dort nichts selbst
-            schreiben, nur einfügen. Administrator-Rechte braucht es nicht.
-          </Warum>
-        </>
-      )
-    case 3:
-      return (
-        <>
           <p className="text-body text-ink-2">
-            Das Fenster führt dich jetzt durch sechs kurze Schritte. Es prüft selbst, was schon da ist, und öffnet dir
-            die richtigen Seiten. Lies, was dort steht, mach es und drück dann im Fenster <Taste>Enter</Taste>.
+            Das Fenster sagt dir, was zu tun ist. Mach es und drück dann im Fenster <Taste>Enter</Taste>.
           </p>
-          <p className="text-body text-ink font-semibold">Das kann dich unterwegs erwarten:</p>
-          <Liste>
-            <li>
-              Der Microsoft Store mit der ChatGPT-App: auf „Herunterladen“ klicken, danach in der App anmelden.
-              <Warum>Die App bringt das Programm mit, das die Recherche macht – über deinen ChatGPT-Zugang.</Warum>
-            </li>
-            <li>
-              Die Chrome-Seite der Erweiterung „ChatGPT“: auf „Zu Chrome hinzufügen“ und dann „Erweiterung hinzufügen“
-              klicken.
-              <Warum>
-                Darüber kann ChatGPT in Chrome lesen und klicken. Chrome warnt, dass die Erweiterung Webseiten ändern
-                darf – genau das soll sie für dich auf LinkedIn tun.
-              </Warum>
-            </li>
-            <li>
-              In der ChatGPT-App „Computer Use“ einschalten – das Fenster sagt dir genau, wo.
-              <Warum>Erst damit darf ChatGPT dein Chrome bedienen. Ohne kann es nur chatten.</Warum>
-            </li>
-            <li>
-              LinkedIn einmal erlauben.
-              <Warum>
-                ChatGPT fragt bei jeder neuen Webseite einmal nach. Später arbeitet es im Hintergrund und kann dich
-                nicht fragen – deshalb erlaubst du LinkedIn jetzt einmal vorab.
-              </Warum>
-            </li>
-          </Liste>
-          <p className="text-small text-ink-3">
-            Am Ende steht grün „Alles fertig!“ – dann kannst du das Fenster schließen. Steht dort etwas in Rot: Foto
-            davon an Vincent.
-          </p>
+          <ul
+            className="bg-surface-hover text-small text-ink-2 grid grid-cols-2 gap-x-3 gap-y-1.5 rounded-md px-3.5 py-2.5"
+            aria-label="Farben im Fenster"
+          >
+            {LEGENDE.map((l) => (
+              <li key={l.text} className="flex items-center gap-2">
+                <span className={cn('size-2.5 shrink-0 rounded-full', l.farbe)} aria-hidden />
+                {l.text}
+              </li>
+            ))}
+          </ul>
+          <p className="text-ink text-body font-semibold">Das kann unterwegs kommen:</p>
+          <ul className="grid gap-2">
+            {UNTERWEGS.map((u) => (
+              <li
+                key={u.tun}
+                className="bg-signal-tint grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 rounded-md px-3.5 py-3"
+              >
+                <u.icon size={20} className="text-signal mt-0.5" aria-hidden />
+                <span className="text-body text-ink">{u.tun}</span>
+                <span className="text-small text-tag-gelb-ink col-start-2">
+                  <span className="font-semibold">Warum? </span>
+                  {u.warum}
+                </span>
+                {'text' in u ? (
+                  <span className="col-start-2">
+                    <KopierKnopf text={u.text} label="Text kopieren" onKopieren={onKopieren} />
+                  </span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
         </>
       )
     default:
       return (
         <>
-          <p
-            className="text-body text-ink flex items-center gap-2 font-semibold"
-            role="status"
-            data-verbunden={verbunden}
-          >
-            {verbunden ? (
-              <>
-                <Check size={16} className="text-done" aria-hidden /> Recherche-Dienst verbunden – alles bereit.
-              </>
-            ) : (
-              'Noch nicht verbunden. Steht im Fenster schon „Alles fertig!“? Sonst einfach dem Fenster weiter folgen.'
-            )}
-          </p>
-          <p className="text-body text-ink font-semibold">So läuft eine Recherche:</p>
-          <Liste>
-            <li>Links im CRM auf den blauen Knopf „Recherche starten“ klicken.</li>
-            <li>
-              ChatGPT sucht in deinem Chrome passende Leute. Lass Chrome offen und den Computer an – zuschauen kannst
-              du, musst du aber nicht.
-            </li>
-            <li>
-              Ist die Liste fertig, steht am blauen Knopf „Freigabe nötig“. Schau dir die Personen an und klick
-              „Freigeben“ – oder „Nicht freigeben“.
-              <Warum>Die Anfragen gehen in deinem Namen raus. Deshalb entscheidest du, wer angefragt wird.</Warum>
-            </li>
-            <li>Jede angefragte Person landet als Lead im CRM, die KPIs zählen mit.</li>
-          </Liste>
+          {verbunden ? (
+            <Gut>Recherche-Dienst verbunden – alles bereit!</Gut>
+          ) : (
+            <p className="bg-tag-orange text-tag-orange-ink rounded-md px-3.5 py-2.5 font-semibold" role="status">
+              Noch nicht verbunden. Steht im Fenster schon grün „Alles fertig!“? Sonst einfach dem Fenster weiter
+              folgen.
+            </p>
+          )}
+          <p className="text-ink text-body font-semibold">So geht’s ab jetzt:</p>
+          <ol className="grid gap-2">
+            {[
+              'Links im CRM auf den blauen Knopf „Recherche starten“ klicken.',
+              'ChatGPT sucht in deinem Chrome passende Leute. Chrome offen und Computer an lassen.',
+              'Steht „Freigabe nötig“ am blauen Knopf: Liste ansehen und „Freigeben“ klicken.',
+            ].map((t, i) => (
+              <li key={t} className="bg-done-tint text-ink flex items-start gap-3 rounded-md px-3.5 py-3">
+                <span className="bg-done text-signal-ink grid size-6 shrink-0 place-items-center rounded-full text-[13px] font-semibold">
+                  {i + 1}
+                </span>
+                <span className="text-body">{t}</span>
+              </li>
+            ))}
+          </ol>
+          <Warum>Die Anfragen gehen in deinem Namen raus – deshalb entscheidest du, wer angefragt wird.</Warum>
         </>
       )
   }

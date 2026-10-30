@@ -11,7 +11,7 @@ import { useRechercheClaudeErsatz, useRechercheDienste, useRechercheDienstEinric
 import { fmtDatumZeit } from '@/lib/format'
 import { kopieren } from '@/lib/zwischenablage'
 import { dienstLage, einrichtungsBefehl, type System, systemVon, WINDOWS_TITEL } from './logik'
-import { WindowsSeite } from './WindowsAnleitung'
+import { Fortschritt, WindowsSeite } from './WindowsAnleitung'
 
 const PUNKT = { verbunden: 'bg-done', getrennt: 'bg-overdue', keiner: 'bg-deco' } as const
 
@@ -117,13 +117,9 @@ export function DienstEinrichten({
     ? befehl
       ? { label: 'Fertig', onClick: () => umschalten(false) }
       : erzeugenKnopf
-    : seite === 0
-      ? { label: 'Los geht’s', onClick: () => setSeite(1) }
-      : seite === 1 && !befehl
-        ? { ...erzeugenKnopf, label: 'Befehl erzeugen und kopieren' }
-        : seite < WINDOWS_TITEL.length - 1
-          ? { label: 'Weiter', onClick: () => setSeite(seite + 1) }
-          : { label: 'Fertig', onClick: () => umschalten(false) }
+    : seite < WINDOWS_TITEL.length - 1
+      ? { label: 'Weiter', disabled: !befehl, onClick: () => setSeite(seite + 1) }
+      : { label: 'Fertig', onClick: () => umschalten(false) }
 
   return (
     <Dialog
@@ -133,7 +129,7 @@ export function DienstEinrichten({
       titel="Recherche-Dienst einrichten"
       text={
         windows
-          ? 'Schritt für Schritt – du wirst durch alles geführt.'
+          ? undefined
           : 'Einmal je Rechner. Danach startet „Recherche starten“ ChatGPT von selbst in deinem Chrome.'
       }
       kinder={
@@ -152,23 +148,27 @@ export function DienstEinrichten({
           ) : null}
           {windows ? (
             <>
-              <div className="flex items-center justify-between gap-3">
-                <h3 className="text-ink-bright text-[15px] font-semibold" data-seite={seite}>
-                  Schritt {seite + 1} von {WINDOWS_TITEL.length}: {WINDOWS_TITEL[seite]}
-                </h3>
-                {seite > 0 ? (
-                  <Button variante="quiet" onClick={() => setSeite(seite - 1)}>
-                    Zurück
-                  </Button>
-                ) : null}
-              </div>
+              <Fortschritt seite={seite} />
               <WindowsSeite
                 seite={seite}
                 befehl={befehl}
                 kopiert={kopiert}
-                onKopieren={() => befehl && kopierenUndMelden(befehl, system)}
+                busy={einrichten.isPending}
+                onBefehl={befehl ? () => kopierenUndMelden(befehl, system) : erzeugen}
+                onKopieren={(t) =>
+                  void kopieren(t).then((r) =>
+                    toast(
+                      r === 'ok' ? 'Text kopiert – in der ChatGPT-App mit Strg + V einfügen.' : 'Kopieren ging nicht',
+                    ),
+                  )
+                }
                 verbunden={verbunden}
               />
+              {seite > 0 ? (
+                <Button variante="quiet" className="justify-self-start" onClick={() => setSeite(seite - 1)}>
+                  Zurück
+                </Button>
+              ) : null}
             </>
           ) : (
             <>

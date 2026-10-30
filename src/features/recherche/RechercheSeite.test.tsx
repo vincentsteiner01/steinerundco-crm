@@ -251,30 +251,37 @@ describe('RechercheSeite', () => {
     expect(m.ersatz).toHaveBeenCalledWith(false)
   })
 
-  it('Einrichten für Windows: geführte Schritte mit „Warum?“, PowerShell-Befehl mit dem neuen Schlüssel', () => {
+  it('Einrichten für Windows: Kopieren-Knöpfe statt Code, vier farbige Schritte mit „Warum?“', async () => {
     const k = `rd_${'b'.repeat(64)}`
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     m.einrichten.mockImplementation((_: unknown, o: { onSuccess: (k: string) => void }) => o.onSuccess(k))
     rendern()
     fireEvent.click(screen.getByRole('button', { name: 'Weiteren Rechner einrichten' }))
     fireEvent.click(screen.getByRole('button', { name: 'Windows' }))
     const dialog = screen.getByRole('dialog')
-    expect(dialog).toHaveTextContent('Schritt 1 von 5: Worum es geht')
+    expect(dialog).toHaveTextContent('Schritt 1 von 4: Befehl kopieren')
     expect(dialog).toHaveTextContent('Warum?')
-    fireEvent.click(screen.getByRole('button', { name: 'Los geht’s' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Befehl erzeugen und kopieren' }))
-    expect(document.querySelector('[data-befehl]')).toHaveTextContent(`/recherche-dienst/einrichten.ps1))) ${k}`)
+    expect(screen.getByRole('button', { name: 'Weiter' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Befehl kopieren' }))
+    expect(await screen.findByText(/Kopiert! Weiter geht’s/)).toBeInTheDocument()
+    expect(writeText).toHaveBeenCalledWith(expect.stringContaining(`/recherche-dienst/einrichten.ps1))) ${k}`))
+    expect(dialog.querySelector('pre')).toBeNull() // kein sichtbarer Code
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
-    expect(dialog).toHaveTextContent('PowerShell öffnen und einfügen')
+    expect(dialog).toHaveTextContent('In PowerShell einfügen')
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
-    expect(dialog).toHaveTextContent('Computer Use')
+    expect(dialog).toHaveTextContent('Dem Fenster folgen')
+    fireEvent.click(screen.getByRole('button', { name: 'Text kopieren' }))
+    expect(writeText).toHaveBeenLastCalledWith('@Chrome öffne https://www.linkedin.com/feed/')
     fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
-    expect(dialog).toHaveTextContent('Recherche-Dienst verbunden – alles bereit.')
-    // zurück zum Anfang, Mac zeigt denselben Schlüssel als Terminal-Befehl
-    for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole('button', { name: 'Zurück' }))
+    expect(dialog).toHaveTextContent('Recherche-Dienst verbunden – alles bereit!')
+    // zurück zum Anfang: Mac zeigt denselben Schlüssel als Terminal-Befehl
+    for (let i = 0; i < 3; i++) fireEvent.click(screen.getByRole('button', { name: 'Zurück' }))
     fireEvent.click(screen.getByRole('button', { name: 'Mac' }))
     expect(document.querySelector('[data-befehl]')).toHaveTextContent(
       `/recherche-dienst/einrichten.sh | bash -s -- ${k}`,
     )
+    Reflect.deleteProperty(navigator, 'clipboard')
   })
 
   it('LinkedIn-Einschränkung melden hält den Lauf mit Wortlaut an', () => {

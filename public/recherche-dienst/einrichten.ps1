@@ -4,6 +4,8 @@
 # passende Seite, erklärt jeden Schritt samt Grund und wartet auf Enter. Danach lädt es den Dienst nach
 # %LOCALAPPDATA%\steinerundco-recherche, legt den persönlichen Dienst-Schlüssel DPAPI-verschlüsselt ab (nur dieses Windows-Konto
 # kann ihn lesen) und startet den Dienst bei jeder Anmeldung ohne Fenster (Autostart-Ordner → start.ps1, das ihn am Laufen hält).
+# Farben mit fester Bedeutung wie in der Anleitung im CRM (WindowsAnleitung.tsx): Hellblau = das machst du, Gelb = warum,
+# Grün = erledigt, Rot = Foto an Vincent. Der eingefügte Befehl verschwindet gleich vom Bildschirm (Clear-Host).
 # Kein Admin nötig. Den Befehl erzeugt das CRM (Recherche-Dienst einrichten → Windows), einzufügen in Windows PowerShell:
 #
 #   & ([scriptblock]::Create((irm https://crm.steinerundco.de/recherche-dienst/einrichten.ps1))) rd_…
@@ -28,14 +30,14 @@ $erweiterungen = @('hehggadaopoacecdllhhajmbjkdcmajg', 'odlomjlbamekndcpllcnffbg
 $erweiterungSeite = 'https://chromewebstore.google.com/detail/chatgpt/hehggadaopoacecdllhhajmbjkdcmajg'
 $schritte = 6
 
-# ---- Ausgabe: kurz, freundlich, immer mit Grund ----
+# ---- Ausgabe: kurz, freundlich, farbig (Hellblau = du, Gelb = warum, Grün = erledigt, Rot = Foto an Vincent) ----
 function Titel([int]$Nr, [string]$Text) {
   Write-Host ''
-  Write-Host "Schritt $Nr von ${schritte}: $Text" -ForegroundColor Cyan
+  Write-Host (" Schritt $Nr von ${schritte}:  $Text ").PadRight(64) -ForegroundColor White -BackgroundColor DarkCyan
 }
-function Warum([string]$Text) { Write-Host "  Warum? $Text" -ForegroundColor Gray }
-function Tun([string]$Text) { Write-Host "  >> $Text" -ForegroundColor Yellow }
-function Gut([string]$Text) { Write-Host "  OK: $Text" -ForegroundColor Green }
+function Warum([string]$Text) { Write-Host "  Warum? $Text" -ForegroundColor DarkYellow }
+function Tun([string]$Text) { Write-Host "  > $Text" -ForegroundColor Cyan }
+function Gut([string]$Text) { Write-Host "  OK  $Text" -ForegroundColor Green }
 function Hinweis([string]$Text) { Write-Host "  $Text" }
 
 function Warte-Bis([scriptblock]$Pruefung, [int]$Versuche = 4) {
@@ -43,9 +45,9 @@ function Warte-Bis([scriptblock]$Pruefung, [int]$Versuche = 4) {
   for ($i = 1; $i -le $Versuche; $i++) {
     [void](Read-Host '  Wenn du das erledigt hast, drück hier Enter')
     if (& $Pruefung) { return $true }
-    Write-Host '  Das sehe ich noch nicht. Schau bitte noch einmal nach, warte einen Moment und drück dann wieder Enter.' -ForegroundColor Yellow
+    Write-Host '  Das sehe ich noch nicht. Bitte noch einmal nachsehen, kurz warten, dann wieder Enter.' -ForegroundColor Cyan
   }
-  $antwort = Read-Host '  Ich kann es nicht prüfen. Bist du sicher, dass es erledigt ist? Dann tippe j und Enter'
+  $antwort = Read-Host '  Ich kann es nicht sehen. Hast du es trotzdem erledigt? Dann tippe j und Enter'
   return ($antwort -match '^\s*j')
 }
 
@@ -141,64 +143,64 @@ if ($Schluessel -notmatch '^rd_[0-9a-f]{64}$') {
   return
 }
 
+try { Clear-Host } catch {}
 Write-Host ''
-Write-Host 'Hallo! Dieses Fenster richtet den Recherche-Dienst für die LinkedIn-Recherche ein.' -ForegroundColor Cyan
-Write-Host 'Ich erkläre dir jeden Schritt und warum er nötig ist. Du kannst dabei nichts kaputt machen.'
-Write-Host 'Wenn ich dich um etwas bitte: mach es, komm hierher zurück und drück Enter.'
-Write-Host 'Klemmt etwas: Foto von diesem Fenster an Vincent schicken.'
+Write-Host '  Hallo! Ich richte jetzt die LinkedIn-Recherche ein.  ' -ForegroundColor White -BackgroundColor DarkGreen
+Write-Host ''
+Write-Host '  Lies einfach, was hier steht. Du kannst nichts kaputt machen.'
+Write-Host '  > Hellblau: das machst du' -ForegroundColor Cyan
+Write-Host '  Gelb: warum' -ForegroundColor DarkYellow
+Write-Host '  Grün: erledigt' -ForegroundColor Green
+Write-Host '  Rot: bitte Foto von diesem Fenster an Vincent' -ForegroundColor Red
 
 # ---- 1. Chrome ----
 Titel 1 'Google Chrome'
-Warum 'ChatGPT arbeitet für dich in Chrome, weil du dort bei LinkedIn angemeldet bist.'
+Warum 'ChatGPT arbeitet in deinem Chrome - dort bist du bei LinkedIn angemeldet.'
 $chrome = Chrome-Pfad
-if ($chrome) { Gut 'Chrome ist installiert.' }
+if ($chrome) { Gut 'Chrome ist da.' }
 else {
-  Tun 'Chrome fehlt noch. Ich öffne dir die Download-Seite. Klick dort auf Chrome herunterladen und installiere es.'
-  Tun 'Melde dich danach in Chrome bei LinkedIn an.'
+  Tun 'Ich öffne die Chrome-Seite. Klick auf Chrome herunterladen und installiere es.'
+  Tun 'Dann in Chrome bei LinkedIn anmelden.'
   Oeffnen 'https://www.google.com/chrome/'
   if (-not (Warte-Bis { [bool](Chrome-Pfad) })) { Abbruch 'Chrome ist nicht installiert.'; return }
   $chrome = Chrome-Pfad
-  Gut 'Chrome ist installiert.'
+  Gut 'Chrome ist da.'
 }
 
 # ---- 2. ChatGPT-App ----
 Titel 2 'ChatGPT-App'
-Warum 'Die Recherche macht ChatGPT. Die App bringt das Programm mit, das später im Hintergrund für dich arbeitet - über deinen ChatGPT-Zugang.'
-if (ChatGPT-App) { Gut 'Die ChatGPT-App ist installiert.' }
+Warum 'Die App erledigt die Recherche - über deinen ChatGPT-Zugang.'
+if (ChatGPT-App) { Gut 'Die ChatGPT-App ist da.' }
 else {
-  Tun 'Die ChatGPT-App fehlt noch. Ich öffne dir den Microsoft Store. Klick dort auf Herunterladen (oder Installieren).'
-  Tun 'Öffne danach die App (Windows-Taste drücken, ChatGPT tippen, Enter) und melde dich mit deinem ChatGPT-Konto an.'
+  Tun 'Ich öffne den Microsoft Store. Klick auf Herunterladen.'
+  Tun 'Dann die ChatGPT-App öffnen und anmelden.'
   Oeffnen 'ms-windows-store://pdp/?ProductId=9PLM9XGG6VKS'
   if (-not (Warte-Bis { ChatGPT-App })) { Abbruch 'Die ChatGPT-App ist nicht installiert.'; return }
-  Gut 'Die ChatGPT-App ist installiert. Bitte sei darin angemeldet.'
+  Gut 'Die ChatGPT-App ist da.'
 }
 
 # ---- 3. ChatGPT-Erweiterung in Chrome ----
 Titel 3 'ChatGPT-Erweiterung in Chrome'
-Warum 'Über diese Erweiterung kann ChatGPT in Chrome lesen und klicken - so, wie du es selbst tun würdest.'
-if (Erweiterung-Da) { Gut 'Die Erweiterung ist in Chrome installiert.' }
+Warum 'So kann ChatGPT in Chrome lesen und klicken. Darum fragt Chrome auch nach.'
+if (Erweiterung-Da) { Gut 'Die Erweiterung ist da.' }
 else {
-  Tun 'Ich öffne dir die Seite der Erweiterung in Chrome. Klick dort auf Zu Chrome hinzufügen.'
-  Tun 'Chrome fragt dann, ob die Erweiterung Webseiten lesen und ändern darf. Klick auf Erweiterung hinzufügen.'
-  Hinweis 'Chrome fragt das, weil die Erweiterung Webseiten für dich bedienen soll - genau das brauchen wir für LinkedIn.'
+  Tun 'Ich öffne die Erweiterung in Chrome. Klick auf Zu Chrome hinzufügen.'
+  Tun 'Dann auf Erweiterung hinzufügen.'
   Oeffnen $erweiterungSeite $chrome
   if (-not (Warte-Bis { Erweiterung-Da })) { Abbruch 'Die ChatGPT-Erweiterung fehlt in Chrome.'; return }
-  Gut 'Die Erweiterung ist in Chrome installiert.'
+  Gut 'Die Erweiterung ist da.'
 }
 
 # ---- 4. Computer Use in der ChatGPT-App ----
-Titel 4 'Computer Use in der ChatGPT-App einschalten'
-Warum 'Erst damit darf ChatGPT dein Chrome steuern. Ohne Computer Use kann es nur chatten, aber nichts anklicken.'
-if (Finde-Codex) { Gut 'Computer Use ist eingeschaltet.' }
+Titel 4 'Computer Use einschalten'
+Warum 'Erst damit darf ChatGPT dein Chrome bedienen.'
+if (Finde-Codex) { Gut 'Computer Use ist an.' }
 else {
-  Tun 'Öffne die ChatGPT-App und wechsle dort zu Codex.'
-  Tun 'Klick auf Plugins und dann auf Computer Use.'
-  Tun 'Klick auf Installieren (Install plugin) - oder auf Aktivieren (Enable), falls das dort steht.'
-  Tun 'Schalte die Schalter dort ein und klick auf Jetzt ausprobieren (Try now).'
-  Tun 'Zur Kontrolle: In der App unter Einstellungen > Computer Use steht bei Google Chrome Verwalten (Manage).'
-  Hinweis 'Fragt die App dabei nach einer Erlaubnis, klick auf Erlauben - genau darum geht es in diesem Schritt.'
+  Tun 'In der ChatGPT-App zu Codex wechseln.'
+  Tun 'Plugins > Computer Use > Installieren klicken. Die Schalter dort einschalten.'
+  Tun 'Fragt die App nach einer Erlaubnis: Erlauben klicken.'
   if (-not (Warte-Bis { [bool](Finde-Codex) })) { Abbruch 'Computer Use ist in der ChatGPT-App noch nicht eingeschaltet.'; return }
-  Gut 'Computer Use ist eingeschaltet.'
+  Gut 'Computer Use ist an.'
 }
 $node = Finde-Node
 if (-not $node) {
@@ -209,7 +211,7 @@ if (-not $node) {
 
 # ---- 5. Recherche-Dienst einrichten ----
 Titel 5 'Recherche-Dienst einrichten'
-Warum 'Der Dienst ist ein kleines Programm ohne Fenster. Er wartet, bis du im CRM auf Recherche starten drückst, und startet dann ChatGPT für dich.'
+Warum 'Ein kleines Programm ohne Fenster. Es startet ChatGPT, wenn du im CRM auf Recherche starten klickst.'
 try {
   [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
   New-Item -ItemType Directory -Force -Path $basis, (Join-Path $basis 'arbeitsordner'), $logs, $autostartOrdner | Out-Null
@@ -225,8 +227,7 @@ try {
 
   ConvertTo-SecureString -String $Schluessel -AsPlainText -Force | ConvertFrom-SecureString |
     Set-Content -LiteralPath (Join-Path $basis 'schluessel.dpapi') -Encoding Ascii
-  Gut 'Deinen persönlichen Schlüssel verschlüsselt gespeichert.'
-  Warum 'Damit nur dieser Computer in deinem Namen im CRM arbeiten darf. Gib den Befehl deshalb nicht weiter.'
+  Gut 'Dein Schlüssel ist sicher gespeichert.'
 
   # Wächter: sucht Node bei jedem Start neu (App-Updates ändern den Pfad) und startet den Dienst nach 30 s wieder
   $waechter = @'
@@ -281,8 +282,7 @@ sh.Run "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Windo
     $cmd = '@start "" /min powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "%LOCALAPPDATA%\steinerundco-recherche\start.ps1"'
     [IO.File]::WriteAllText($eintrag, $cmd, [Text.Encoding]::ASCII)
   }
-  Gut 'In den Autostart eingetragen.'
-  Warum 'Damit der Dienst nach jedem Neustart von allein läuft. Du siehst davon kein Fenster.'
+  Gut 'Startet ab jetzt von allein - auch nach einem Neustart.'
 
   Stoppen
   Start-Sleep -Seconds 1
@@ -296,7 +296,7 @@ sh.Run "powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Windo
 }
 
 # Erfolg erst melden, wenn der Dienst das CRM erreicht hat (Schlüssel, Verbindung) – sonst die neuen Protokollzeilen zeigen
-Hinweis 'Ich teste jetzt die Verbindung zum CRM. Das dauert bis zu 45 Sekunden ...'
+Hinweis 'Ich teste die Verbindung zum CRM - einen Moment ...'
 $neu = @()
 for ($i = 0; $i -lt 90; $i++) {
   Start-Sleep -Milliseconds 500
@@ -304,7 +304,7 @@ for ($i = 0; $i -lt 90; $i++) {
   if ($neu -match 'Verbunden mit dem CRM') { break }
 }
 if ($neu -match 'Verbunden mit dem CRM') {
-  Gut 'Der Recherche-Dienst läuft und ist mit dem CRM verbunden.'
+  Gut 'Mit dem CRM verbunden.'
 } else {
   Abbruch 'Der Recherche-Dienst hat das CRM nicht erreicht.'
   if ($neu.Count) { $neu | Select-Object -Last 15 | ForEach-Object { Hinweis $_ } } else { Hinweis '(keine Protokollzeilen)' }
@@ -313,22 +313,20 @@ if ($neu -match 'Verbunden mit dem CRM') {
 
 # ---- 6. LinkedIn einmal erlauben ----
 Titel 6 'LinkedIn einmal erlauben'
-Warum 'ChatGPT fragt bei jeder neuen Webseite einmal nach, ob es sie benutzen darf. Später arbeitet es im Hintergrund und kann dich nicht fragen - deshalb erlaubst du LinkedIn jetzt einmal vorab.'
+Warum 'ChatGPT fragt bei neuen Seiten einmal nach. Später arbeitet es ohne dich - darum jetzt einmal erlauben.'
 if (LinkedIn-Erlaubt) { Gut 'LinkedIn ist schon erlaubt.' }
 else {
-  Tun 'In der ChatGPT-App bei Codex einen neuen Chat öffnen.'
-  Tun 'Dort eintippen:  @Chrome öffne https://www.linkedin.com/feed/  und Enter drücken.'
-  Tun 'Fragt ChatGPT, ob es linkedin.com benutzen darf: auf Für diese Seite erlauben klicken (Allow for this site).'
-  Hinweis 'Bist du in Chrome noch nicht bei LinkedIn angemeldet, melde dich jetzt dort an.'
-  [void](Read-Host '  Wenn LinkedIn in Chrome aufgegangen ist und du es erlaubt hast, drück hier Enter')
+  $kopiert = $false
+  try { Set-Clipboard -Value '@Chrome öffne https://www.linkedin.com/feed/'; $kopiert = $true } catch {}
+  if ($kopiert) { Tun 'Ich habe dir einen Text kopiert. In der ChatGPT-App bei Codex einen neuen Chat öffnen, Strg + V und Enter.' }
+  else { Tun 'In der ChatGPT-App bei Codex einen neuen Chat öffnen und eintippen: @Chrome öffne https://www.linkedin.com/feed/' }
+  Tun 'Fragt ChatGPT nach linkedin.com: Für diese Seite erlauben klicken.'
+  [void](Read-Host '  Wenn LinkedIn in Chrome aufgegangen ist, drück hier Enter')
 }
 
 Write-Host ''
-Write-Host 'Alles fertig! Du kannst dieses Fenster jetzt schließen.' -ForegroundColor Green
-Write-Host 'Im CRM steht jetzt: Recherche-Dienst verbunden.'
+Write-Host '  Alles fertig! Du kannst dieses Fenster jetzt schließen.  ' -ForegroundColor White -BackgroundColor DarkGreen
 Write-Host ''
-Write-Host 'So geht es weiter:'
-Hinweis '1. Im CRM links auf den blauen Knopf Recherche starten drücken.'
-Hinweis '2. ChatGPT sucht in deinem Chrome passende Leute. Lass Chrome offen und den Computer an - du kannst zuschauen.'
-Hinweis '3. Bevor jemand angefragt wird, steht im CRM Freigabe nötig mit der Liste. Erst wenn du Freigeben klickst, gehen die Anfragen raus.'
-Warum 'Die Anfragen gehen in deinem Namen raus - deshalb entscheidest du, wer angefragt wird.'
+Tun 'Im CRM links auf den blauen Knopf Recherche starten klicken.'
+Tun 'Steht dort Freigabe nötig: Liste ansehen und Freigeben klicken.'
+Warum 'Die Anfragen gehen in deinem Namen raus - deshalb entscheidest du.'
