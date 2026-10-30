@@ -251,18 +251,30 @@ describe('RechercheSeite', () => {
     expect(m.ersatz).toHaveBeenCalledWith(false)
   })
 
-  it('Einrichten für Windows: PowerShell-Befehl mit dem neuen Schlüssel', () => {
+  it('Einrichten für Windows: geführte Schritte mit „Warum?“, PowerShell-Befehl mit dem neuen Schlüssel', () => {
     const k = `rd_${'b'.repeat(64)}`
     m.einrichten.mockImplementation((_: unknown, o: { onSuccess: (k: string) => void }) => o.onSuccess(k))
     rendern()
     fireEvent.click(screen.getByRole('button', { name: 'Weiteren Rechner einrichten' }))
     fireEvent.click(screen.getByRole('button', { name: 'Windows' }))
-    expect(screen.getByRole('list', { name: 'Schritte' })).toHaveTextContent('Computer Use')
-    fireEvent.click(screen.getByRole('button', { name: 'Einrichtungsbefehl erzeugen' }))
-    const befehl = document.querySelector('[data-befehl]')
-    expect(befehl).toHaveTextContent(`/recherche-dienst/einrichten.ps1))) ${k}`)
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveTextContent('Schritt 1 von 5: Worum es geht')
+    expect(dialog).toHaveTextContent('Warum?')
+    fireEvent.click(screen.getByRole('button', { name: 'Los geht’s' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Befehl erzeugen und kopieren' }))
+    expect(document.querySelector('[data-befehl]')).toHaveTextContent(`/recherche-dienst/einrichten.ps1))) ${k}`)
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
+    expect(dialog).toHaveTextContent('PowerShell öffnen und einfügen')
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
+    expect(dialog).toHaveTextContent('Computer Use')
+    fireEvent.click(screen.getByRole('button', { name: 'Weiter' }))
+    expect(dialog).toHaveTextContent('Recherche-Dienst verbunden – alles bereit.')
+    // zurück zum Anfang, Mac zeigt denselben Schlüssel als Terminal-Befehl
+    for (let i = 0; i < 4; i++) fireEvent.click(screen.getByRole('button', { name: 'Zurück' }))
     fireEvent.click(screen.getByRole('button', { name: 'Mac' }))
-    expect(befehl).toHaveTextContent(`/recherche-dienst/einrichten.sh | bash -s -- ${k}`)
+    expect(document.querySelector('[data-befehl]')).toHaveTextContent(
+      `/recherche-dienst/einrichten.sh | bash -s -- ${k}`,
+    )
   })
 
   it('LinkedIn-Einschränkung melden hält den Lauf mit Wortlaut an', () => {

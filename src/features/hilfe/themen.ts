@@ -406,7 +406,7 @@ export const THEMEN: readonly Thema[] = [
         art: 'schritte',
         punkte: [
           'Mac: ChatGPT-App für Mac installieren und anmelden, in der App bei Codex das Plugin „Chrome“ einschalten und in Chrome die Erweiterung „ChatGPT for Chrome“ installieren.',
-          'Windows: ChatGPT-App aus dem Microsoft Store installieren und anmelden, in der App unter Einstellungen → Computer Use „Chrome“ wählen und in Chrome die Erweiterung „ChatGPT“ installieren.',
+          'Windows: Auf [Auftrag](/auftrag) „Recherche-Dienst einrichten“ → „Windows“ wählen. Die Anleitung führt Schritt für Schritt durch alles und sagt bei jedem Schritt, warum er nötig ist; das Fenster in PowerShell öffnet dir ChatGPT-App, Chrome-Erweiterung und Computer Use der Reihe nach.',
           'In Codex einmal „Öffne https://www.linkedin.com/feed/ in Chrome“ schreiben und LinkedIn dauerhaft erlauben.',
           'Auf [Auftrag](/auftrag) „Recherche-Dienst einrichten“ wählen (Mac oder Windows), den Befehl erzeugen, im Programm Terminal (Mac) bzw. in Windows PowerShell einfügen und Enter drücken. Danach steht dort „Recherche-Dienst verbunden“.',
         ],
