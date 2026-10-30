@@ -8,9 +8,11 @@ import {
   dienstLage,
   DIENST_VERBUNDEN_S,
   type DienstLage,
+  einrichtungsBefehl,
   formularFehler,
   gesendetErlaubt,
   LEERES_FORMULAR,
+  systemVon,
   verbleibend,
 } from './logik'
 import { agentAuftrag, ALLE_ABSCHNITTE, FREIGABE_PRAEFIX, kontrolleFaellig, startAnweisung } from './regeln'
@@ -204,6 +206,18 @@ describe('Agent-Zustand', () => {
         starten: null,
       },
     )
+  })
+
+  it('Einrichtungsbefehl je Betriebssystem, Vorschlag aus dem Browser', () => {
+    const k = `rd_${'a'.repeat(64)}`
+    expect(einrichtungsBefehl(k, 'https://crm.x')).toBe(
+      `curl -fsSL https://crm.x/recherche-dienst/einrichten.sh | bash -s -- ${k}`,
+    )
+    expect(einrichtungsBefehl(k, 'https://crm.x', 'windows')).toBe(
+      `& ([scriptblock]::Create((irm https://crm.x/recherche-dienst/einrichten.ps1))) ${k}`,
+    )
+    expect(systemVon('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130')).toBe('windows')
+    expect(systemVon('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15')).toBe('mac')
   })
 
   it('Dienst-Lage: verbunden bei Meldung in der letzten Minute', () => {

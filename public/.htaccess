@@ -5,6 +5,8 @@ AddDefaultCharset utf-8
 
 AddType application/manifest+json .webmanifest
 AddType font/woff2 .woff2
+# Einrichtungsskript des Recherche-Diensts für Windows: als Text (UTF-8), damit PowerShell es per irm lesen kann
+AddType text/plain .ps1
 
 # ---------- SPA-Fallback: alles, was keine Datei/kein Ordner ist, bekommt index.html
 <IfModule mod_rewrite.c>

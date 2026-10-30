@@ -1,15 +1,16 @@
-// Recherche-Dienst (29.10.2026): Lage des Diensts auf den Macs einer Person und die Einrichtung mit persönlichem Dienst-Schlüssel
-// (crm.recherche_dienst_einrichten, Migration 19). Der erzeugte Befehl lädt public/recherche-dienst/einrichten.sh – so richtet
-// jede Person den Dienst selbst ein, ohne Repository und ohne Entwicklerzugang. Meldet ein Dienst ein angemeldetes Claude Code
-// (Migration 20), steht darunter der Schalter „Bei ChatGPT-Limit mit Claude weitermachen“.
+// Recherche-Dienst (29.10.2026): Lage des Diensts auf den Rechnern einer Person und die Einrichtung mit persönlichem Dienst-Schlüssel
+// (crm.recherche_dienst_einrichten, Migration 19). Der erzeugte Befehl lädt public/recherche-dienst/einrichten.sh (Mac) bzw.
+// einrichten.ps1 (Windows, 30.10.2026) – so richtet jede Person den Dienst selbst ein, ohne Repository und ohne
+// Entwicklerzugang. Meldet ein Dienst ein angemeldetes Claude Code (Migration 20), steht darunter der Schalter „Bei
+// ChatGPT-Limit mit Claude weitermachen“.
 import { Copy } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from '@/components/toast'
-import { Button, cn, Dialog, Switch } from '@/components/ui'
+import { Button, cn, Dialog, Segment, type SegmentOption, Switch } from '@/components/ui'
 import { useRechercheClaudeErsatz, useRechercheDienste, useRechercheDienstEinrichten } from '@/data/recherche'
 import { fmtDatumZeit } from '@/lib/format'
 import { kopieren } from '@/lib/zwischenablage'
-import { dienstLage, einrichtungsBefehl } from './logik'
+import { dienstLage, einrichtungsBefehl, type System, systemVon } from './logik'
 
 const PUNKT = { verbunden: 'bg-done', getrennt: 'bg-overdue', keiner: 'bg-deco' } as const
 
@@ -34,7 +35,7 @@ export function DienstZeile({ memberId, fremd = false }: { memberId: string | nu
       <span>{text}</span>
       {!fremd ? (
         <Button variante="quiet" onClick={() => setOffen(true)}>
-          {lage === 'verbunden' ? 'Weiteren Mac einrichten' : 'Recherche-Dienst einrichten'}
+          {lage === 'verbunden' ? 'Weiteren Rechner einrichten' : 'Recherche-Dienst einrichten'}
         </Button>
       ) : null}
       {!fremd ? <DienstEinrichten offen={offen} onOpenChange={setOffen} /> : null}
@@ -53,16 +54,44 @@ export function DienstZeile({ memberId, fremd = false }: { memberId: string | nu
   )
 }
 
-/** Schritte und Einrichtungsbefehl – der Schlüssel entsteht erst auf Knopfdruck und erscheint nur hier. */
+const SCHRITTE: Record<System, readonly string[]> = {
+  mac: [
+    'ChatGPT-App für Mac installieren und dort anmelden.',
+    'In der ChatGPT-App bei Codex das Plugin „Chrome“ einschalten und in Chrome die Erweiterung „ChatGPT for Chrome“ installieren.',
+    'In Codex einmal schreiben: „Öffne https://www.linkedin.com/feed/ in Chrome“ – und LinkedIn dauerhaft erlauben.',
+    'Befehl erzeugen, im Programm Terminal einfügen und Enter drücken.',
+  ],
+  windows: [
+    'ChatGPT-App für Windows aus dem Microsoft Store installieren und dort anmelden.',
+    'In der App unter Einstellungen → Computer Use „Chrome“ wählen und in Chrome die Erweiterung „ChatGPT“ installieren.',
+    'In einem Codex-Chat einmal schreiben: „@Chrome öffne https://www.linkedin.com/feed/“ – und linkedin.com für diese Seite erlauben.',
+    'Befehl erzeugen, in Windows PowerShell einfügen (Start → „PowerShell“) und Enter drücken. Kein Admin nötig.',
+  ],
+}
+
+const SYSTEME: SegmentOption<System>[] = [
+  { key: 'mac', label: 'Mac' },
+  { key: 'windows', label: 'Windows' },
+]
+
+/** Schritte und Einrichtungsbefehl für Mac oder Windows – der Schlüssel entsteht erst auf Knopfdruck und erscheint nur hier. */
 export function DienstEinrichten({ offen, onOpenChange }: { offen: boolean; onOpenChange: (o: boolean) => void }) {
   const einrichten = useRechercheDienstEinrichten()
-  const [befehl, setBefehl] = useState<string | null>(null)
+  const [system, setSystem] = useState<System>(() => systemVon(navigator.userAgent))
+  const [schluessel, setSchluessel] = useState<string | null>(null)
+  const befehl = schluessel ? einrichtungsBefehl(schluessel, window.location.origin, system) : null
   const umschalten = (o: boolean) => {
     onOpenChange(o)
-    if (!o) setBefehl(null)
+    if (!o) setSchluessel(null)
   }
-  const kopierenUndMelden = (t: string) =>
-    void kopieren(t).then((r) => toast(r === 'ok' ? 'Befehl kopiert – im Terminal einfügen.' : 'Text markiert – ⌘C'))
+  const kopierenUndMelden = (t: string, s: System) =>
+    void kopieren(t).then((r) =>
+      toast(
+        r === 'ok'
+          ? `Befehl kopiert – ${s === 'windows' ? 'in Windows PowerShell' : 'im Terminal'} einfügen.`
+          : `Text markiert – ${s === 'windows' ? 'Strg+C' : '⌘C'}`,
+      ),
+    )
 
   return (
     <Dialog
@@ -70,25 +99,21 @@ export function DienstEinrichten({ offen, onOpenChange }: { offen: boolean; onOp
       onOpenChange={umschalten}
       className="w-[min(580px,calc(100vw-32px))]"
       titel="Recherche-Dienst einrichten"
-      text="Einmal je Mac. Danach startet „Recherche starten“ ChatGPT von selbst in deinem Chrome."
+      text="Einmal je Rechner. Danach startet „Recherche starten“ ChatGPT von selbst in deinem Chrome."
       kinder={
         <>
+          <Segment optionen={SYSTEME} wert={system} onChange={setSystem} ariaLabel="Betriebssystem" klein />
           <ol className="text-body text-ink-2 grid list-decimal gap-1.5 pl-5" aria-label="Schritte">
-            <li>ChatGPT-App für Mac installieren und dort anmelden.</li>
-            <li>
-              In der ChatGPT-App bei Codex das Plugin „Chrome“ einschalten und in Chrome die Erweiterung „ChatGPT for
-              Chrome“ installieren.
-            </li>
-            <li>
-              In Codex einmal schreiben: „Öffne https://www.linkedin.com/feed/ in Chrome“ – und LinkedIn dauerhaft
-              erlauben.
-            </li>
-            <li>Befehl erzeugen, im Programm Terminal einfügen und Enter drücken.</li>
+            {SCHRITTE[system].map((t) => (
+              <li key={t}>{t}</li>
+            ))}
           </ol>
-          <p className="text-small text-ink-3">
-            Ist auf dem Mac auch die Claude-App angemeldet, macht Claude weiter, sobald ChatGPT sein Nutzungslimit
-            erreicht.
-          </p>
+          {system === 'mac' ? (
+            <p className="text-small text-ink-3">
+              Ist auf dem Mac auch die Claude-App angemeldet, macht Claude weiter, sobald ChatGPT sein Nutzungslimit
+              erreicht.
+            </p>
+          ) : null}
           {befehl ? (
             <div className="grid gap-1.5">
               <pre
@@ -99,9 +124,9 @@ export function DienstEinrichten({ offen, onOpenChange }: { offen: boolean; onOp
               </pre>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-small text-ink-3">
-                  Enthält deinen persönlichen Schlüssel – nicht weitergeben, gilt für einen Mac.
+                  Enthält deinen persönlichen Schlüssel – nicht weitergeben, gilt für einen Rechner.
                 </span>
-                <Button variante="quiet" icon={Copy} onClick={() => kopierenUndMelden(befehl)}>
+                <Button variante="quiet" icon={Copy} onClick={() => kopierenUndMelden(befehl, system)}>
                   Kopieren
                 </Button>
               </div>
@@ -118,9 +143,8 @@ export function DienstEinrichten({ offen, onOpenChange }: { offen: boolean; onOp
               onClick: () =>
                 einrichten.mutate(undefined, {
                   onSuccess: (k) => {
-                    const b = einrichtungsBefehl(k, window.location.origin)
-                    setBefehl(b)
-                    kopierenUndMelden(b)
+                    setSchluessel(k)
+                    kopierenUndMelden(einrichtungsBefehl(k, window.location.origin, system), system)
                   },
                 }),
             }

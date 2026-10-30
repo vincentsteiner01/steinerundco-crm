@@ -119,9 +119,19 @@ export const DIENST_VERBUNDEN_S = 60
 
 export type DienstLage = 'verbunden' | 'getrennt' | 'keiner'
 
-/** Befehl fürs Terminal: lädt public/recherche-dienst/einrichten.sh und übergibt den persönlichen Dienst-Schlüssel. */
-export const einrichtungsBefehl = (schluessel: string, origin: string) =>
-  `curl -fsSL ${origin}/recherche-dienst/einrichten.sh | bash -s -- ${schluessel}`
+export type System = 'mac' | 'windows'
+
+/** Betriebssystem des Browsers – der Einrichtungsdialog schlägt das passende vor (Mike arbeitet mit Windows). */
+export const systemVon = (userAgent: string): System => (/Windows/i.test(userAgent) ? 'windows' : 'mac')
+
+/**
+ * Befehl fürs Terminal (Mac) bzw. für Windows PowerShell: lädt public/recherche-dienst/einrichten.sh bzw. einrichten.ps1 und
+ * übergibt den persönlichen Dienst-Schlüssel. Unter Windows als Skriptblock, damit das Skript Parameter bekommt.
+ */
+export const einrichtungsBefehl = (schluessel: string, origin: string, system: System = 'mac') =>
+  system === 'windows'
+    ? `& ([scriptblock]::Create((irm ${origin}/recherche-dienst/einrichten.ps1))) ${schluessel}`
+    : `curl -fsSL ${origin}/recherche-dienst/einrichten.sh | bash -s -- ${schluessel}`
 
 /** Lage der Recherche-Dienste einer Person – `undefined`, solange sie lädt. */
 export function dienstLage(
@@ -160,8 +170,8 @@ type AgentFelder = Pick<
 const sekundenSeit = (t: string | null, jetzt: number) => (t ? (jetzt - new Date(t).getTime()) / 1000 : Infinity)
 
 const KEIN_DIENST: Record<DienstLage, string> = {
-  keiner: 'Auf deinem Mac ist noch kein Recherche-Dienst eingerichtet – einmalig „Recherche-Dienst einrichten“.',
-  getrennt: 'Der Recherche-Dienst auf deinem Mac meldet sich nicht. Ist der Mac wach und angemeldet?',
+  keiner: 'Auf deinem Rechner ist noch kein Recherche-Dienst eingerichtet – einmalig „Recherche-Dienst einrichten“.',
+  getrennt: 'Der Recherche-Dienst auf deinem Rechner meldet sich nicht. Ist der Rechner wach und bist du angemeldet?',
   verbunden: 'Der Recherche-Dienst hat den Lauf nicht übernommen. Läuft gerade ein anderer Agent?',
 }
 
@@ -199,7 +209,7 @@ export function agentZustand(l: AgentFelder, jetzt = Date.now(), dienst?: Dienst
         ? {
             art: 'startet',
             titel: fortsetzen ? 'Antwort übermittelt – Agent macht weiter …' : 'Agent startet …',
-            text: `Der Recherche-Dienst auf deinem Mac startet ${name} gleich in deinem Chrome.`,
+            text: `Der Recherche-Dienst auf deinem Rechner startet ${name} gleich in deinem Chrome.`,
             starten: null,
           }
         : {
@@ -236,7 +246,7 @@ export function agentZustand(l: AgentFelder, jetzt = Date.now(), dienst?: Dienst
         : {
             art: 'still',
             titel: 'Agent antwortet nicht',
-            text: `Letztes Lebenszeichen ${l.agent_heartbeat ? `um ${fmtZeit(l.agent_heartbeat)}` : 'unbekannt'}. Schläft der Mac? Sonst neu starten – niemand wird doppelt angefragt.`,
+            text: `Letztes Lebenszeichen ${l.agent_heartbeat ? `um ${fmtZeit(l.agent_heartbeat)}` : 'unbekannt'}. Schläft der Rechner? Sonst neu starten – niemand wird doppelt angefragt.`,
             starten: 'neu',
           }
     case 'beendet':
@@ -257,7 +267,7 @@ export function agentZustand(l: AgentFelder, jetzt = Date.now(), dienst?: Dienst
       return {
         art: 'manuell',
         titel: 'Für diesen Lauf arbeitet noch kein Agent',
-        text: '„Agent starten“ übergibt den Lauf an den Recherche-Dienst auf deinem Mac.',
+        text: '„Agent starten“ übergibt den Lauf an den Recherche-Dienst auf deinem Rechner.',
         starten: 'starten',
       }
   }

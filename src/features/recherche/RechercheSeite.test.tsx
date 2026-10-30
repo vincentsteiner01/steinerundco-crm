@@ -17,6 +17,7 @@ const m = vi.hoisted(() => ({
   agent: vi.fn(),
   antworten: vi.fn(),
   ersatz: vi.fn(),
+  einrichten: vi.fn(),
   dienste: [{ zuletzt_gesehen: new Date().toISOString(), rechner: 'MacBook Pro' }] as unknown[],
 }))
 
@@ -35,7 +36,7 @@ vi.mock('@/data/recherche', () => ({
   useRechercheAgentStarten: () => ({ mutate: m.agent, isPending: false }),
   useRechercheAgentAntworten: () => ({ mutate: m.antworten, isPending: false }),
   useRechercheDienste: () => ({ data: m.dienste }),
-  useRechercheDienstEinrichten: () => ({ mutate: vi.fn(), isPending: false }),
+  useRechercheDienstEinrichten: () => ({ mutate: m.einrichten, isPending: false }),
   useRechercheClaudeErsatz: () => ({ mutate: m.ersatz, isPending: false }),
   useRechercheEintragen: () => ({ mutate: m.eintragen, isPending: false }),
   recherchePruefen: m.pruefen,
@@ -248,6 +249,20 @@ describe('RechercheSeite', () => {
     expect(schalter).toHaveAttribute('aria-checked', 'true')
     fireEvent.click(schalter)
     expect(m.ersatz).toHaveBeenCalledWith(false)
+  })
+
+  it('Einrichten für Windows: PowerShell-Befehl mit dem neuen Schlüssel', () => {
+    const k = `rd_${'b'.repeat(64)}`
+    m.einrichten.mockImplementation((_: unknown, o: { onSuccess: (k: string) => void }) => o.onSuccess(k))
+    rendern()
+    fireEvent.click(screen.getByRole('button', { name: 'Weiteren Rechner einrichten' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Windows' }))
+    expect(screen.getByRole('list', { name: 'Schritte' })).toHaveTextContent('Computer Use')
+    fireEvent.click(screen.getByRole('button', { name: 'Einrichtungsbefehl erzeugen' }))
+    const befehl = document.querySelector('[data-befehl]')
+    expect(befehl).toHaveTextContent(`/recherche-dienst/einrichten.ps1))) ${k}`)
+    fireEvent.click(screen.getByRole('button', { name: 'Mac' }))
+    expect(befehl).toHaveTextContent(`/recherche-dienst/einrichten.sh | bash -s -- ${k}`)
   })
 
   it('LinkedIn-Einschränkung melden hält den Lauf mit Wortlaut an', () => {

@@ -1,4 +1,5 @@
-// Recherche-Dienst (29.10.2026): läuft per launchd auf dem Mac einer Person und macht aus „Recherche starten“ im CRM einen
+// Recherche-Dienst (29.10.2026): läuft per launchd auf dem Mac einer Person – unter Windows (30.10.2026) per Autostart-Eintrag
+// aus einrichten.ps1 – und macht aus „Recherche starten“ im CRM einen
 // arbeitenden ChatGPT-Agenten. Alle 10 s fragt er das CRM nach angeforderten Läufen (agent_status 'wartet' oder 'antwort'),
 // startet Codex aus der ChatGPT-App (codex exec, Chrome-Plugin, CRM-Werkzeuge aus crm-mcp.mjs) mit dem Auftrag des Laufs und
 // meldet das Ergebnis der Runde zurück: „Fertig:“/„Abbruch:“ beenden, alles andere ist eine Frage an die Person (Freigabe im
@@ -6,17 +7,19 @@
 // Claude als Ersatz (30.10.2026, Migration 20): Meldet Codex das Nutzungslimit von ChatGPT und ist der Schalter im CRM an, übernimmt
 // Claude Code der Claude-Desktop-App (Claude in Chrome, dieselben CRM-Werkzeuge) den Lauf mit einer Übergabe – Auftrag, Stand aus
 // lauf_status, zuletzt beantwortete Frage samt Freigabe. Bis das Limit abläuft, starten neue Runden gleich mit Claude.
+// Windows: Codex kommt aus der ChatGPT-App für Windows – den Pfad trägt die App in ihr Computer-Use-Plugin ein (CODEX_CLI_PATH in
+// %USERPROFILE%\.codex\plugins\cache\openai-bundled\unified-computer-use\<version>\.mcp.json) und ändert ihn bei jedem Update.
 // Einrichten: Befehl aus dem CRM (Laufseite → „Recherche-Dienst einrichten“) · Protokolle: ~/Library/Logs/steinerundco-recherche/
+// bzw. %LOCALAPPDATA%\steinerundco-recherche\logs\
 // Umgebung: CODEX_BIN, CLAUDE_BIN (sonst neueste Version der Claude-App), RECHERCHE_EFFORT (high), RECHERCHE_MODELL (Codex-Standard),
 // RECHERCHE_CLAUDE_MODELL (opus), RECHERCHE_PROBE=1 (Funktionstest ohne LinkedIn), RECHERCHE_LIMIT_PROBE=1 (ChatGPT gilt als gesperrt)
 import { execFile, execFileSync, spawn } from 'node:child_process'
-import { createWriteStream, existsSync, mkdirSync, readdirSync } from 'node:fs'
+import { appendFileSync, createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, hostname } from 'node:os'
 import { join } from 'node:path'
-import { BASIS, dienst, LOGS } from './gemeinsam.mjs'
+import { BASIS, dienst, LOGS, WINDOWS } from './gemeinsam.mjs'
 
 const VERSION = '2026-10-30'
-const CODEX = process.env.CODEX_BIN || '/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex'
 const EFFORT = process.env.RECHERCHE_EFFORT || 'high'
 const MODELL = process.env.RECHERCHE_MODELL || ''
 const CLAUDE_MODELL = process.env.RECHERCHE_CLAUDE_MODELL || 'opus'
@@ -28,6 +31,7 @@ const LIMIT = /usage limit|hit your limit|purchase more credits/i
 
 const RECHNER = (() => {
   try {
+    if (WINDOWS) throw new Error('kein scutil')
     return execFileSync('/usr/sbin/scutil', ['--get', 'ComputerName'], { encoding: 'utf8' }).trim().slice(0, 100)
   } catch {
     return hostname()
@@ -36,7 +40,49 @@ const RECHNER = (() => {
   }
 })()
 
-const log = (...t) => console.log(new Date().toISOString(), ...t)
+// Unter Windows läuft der Dienst ohne Fenster – das Protokoll schreibt er selbst (auf dem Mac leitet launchd die Ausgabe um)
+const LOGDATEI = WINDOWS ? join(LOGS, 'dienst.log') : null
+if (LOGDATEI) mkdirSync(LOGS, { recursive: true })
+const log = (...t) => {
+  const zeile = [new Date().toISOString(), ...t].join(' ')
+  console.log(zeile)
+  if (LOGDATEI)
+    try {
+      appendFileSync(LOGDATEI, `${zeile}\n`)
+    } catch {
+      /* Protokoll ist Beiwerk */
+    }
+}
+
+/** Codex: Mac aus der ChatGPT-App (CODEX_BIN aus einrichten.sh), Windows aus dem Computer-Use-Plugin der ChatGPT-App. */
+function codexBin() {
+  if (!WINDOWS) return process.env.CODEX_BIN || '/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex'
+  const ordner = join(
+    process.env.CODEX_HOME || join(homedir(), '.codex'),
+    'plugins',
+    'cache',
+    'openai-bundled',
+    'unified-computer-use',
+  )
+  try {
+    const neueste = readdirSync(ordner)
+      .map((v) => join(ordner, v, '.mcp.json'))
+      .filter((f) => existsSync(f))
+      .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0]
+    const pfad = neueste && JSON.parse(readFileSync(neueste, 'utf8')).mcpServers?.cua_repl?.env?.CODEX_CLI_PATH
+    if (pfad && existsSync(pfad)) return pfad
+  } catch {
+    /* Computer Use in der ChatGPT-App noch nicht eingerichtet */
+  }
+  return process.env.CODEX_BIN || 'codex.exe'
+}
+
+/** Agent samt Unterprozessen beenden – Windows kennt keine Signale, taskkill /T nimmt den ganzen Baum. */
+function beenden(kind, signal = 'SIGTERM') {
+  if (kind.exitCode !== null) return
+  if (WINDOWS && kind.pid) execFile('taskkill', ['/PID', String(kind.pid), '/T', '/F'], { windowsHide: true }, () => {})
+  else kind.kill(signal)
+}
 const kuerzen = (s, n) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
 const toml = (s) => `"${String(s).replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`
 const uhrzeit = (t) => new Date(t).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
@@ -55,6 +101,24 @@ function kern(text) {
 
 /** Mitteilung oben rechts – eine Freigabe soll nicht erst beim nächsten Blick ins CRM auffallen. */
 function mitteilen(text) {
+  if (WINDOWS) {
+    // Windows-Toast über PowerShell (Absender „Windows PowerShell“); der Text kommt per Umgebung, nie in den Befehl
+    const ps = [
+      '[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null',
+      '$x = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastText02)',
+      "$t = $x.GetElementsByTagName('text')",
+      "$t.Item(0).AppendChild($x.CreateTextNode('LinkedIn-Recherche')) > $null",
+      '$t.Item(1).AppendChild($x.CreateTextNode($env:RECHERCHE_MITTEILUNG)) > $null',
+      "[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}\\WindowsPowerShell\\v1.0\\powershell.exe').Show([Windows.UI.Notifications.ToastNotification]::new($x))",
+    ].join('; ')
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', ps],
+      { windowsHide: true, env: { ...process.env, RECHERCHE_MITTEILUNG: text } },
+      () => {},
+    )
+    return
+  }
   execFile(
     '/usr/bin/osascript',
     [
@@ -74,6 +138,10 @@ function mitteilen(text) {
 /** Neuestes Claude Code der Claude-Desktop-App (die Homebrew-Version ist oft zu alt für Claude in Chrome). */
 function claudeBin() {
   if (process.env.CLAUDE_BIN) return process.env.CLAUDE_BIN
+  if (WINDOWS) {
+    const p = join(homedir(), '.local', 'bin', 'claude.exe') // Installationsort von Claude Code unter Windows
+    return existsSync(p) ? p : null
+  }
   const app = join(homedir(), 'Library/Application Support/Claude/claude-code')
   if (!existsSync(app)) return null
   const zahl = (v) => v.split('.').map(Number)
@@ -98,7 +166,7 @@ function claudePruefen() {
   claude.geprueft = Date.now()
   const bin = claudeBin()
   if (!bin) return Object.assign(claude, { bin: null, version: '', bekannt: true })
-  execFile(bin, ['auth', 'status', '--json'], { timeout: 30_000 }, (_fehler, aus) => {
+  execFile(bin, ['auth', 'status', '--json'], { timeout: 30_000, windowsHide: true }, (_fehler, aus) => {
     let an = false
     try {
       an = JSON.parse(aus).loggedIn === true
@@ -203,10 +271,27 @@ async function wechseln(runde, grund) {
   return true
 }
 
+// Codex reicht MCP-Servern nur wenige Umgebungsvariablen durch – unter Windows brauchen Node und PowerShell (DPAPI) mehr
+const WINDOWS_UMGEBUNG = [
+  'SystemRoot',
+  'windir',
+  'USERPROFILE',
+  'LOCALAPPDATA',
+  'APPDATA',
+  'TEMP',
+  'TMP',
+  'PATH',
+  'PATHEXT',
+  'ComSpec',
+]
+
 function codexArgs(id, sitzung) {
+  const umgebung = WINDOWS
+    ? `env={RECHERCHE_LAUF=${toml(id)}, RECHERCHE_BASIS=${toml(BASIS)}}, env_vars=[${WINDOWS_UMGEBUNG.map(toml).join(', ')}]`
+    : `env={RECHERCHE_LAUF=${toml(id)}}`
   const mcp =
     `mcp_servers.crm={command=${toml(process.execPath)}, args=[${toml(join(BASIS, 'crm-mcp.mjs'))}], ` +
-    `env={RECHERCHE_LAUF=${toml(id)}}, default_tools_approval_mode="approve"}`
+    `${umgebung}, default_tools_approval_mode="approve"}`
   const gemeinsam = [
     '--json',
     '--skip-git-repo-check',
@@ -260,11 +345,12 @@ function agentStarten(runde, anbieter, sitzung, eingabe) {
   )
   const ausgabe = createWriteStream(datei, { flags: 'a' })
   const kind = spawn(
-    anbieter === 'claude' ? claude.bin : CODEX,
+    anbieter === 'claude' ? claude.bin : codexBin(),
     (anbieter === 'claude' ? claudeArgs : codexArgs)(id, sitzung),
     {
       cwd: ARBEIT,
       stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
       env: anbieter === 'claude' ? { ...process.env, ENABLE_CLAUDEAI_MCP_SERVERS: 'false' } : process.env,
     },
   )
@@ -315,7 +401,10 @@ function agentStarten(runde, anbieter, sitzung, eingabe) {
     zeilen.forEach(zeileLesen)
   })
   kind.stderr.on('data', (b) => ausgabe.write(b))
-  kind.on('error', (e) => log('Agent-Fehler', id, e.message))
+  kind.on('error', (e) => {
+    log('Agent-Fehler', id, e.message)
+    a.fehler ||= `${anbieter === 'claude' ? 'Claude' : 'Codex'} startet nicht: ${e.message}` // „close“ folgt und meldet es
+  })
   kind.on('close', (code, signal) => {
     zeileLesen(a.rest)
     void beendet(id, a, code, signal).finally(() => ausgabe.end())
@@ -385,14 +474,14 @@ function stoppen(id, status) {
   // Pause/Abbruch durch die Person sofort; bei Ziel erreicht oder gemeldeter Einschränkung darf der Agent seinen Bericht schreiben
   const frist = status === 'pausiert' || status === 'abgebrochen' ? 0 : 30_000
   setTimeout(() => {
-    if (a.kind.exitCode !== null) return
-    a.kind.kill('SIGTERM')
-    setTimeout(() => a.kind.exitCode === null && a.kind.kill('SIGKILL'), 10_000)
+    beenden(a.kind)
+    setTimeout(() => beenden(a.kind, 'SIGKILL'), 10_000)
   }, frist)
   log(`Lauf ${id} ist ${status} → Agent wird gestoppt`)
 }
 
 let takt = 0
+let verbunden = false
 async function durchgang() {
   takt++
   claudePruefen()
@@ -402,6 +491,10 @@ async function durchgang() {
     version: VERSION,
     ...(claude.bekannt ? { claude: claude.version } : {}),
   })
+  if (!verbunden) {
+    verbunden = true
+    log('Verbunden mit dem CRM') // einrichten.ps1 wartet auf diese Zeile
+  }
   for (const l of laeufe) {
     if (agenten.has(l.id)) {
       if (l.status !== 'laeuft') stoppen(l.id, l.status)
@@ -422,7 +515,7 @@ async function durchgang() {
 
 async function main() {
   log(
-    `Recherche-Dienst ${VERSION} bereit auf ${RECHNER}${PROBE ? ' (Probe)' : ''} · Codex: ${CODEX} · Claude: ${claudeBin() ?? '–'}`,
+    `Recherche-Dienst ${VERSION} bereit auf ${RECHNER}${PROBE ? ' (Probe)' : ''} · Codex: ${codexBin()} · Claude: ${claudeBin() ?? '–'}`,
   )
   await dienst('aufraeumen', {
     rechner: RECHNER,
@@ -430,19 +523,24 @@ async function main() {
   }).catch((e) => log('Aufräumen fehlgeschlagen:', e.message))
 
   let ende = false
-  const beenden = async (sig) => {
+  const herunterfahren = async (sig) => {
     if (ende) return
     ende = true
     log(`${sig} – Agenten werden gestoppt`)
     for (const a of agenten.values()) {
       a.stoppGrund = 'Recherche-Dienst gestoppt – „Agent neu starten“, sobald er wieder läuft.'
-      a.kind.kill('SIGTERM')
+      beenden(a.kind)
     }
     await new Promise((r) => setTimeout(r, 4000))
     process.exit(0)
   }
-  process.on('SIGTERM', () => void beenden('SIGTERM'))
-  process.on('SIGINT', () => void beenden('SIGINT'))
+  process.on('SIGTERM', () => void herunterfahren('SIGTERM'))
+  process.on('SIGINT', () => void herunterfahren('SIGINT'))
+  // Ohne Fenster sähe niemand einen Absturz – ins Protokoll, dann neu starten lassen (start.ps1 bzw. launchd)
+  process.on('uncaughtException', (e) => {
+    log('Absturz:', e.stack ?? e.message)
+    process.exit(1)
+  })
 
   for (;;) {
     try {

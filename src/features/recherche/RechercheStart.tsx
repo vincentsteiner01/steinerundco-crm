@@ -1,5 +1,5 @@
 // Startkarte auf /auftrag (29.10.2026): Play-Button für den LinkedIn-Recherchelauf (derselbe Start wie der blaue Knopf in der
-// Seitenleiste). Der Start fordert zugleich den ChatGPT-Agenten an, den der Recherche-Dienst auf dem Mac startet (Migrationen
+// Seitenleiste). Der Start fordert zugleich den ChatGPT-Agenten an, den der Recherche-Dienst auf dem Rechner startet (Migrationen
 // 18/19). Läuft schon ein Lauf, öffnet der Knopf diesen statt einen zweiten anzulegen.
 import { Play } from 'lucide-react'
 import { Link } from 'react-router'
@@ -28,7 +28,7 @@ export function RechercheStart({ me }: { me: string | null }) {
             ChatGPT sucht passende Energie- und Solarbetriebe, prüft Firma und Rolle, gleicht jedes Profil mit dem CRM
             ab und vernetzt dich mit bis zu 30 Personen – ohne Nachricht und erst nach deiner Freigabe. Jede Person
             landet als Lead im CRM, die KPIs zählen mit. Es startet von selbst in deinem Chrome, sobald der
-            Recherche-Dienst auf deinem Mac eingerichtet ist.
+            Recherche-Dienst auf deinem Rechner (Mac oder Windows) eingerichtet ist.
           </p>
         </div>
         <Button variante="primary" icon={Play} busy={busy} onClick={los}>

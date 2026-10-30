@@ -394,21 +394,21 @@ export const THEMEN: readonly Thema[] = [
     titel: 'LinkedIn-Recherche mit ChatGPT',
     kurz: 'Der blaue Knopf unter der Suche: ChatGPT findet passende Energie- und Solarbetriebe und vernetzt dich nach deiner Freigabe – alles landet im CRM.',
     stichworte:
-      'play recherche starten agent chatgpt codex claude limit nutzungslimit ersatz vernetzen leads finden icp dienst einrichten freigabe automatisch terminal mac',
+      'play recherche starten agent chatgpt codex claude limit nutzungslimit ersatz vernetzen leads finden icp dienst einrichten freigabe automatisch terminal mac windows powershell computer use',
     tour: 'recherche',
     bloecke: [
       {
         art: 'absatz',
-        text: 'Ein Klick auf den blauen Knopf unter der Suche startet einen Recherchelauf. ChatGPT arbeitet in deinem Chrome auf dem Mac: Es sucht über eure vernetzten Kontakte passende Personen in Energie- und Solarbetrieben, prüft Firma und Rolle nach dem ICP, gleicht jedes Profil mit dem CRM ab und vernetzt dich mit bis zu 30 Personen – ohne Nachricht.',
+        text: 'Ein Klick auf den blauen Knopf unter der Suche startet einen Recherchelauf. ChatGPT arbeitet in deinem Chrome auf deinem Rechner (Mac oder Windows): Es sucht über eure vernetzten Kontakte passende Personen in Energie- und Solarbetrieben, prüft Firma und Rolle nach dem ICP, gleicht jedes Profil mit dem CRM ab und vernetzt dich mit bis zu 30 Personen – ohne Nachricht.',
       },
-      { art: 'zwischentitel', text: 'Einmal einrichten, je Mac' },
+      { art: 'zwischentitel', text: 'Einmal einrichten, je Rechner' },
       {
         art: 'schritte',
         punkte: [
-          'ChatGPT-App für Mac installieren und anmelden.',
-          'In der ChatGPT-App bei Codex das Plugin „Chrome“ einschalten und in Chrome die Erweiterung „ChatGPT for Chrome“ installieren.',
+          'Mac: ChatGPT-App für Mac installieren und anmelden, in der App bei Codex das Plugin „Chrome“ einschalten und in Chrome die Erweiterung „ChatGPT for Chrome“ installieren.',
+          'Windows: ChatGPT-App aus dem Microsoft Store installieren und anmelden, in der App unter Einstellungen → Computer Use „Chrome“ wählen und in Chrome die Erweiterung „ChatGPT“ installieren.',
           'In Codex einmal „Öffne https://www.linkedin.com/feed/ in Chrome“ schreiben und LinkedIn dauerhaft erlauben.',
-          'Auf [Auftrag](/auftrag) „Recherche-Dienst einrichten“ wählen, den Befehl erzeugen, im Programm Terminal einfügen und Enter drücken. Danach steht dort „Recherche-Dienst verbunden“.',
+          'Auf [Auftrag](/auftrag) „Recherche-Dienst einrichten“ wählen (Mac oder Windows), den Befehl erzeugen, im Programm Terminal (Mac) bzw. in Windows PowerShell einfügen und Enter drücken. Danach steht dort „Recherche-Dienst verbunden“.',
         ],
       },
       { art: 'zwischentitel', text: 'Während des Laufs' },
@@ -424,7 +424,7 @@ export const THEMEN: readonly Thema[] = [
       },
       {
         art: 'hinweis',
-        text: 'Der Mac muss wach sein, Chrome offen und du bei LinkedIn angemeldet. LinkedIn sieht Automatisierung nicht gern – deshalb kleine Mengen und deine Freigabe vor jedem Vernetzen.',
+        text: 'Der Rechner muss wach sein, Chrome offen und du bei LinkedIn angemeldet. LinkedIn sieht Automatisierung nicht gern – deshalb kleine Mengen und deine Freigabe vor jedem Vernetzen.',
       },
     ],
   },
