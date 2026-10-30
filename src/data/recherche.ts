@@ -1,6 +1,6 @@
 // LinkedIn-Recherchelauf (Migration 17, 29.10.2026): Läufe, geprüfte Profile, Ausgangspunkte aus dem CRM und die RPCs
 // recherche_starten · _pruefen · _eintragen · _kontrolle · _status · _agent_starten · _agent_antworten, dazu die Recherche-Dienste
-// je Mac (Migrationen 18/19). Die Regeln erzwingt die Datenbank; diese Hooks rufen nur auf.
+// je Mac (Migrationen 18/19) samt Schalter „Claude als Ersatz bei ChatGPT-Limit“ (Migration 20). Die Regeln erzwingt die Datenbank; diese Hooks rufen nur auf.
 // Fortschritt per Abfrage alle 4 s, solange ein Lauf aktiv ist (die Seite ist auch für einen zuschauenden Menschen gedacht).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Database } from '@/types/database'
@@ -271,6 +271,18 @@ export function useRechercheDienste(memberId: string | null | undefined, abfrage
           .order('zuletzt_gesehen', { ascending: false, nullsFirst: false }),
       ),
     refetchInterval: abfragen ? 10_000 : false,
+  })
+}
+
+/** Schalter „Bei ChatGPT-Limit mit Claude weitermachen“ – gilt für alle Recherche-Dienste der Person. */
+export function useRechercheClaudeErsatz() {
+  const inval = useInvalidieren()
+  return useMutation({
+    mutationFn: async (an: boolean): Promise<void> => {
+      pruefe(await supabase.rpc('recherche_claude_ersatz', { p_an: an }))
+    },
+    onError: mutationFehler,
+    onSettled: inval,
   })
 }
 

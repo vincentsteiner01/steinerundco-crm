@@ -394,7 +394,7 @@ export const THEMEN: readonly Thema[] = [
     titel: 'LinkedIn-Recherche mit ChatGPT',
     kurz: 'Der blaue Knopf unter der Suche: ChatGPT findet passende Energie- und Solarbetriebe und vernetzt dich nach deiner Freigabe – alles landet im CRM.',
     stichworte:
-      'play recherche starten agent chatgpt codex vernetzen leads finden icp dienst einrichten freigabe automatisch terminal mac',
+      'play recherche starten agent chatgpt codex claude limit nutzungslimit ersatz vernetzen leads finden icp dienst einrichten freigabe automatisch terminal mac',
     tour: 'recherche',
     bloecke: [
       {
@@ -419,6 +419,7 @@ export const THEMEN: readonly Thema[] = [
           'Jede Person wird Lead mit der Quelle des Laufs. Dubletten (CRM, Sperrliste, bestehende Verbindungen, frühere Absagen) erkennt das CRM selbst, die KPIs zählen mit.',
           '„Pausieren“ hält ChatGPT sofort an, „Fortsetzen“ startet es neu – Eingetragenes bleibt, niemand wird doppelt angefragt.',
           'Zeigt LinkedIn eine Warnung oder ein Limit, hält der Lauf an und zeigt den Wortlaut.',
+          'Erreicht ChatGPT sein Nutzungslimit, macht Claude im selben Lauf weiter – mit allem, was schon erledigt und freigegeben ist. Voraussetzung: die Claude-App ist auf dem Mac angemeldet. Der Schalter „Bei ChatGPT-Limit mit Claude weitermachen“ steht unter dem Recherche-Dienst.',
         ],
       },
       {

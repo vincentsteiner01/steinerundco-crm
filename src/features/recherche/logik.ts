@@ -154,6 +154,7 @@ type AgentFelder = Pick<
   | 'agent_rechner'
   | 'agent_meldung'
   | 'agent_frage'
+  | 'agent_anbieter'
 >
 
 const sekundenSeit = (t: string | null, jetzt: number) => (t ? (jetzt - new Date(t).getTime()) / 1000 : Infinity)
@@ -164,8 +165,13 @@ const KEIN_DIENST: Record<DienstLage, string> = {
   verbunden: 'Der Recherche-Dienst hat den Lauf nicht übernommen. Läuft gerade ein anderer Agent?',
 }
 
+/** Claude übernimmt, wenn ChatGPT sein Nutzungslimit erreicht (Migration 20) – sonst arbeitet ChatGPT. */
+export const agentName = (l: Pick<RechercheLauf, 'agent_anbieter'>) =>
+  l.agent_anbieter === 'claude' ? 'Claude' : 'ChatGPT'
+
 /** Was der Agent gerade tut – aus Laufstatus, den Meldungen des Recherche-Diensts und ob ein Dienst verbunden ist. */
 export function agentZustand(l: AgentFelder, jetzt = Date.now(), dienst?: DienstLage): AgentZustand {
+  const name = agentName(l)
   if (l.status === 'pausiert' || l.status === 'fehler')
     return {
       art: 'angehalten',
@@ -193,7 +199,7 @@ export function agentZustand(l: AgentFelder, jetzt = Date.now(), dienst?: Dienst
         ? {
             art: 'startet',
             titel: fortsetzen ? 'Antwort übermittelt – Agent macht weiter …' : 'Agent startet …',
-            text: 'Der Recherche-Dienst auf deinem Mac startet ChatGPT gleich in deinem Chrome.',
+            text: `Der Recherche-Dienst auf deinem Mac startet ${name} gleich in deinem Chrome.`,
             starten: null,
           }
         : {
@@ -218,8 +224,13 @@ export function agentZustand(l: AgentFelder, jetzt = Date.now(), dienst?: Dienst
       return sekundenSeit(l.agent_heartbeat, jetzt) <= AGENT_STILL_S
         ? {
             art: 'arbeitet',
-            titel: l.agent_rechner ? `Agent arbeitet auf ${l.agent_rechner}` : 'Agent arbeitet',
-            text: 'ChatGPT arbeitet in deinem Chrome – du kannst zuschauen. Vor dem Vernetzen fragt es hier nach deiner Freigabe.',
+            titel: `${name} arbeitet${l.agent_rechner ? ` auf ${l.agent_rechner}` : ''}`,
+            text: [
+              name === 'Claude' ? l.agent_meldung : null,
+              `${name} arbeitet in deinem Chrome – du kannst zuschauen. Vor dem Vernetzen fragt es hier nach deiner Freigabe.`,
+            ]
+              .filter(Boolean)
+              .join(' '),
             starten: null,
           }
         : {

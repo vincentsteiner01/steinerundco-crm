@@ -16,6 +16,7 @@ const m = vi.hoisted(() => ({
   kontrolle: vi.fn(),
   agent: vi.fn(),
   antworten: vi.fn(),
+  ersatz: vi.fn(),
   dienste: [{ zuletzt_gesehen: new Date().toISOString(), rechner: 'MacBook Pro' }] as unknown[],
 }))
 
@@ -35,6 +36,7 @@ vi.mock('@/data/recherche', () => ({
   useRechercheAgentAntworten: () => ({ mutate: m.antworten, isPending: false }),
   useRechercheDienste: () => ({ data: m.dienste }),
   useRechercheDienstEinrichten: () => ({ mutate: vi.fn(), isPending: false }),
+  useRechercheClaudeErsatz: () => ({ mutate: m.ersatz, isPending: false }),
   useRechercheEintragen: () => ({ mutate: m.eintragen, isPending: false }),
   recherchePruefen: m.pruefen,
 }))
@@ -70,6 +72,7 @@ const LAUF: RechercheLauf = {
   agent_sitzung: null,
   agent_frage: null,
   agent_antwort: null,
+  agent_anbieter: 'chatgpt',
 }
 
 function rendern(p: Partial<RechercheLauf> = {}) {
@@ -98,6 +101,7 @@ beforeEach(() => {
   m.kontrolle.mockReset()
   m.agent.mockReset()
   m.antworten.mockReset()
+  m.ersatz.mockReset()
   m.dienste = [{ zuletzt_gesehen: new Date().toISOString(), rechner: 'MacBook Pro' }]
 })
 
@@ -185,7 +189,7 @@ describe('RechercheSeite', () => {
   it('Agent-Zustand oben: arbeitet ohne Knopf, beendet mit „Agent neu starten“', () => {
     rendern()
     const panel = screen.getByRole('region', { name: 'Agent' })
-    expect(panel).toHaveTextContent('Agent arbeitet auf MacBook Pro')
+    expect(panel).toHaveTextContent('ChatGPT arbeitet auf MacBook Pro')
     expect(screen.queryByRole('button', { name: /Agent (neu )?starten/ })).toBeNull()
   })
 
@@ -224,6 +228,26 @@ describe('RechercheSeite', () => {
     rendern({ agent_status: 'wartet', agent_angefordert: new Date().toISOString() })
     expect(screen.getByRole('region', { name: 'Agent' })).toHaveTextContent('Kein Recherche-Dienst verbunden')
     expect(screen.getByRole('button', { name: 'Recherche-Dienst einrichten' })).toBeInTheDocument()
+  })
+
+  it('Schalter „Bei ChatGPT-Limit mit Claude weitermachen“ nur, wenn ein Dienst Claude meldet', () => {
+    m.dienste = [
+      { zuletzt_gesehen: new Date().toISOString(), rechner: 'MacBook Pro', claude: null, claude_ersatz: true },
+    ]
+    rendern()
+    expect(screen.queryByRole('switch')).toBeNull()
+  })
+
+  it('Schalter schaltet Claude als Ersatz aus', () => {
+    m.dienste = [
+      { zuletzt_gesehen: new Date().toISOString(), rechner: 'MacBook Pro', claude: '2.1.309', claude_ersatz: true },
+    ]
+    rendern({ agent_anbieter: 'claude' })
+    expect(screen.getByRole('region', { name: 'Agent' })).toHaveTextContent('Claude arbeitet auf MacBook Pro')
+    const schalter = screen.getByRole('switch', { name: 'Bei ChatGPT-Limit mit Claude weitermachen' })
+    expect(schalter).toHaveAttribute('aria-checked', 'true')
+    fireEvent.click(schalter)
+    expect(m.ersatz).toHaveBeenCalledWith(false)
   })
 
   it('LinkedIn-Einschränkung melden hält den Lauf mit Wortlaut an', () => {

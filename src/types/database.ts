@@ -1562,6 +1562,8 @@ export type Database = {
       }
       recherche_dienste: {
         Row: {
+          claude: string | null
+          claude_ersatz: boolean
           created_at: string
           id: string
           member_id: string
@@ -1571,6 +1573,8 @@ export type Database = {
           zuletzt_gesehen: string | null
         }
         Insert: {
+          claude?: string | null
+          claude_ersatz?: boolean
           created_at?: string
           id?: string
           member_id?: string
@@ -1580,6 +1584,8 @@ export type Database = {
           zuletzt_gesehen?: string | null
         }
         Update: {
+          claude?: string | null
+          claude_ersatz?: boolean
           created_at?: string
           id?: string
           member_id?: string
@@ -1593,6 +1599,7 @@ export type Database = {
       recherche_laeufe: {
         Row: {
           abgelehnt: number
+          agent_anbieter: string
           agent_angefordert: string | null
           agent_antwort: string | null
           agent_auftrag: string | null
@@ -1623,6 +1630,7 @@ export type Database = {
         }
         Insert: {
           abgelehnt?: number
+          agent_anbieter?: string
           agent_angefordert?: string | null
           agent_antwort?: string | null
           agent_auftrag?: string | null
@@ -1653,6 +1661,7 @@ export type Database = {
         }
         Update: {
           abgelehnt?: number
+          agent_anbieter?: string
           agent_angefordert?: string | null
           agent_antwort?: string | null
           agent_auftrag?: string | null
@@ -2934,6 +2943,7 @@ export type Database = {
         Args: { p_freigabe: boolean; p_lauf: string; p_text?: string }
         Returns: {
           abgelehnt: number
+          agent_anbieter: string
           agent_angefordert: string | null
           agent_antwort: string | null
           agent_auftrag: string | null
@@ -2973,6 +2983,7 @@ export type Database = {
         Args: { p_auftrag?: string; p_lauf: string }
         Returns: {
           abgelehnt: number
+          agent_anbieter: string
           agent_angefordert: string | null
           agent_antwort: string | null
           agent_auftrag: string | null
@@ -3008,6 +3019,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      recherche_claude_ersatz: { Args: { p_an: boolean }; Returns: undefined }
       recherche_dienst: {
         Args: { p_aktion: string; p_daten?: Json; p_schluessel: string }
         Returns: Json
@@ -3029,6 +3041,7 @@ export type Database = {
         }
         Returns: {
           abgelehnt: number
+          agent_anbieter: string
           agent_angefordert: string | null
           agent_antwort: string | null
           agent_auftrag: string | null
@@ -3068,6 +3081,7 @@ export type Database = {
         Args: { p_lauf: string }
         Returns: {
           abgelehnt: number
+          agent_anbieter: string
           agent_angefordert: string | null
           agent_antwort: string | null
           agent_auftrag: string | null
@@ -3121,6 +3135,7 @@ export type Database = {
         Args: { p_auftrag?: string; p_ziel?: number }
         Returns: {
           abgelehnt: number
+          agent_anbieter: string
           agent_angefordert: string | null
           agent_antwort: string | null
           agent_auftrag: string | null
@@ -3160,6 +3175,7 @@ export type Database = {
         Args: { p_lauf: string; p_meldung?: string; p_status: string }
         Returns: {
           abgelehnt: number
+          agent_anbieter: string
           agent_angefordert: string | null
           agent_antwort: string | null
           agent_auftrag: string | null

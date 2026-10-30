@@ -127,6 +127,7 @@ describe('Agent-Zustand', () => {
         agent_rechner: null,
         agent_meldung: null,
         agent_frage: null,
+        agent_anbieter: 'chatgpt',
         ...p,
       },
       jetzt,
@@ -152,11 +153,25 @@ describe('Agent-Zustand', () => {
 
   it('arbeitet mit Lebenszeichen, sonst „antwortet nicht“', () => {
     const a = l({ agent_status: 'arbeitet', agent_heartbeat: vor(20), agent_rechner: 'MacBook Pro' })
-    expect(a).toMatchObject({ art: 'arbeitet', titel: 'Agent arbeitet auf MacBook Pro', starten: null })
+    expect(a).toMatchObject({ art: 'arbeitet', titel: 'ChatGPT arbeitet auf MacBook Pro', starten: null })
     expect(l({ agent_status: 'arbeitet', agent_heartbeat: vor(AGENT_STILL_S + 5) })).toMatchObject({
       art: 'still',
       starten: 'neu',
     })
+  })
+
+  it('nach ChatGPT-Limit: Claude arbeitet, mit dem Hinweis des Diensts', () => {
+    const c = l({
+      agent_status: 'arbeitet',
+      agent_heartbeat: vor(5),
+      agent_anbieter: 'claude',
+      agent_meldung: 'ChatGPT hat sein Nutzungslimit erreicht (wieder ab 19:17 Uhr). Claude macht weiter.',
+    })
+    expect(c.titel).toBe('Claude arbeitet')
+    expect(c.text).toMatch(/^ChatGPT hat sein Nutzungslimit erreicht .* Claude arbeitet in deinem Chrome/)
+    expect(l({ agent_status: 'antwort', agent_anbieter: 'claude' }).text).toMatch(/startet Claude gleich/)
+    // ChatGPT ohne Hinweis – eine alte Meldung bleibt unsichtbar
+    expect(l({ agent_status: 'arbeitet', agent_heartbeat: vor(5), agent_meldung: 'alt' }).text).not.toMatch(/alt/)
   })
 
   it('Frage: Freigabe-Liste mit Überschrift, andere Fragen als freie Antwort; nach der Antwort „macht weiter“', () => {

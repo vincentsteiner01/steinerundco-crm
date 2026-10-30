@@ -1,4 +1,4 @@
--- Integrationstest Recherchelauf (Migrationen 17–19) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
+-- Integrationstest Recherchelauf (Migrationen 17–20) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
 -- per Exception zurückgerollt wird (es bleibt nichts zurück). Aufruf: bash tools/db-query.sh -f supabase/tests/recherche_test.sql
 -- Ergebnis steht in der Fehlermeldung „TESTERGEBNIS: …“ (oder „FEHLER: …“ bei einer verletzten Annahme).
 do $$
@@ -251,7 +251,36 @@ begin
   exception when others then
     if sqlerrm like 'FEHLER:%' then raise; end if;
   end;
-  out := out || '12 Dienst-Schnittstelle (Schlüssel, Werkzeuge, Frage/Freigabe, fremd) ok';
+  out := out || '12 Dienst-Schnittstelle (Schlüssel, Werkzeuge, Frage/Freigabe, fremd) ok; ';
+
+  -- 13. Claude als Ersatz bei ChatGPT-Limit: Übergabe-Angaben, Wechsel einmalig, Schalter, Neustart beginnt wieder mit ChatGPT
+  if chk ->> 'frage' <> 'Freigabe nötig: 2 Vernetzungsanfragen' or chk ->> 'anbieter' <> 'chatgpt' or not (chk ->> 'claude_ersatz')::boolean then
+    raise exception 'FEHLER: Übergabe-Angaben %', chk;
+  end if;
+  perform crm.recherche_dienst(schluessel, 'abholen', jsonb_build_object('claude', '2.1.309'));
+  if (select claude from crm.recherche_dienste where member_id = v_me order by created_at desc limit 1) is distinct from '2.1.309' then
+    raise exception 'FEHLER: Claude-Version nicht gemeldet';
+  end if;
+  chk := crm.recherche_dienst(schluessel, 'wechsel', jsonb_build_object('lauf', r.id, 'meldung', 'ChatGPT-Limit erreicht'));
+  select * into r from crm.recherche_laeufe where id = r.id;
+  if not (chk ->> 'ok')::boolean or r.agent_anbieter <> 'claude' or r.agent_sitzung is not null or r.agent_status <> 'arbeitet'
+     or r.agent_meldung <> 'ChatGPT-Limit erreicht' then
+    raise exception 'FEHLER: Wechsel %', row_to_json(r);
+  end if;
+  chk := crm.recherche_dienst(schluessel, 'wechsel', jsonb_build_object('lauf', r.id));
+  if (chk ->> 'ok')::boolean then raise exception 'FEHLER: doppelter Wechsel'; end if;
+  perform crm.recherche_dienst(schluessel, 'melden', jsonb_build_object('lauf', r.id, 'agent_status', 'fehler', 'meldung', 'Test'));
+  r := crm.recherche_agent_starten(r.id);
+  if r.agent_anbieter <> 'chatgpt' then raise exception 'FEHLER: Neustart bleibt bei %', r.agent_anbieter; end if;
+  perform crm.recherche_dienst(schluessel, 'uebernehmen', jsonb_build_object('lauf', r.id, 'rechner', 'Testrechner'));
+  perform crm.recherche_claude_ersatz(false);
+  begin
+    perform crm.recherche_dienst(schluessel, 'wechsel', jsonb_build_object('lauf', r.id));
+    raise exception 'FEHLER: Wechsel trotz ausgeschaltetem Schalter';
+  exception when others then
+    if sqlerrm like 'FEHLER:%' then raise; end if;
+  end;
+  out := out || '13 Claude-Ersatz (Übergabe, Wechsel, Schalter, Neustart) ok';
 
   raise exception 'TESTERGEBNIS: %', out;
 end

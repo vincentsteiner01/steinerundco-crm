@@ -1,11 +1,12 @@
 // Recherche-Dienst (29.10.2026): Lage des Diensts auf den Macs einer Person und die Einrichtung mit persönlichem Dienst-Schlüssel
 // (crm.recherche_dienst_einrichten, Migration 19). Der erzeugte Befehl lädt public/recherche-dienst/einrichten.sh – so richtet
-// jede Person den Dienst selbst ein, ohne Repository und ohne Entwicklerzugang.
+// jede Person den Dienst selbst ein, ohne Repository und ohne Entwicklerzugang. Meldet ein Dienst ein angemeldetes Claude Code
+// (Migration 20), steht darunter der Schalter „Bei ChatGPT-Limit mit Claude weitermachen“.
 import { Copy } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from '@/components/toast'
-import { Button, cn, Dialog } from '@/components/ui'
-import { useRechercheDienste, useRechercheDienstEinrichten } from '@/data/recherche'
+import { Button, cn, Dialog, Switch } from '@/components/ui'
+import { useRechercheClaudeErsatz, useRechercheDienste, useRechercheDienstEinrichten } from '@/data/recherche'
 import { fmtDatumZeit } from '@/lib/format'
 import { kopieren } from '@/lib/zwischenablage'
 import { dienstLage, einrichtungsBefehl } from './logik'
@@ -16,9 +17,11 @@ const PUNKT = { verbunden: 'bg-done', getrennt: 'bg-overdue', keiner: 'bg-deco' 
 export function DienstZeile({ memberId, fremd = false }: { memberId: string | null; fremd?: boolean }) {
   const { data } = useRechercheDienste(memberId, true)
   const [offen, setOffen] = useState(false)
+  const ersatz = useRechercheClaudeErsatz()
   const lage = dienstLage(data)
   if (!lage) return null
   const neuester = data?.find((d) => d.zuletzt_gesehen)
+  const mitClaude = data?.filter((d) => d.claude) ?? []
   const text =
     lage === 'verbunden'
       ? `Recherche-Dienst verbunden${neuester?.rechner ? ` · ${neuester.rechner}` : ''}`
@@ -35,6 +38,17 @@ export function DienstZeile({ memberId, fremd = false }: { memberId: string | nu
         </Button>
       ) : null}
       {!fremd ? <DienstEinrichten offen={offen} onOpenChange={setOffen} /> : null}
+      {!fremd && mitClaude.length ? (
+        <label className="flex basis-full cursor-pointer items-center gap-2">
+          <Switch
+            checked={mitClaude.some((d) => d.claude_ersatz)}
+            onCheckedChange={(an) => ersatz.mutate(an)}
+            disabled={ersatz.isPending}
+            label="Bei ChatGPT-Limit mit Claude weitermachen"
+          />
+          <span>Bei ChatGPT-Limit mit Claude weitermachen</span>
+        </label>
+      ) : null}
     </div>
   )
 }
@@ -71,6 +85,10 @@ export function DienstEinrichten({ offen, onOpenChange }: { offen: boolean; onOp
             </li>
             <li>Befehl erzeugen, im Programm Terminal einfügen und Enter drücken.</li>
           </ol>
+          <p className="text-small text-ink-3">
+            Ist auf dem Mac auch die Claude-App angemeldet, macht Claude weiter, sobald ChatGPT sein Nutzungslimit
+            erreicht.
+          </p>
           {befehl ? (
             <div className="grid gap-1.5">
               <pre
