@@ -1,0 +1,1 @@
+var e=`crm:tour`,t=[`onboarding`,`heute`,`leads`,`linkedin`,`telefon`,`email`,`leitfaeden`,`kpis`,`import`,`feedback`,`recherche`];function n(e){return typeof e==`string`&&t.includes(e)}function r(t=`onboarding`){window.dispatchEvent(new CustomEvent(e,{detail:{tour:t}}))}export{n,r,e as t};

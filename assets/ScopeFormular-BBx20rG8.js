@@ -1,0 +1,1 @@
+import{h as e}from"./index-DYKrK_D7.js";function t(){return e(`formular`),null}export{t};
