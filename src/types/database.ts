@@ -634,18 +634,28 @@ export type Database = {
           consent_note_snapshot: string | null
           created_at: string
           direction: Database['crm']['Enums']['email_direction']
+          einordnung: string | null
+          empfaenger_id: string | null
           enrollment_id: string | null
+          erledigt_at: string | null
           from_address: string | null
+          gelesen_at: string | null
+          hinweis: string | null
           id: string
           in_reply_to: string | null
+          kampagne_id: string | null
+          label: Database['crm']['Enums']['reply_label'] | null
           lead_id: string
           member_id: string | null
           message_id_header: string | null
+          postfach_id: string | null
           provider_message_id: string | null
           provider_thread_id: string | null
           references_header: string | null
           replied_at: string | null
+          schritt_id: string | null
           sent_at: string | null
+          sofort: boolean
           source: Database['crm']['Enums']['record_source']
           status: Database['crm']['Enums']['email_status']
           status_at: string
@@ -654,6 +664,7 @@ export type Database = {
           template_id: string | null
           to_address: string | null
           updated_at: string
+          variante_id: string | null
         }
         Insert: {
           body_html?: string | null
@@ -665,18 +676,28 @@ export type Database = {
           consent_note_snapshot?: string | null
           created_at?: string
           direction?: Database['crm']['Enums']['email_direction']
+          einordnung?: string | null
+          empfaenger_id?: string | null
           enrollment_id?: string | null
+          erledigt_at?: string | null
           from_address?: string | null
+          gelesen_at?: string | null
+          hinweis?: string | null
           id?: string
           in_reply_to?: string | null
+          kampagne_id?: string | null
+          label?: Database['crm']['Enums']['reply_label'] | null
           lead_id: string
           member_id?: string | null
           message_id_header?: string | null
+          postfach_id?: string | null
           provider_message_id?: string | null
           provider_thread_id?: string | null
           references_header?: string | null
           replied_at?: string | null
+          schritt_id?: string | null
           sent_at?: string | null
+          sofort?: boolean
           source?: Database['crm']['Enums']['record_source']
           status?: Database['crm']['Enums']['email_status']
           status_at?: string
@@ -685,6 +706,7 @@ export type Database = {
           template_id?: string | null
           to_address?: string | null
           updated_at?: string
+          variante_id?: string | null
         }
         Update: {
           body_html?: string | null
@@ -696,18 +718,28 @@ export type Database = {
           consent_note_snapshot?: string | null
           created_at?: string
           direction?: Database['crm']['Enums']['email_direction']
+          einordnung?: string | null
+          empfaenger_id?: string | null
           enrollment_id?: string | null
+          erledigt_at?: string | null
           from_address?: string | null
+          gelesen_at?: string | null
+          hinweis?: string | null
           id?: string
           in_reply_to?: string | null
+          kampagne_id?: string | null
+          label?: Database['crm']['Enums']['reply_label'] | null
           lead_id?: string
           member_id?: string | null
           message_id_header?: string | null
+          postfach_id?: string | null
           provider_message_id?: string | null
           provider_thread_id?: string | null
           references_header?: string | null
           replied_at?: string | null
+          schritt_id?: string | null
           sent_at?: string | null
+          sofort?: boolean
           source?: Database['crm']['Enums']['record_source']
           status?: Database['crm']['Enums']['email_status']
           status_at?: string
@@ -716,13 +748,35 @@ export type Database = {
           template_id?: string | null
           to_address?: string | null
           updated_at?: string
+          variante_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: 'emails_empfaenger_id_fkey'
+            columns: ['empfaenger_id']
+            isOneToOne: false
+            referencedRelation: 'mail_empfaenger'
+            referencedColumns: ['id']
+          },
           {
             foreignKeyName: 'emails_enrollment_id_fkey'
             columns: ['enrollment_id']
             isOneToOne: false
             referencedRelation: 'enrollments'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'emails_kampagne_id_fkey'
+            columns: ['kampagne_id']
+            isOneToOne: false
+            referencedRelation: 'mail_kampagnen'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'emails_kampagne_id_fkey'
+            columns: ['kampagne_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_kampagnen'
             referencedColumns: ['id']
           },
           {
@@ -747,6 +801,27 @@ export type Database = {
             referencedColumns: ['id']
           },
           {
+            foreignKeyName: 'emails_postfach_id_fkey'
+            columns: ['postfach_id']
+            isOneToOne: false
+            referencedRelation: 'mail_postfaecher'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'emails_postfach_id_fkey'
+            columns: ['postfach_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_postfaecher'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'emails_schritt_id_fkey'
+            columns: ['schritt_id']
+            isOneToOne: false
+            referencedRelation: 'mail_schritte'
+            referencedColumns: ['id']
+          },
+          {
             foreignKeyName: 'emails_step_id_fkey'
             columns: ['step_id']
             isOneToOne: false
@@ -766,6 +841,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: 'v_template_performance'
             referencedColumns: ['template_id']
+          },
+          {
+            foreignKeyName: 'emails_variante_id_fkey'
+            columns: ['variante_id']
+            isOneToOne: false
+            referencedRelation: 'mail_varianten'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'emails_variante_id_fkey'
+            columns: ['variante_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_varianten'
+            referencedColumns: ['variante_id']
           },
         ]
       }
@@ -1373,6 +1462,595 @@ export type Database = {
             columns: ['member_id']
             isOneToOne: false
             referencedRelation: 'members'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      mail_domains: {
+        Row: {
+          anbieter: string
+          created_at: string
+          created_by: string | null
+          dns: Json
+          dns_geprueft_at: string | null
+          domain: string
+          id: string
+          notiz: string | null
+          registriert_am: string | null
+          updated_at: string
+          website: string | null
+          zweck: string
+        }
+        Insert: {
+          anbieter?: string
+          created_at?: string
+          created_by?: string | null
+          dns?: Json
+          dns_geprueft_at?: string | null
+          domain: string
+          id?: string
+          notiz?: string | null
+          registriert_am?: string | null
+          updated_at?: string
+          website?: string | null
+          zweck?: string
+        }
+        Update: {
+          anbieter?: string
+          created_at?: string
+          created_by?: string | null
+          dns?: Json
+          dns_geprueft_at?: string | null
+          domain?: string
+          id?: string
+          notiz?: string | null
+          registriert_am?: string | null
+          updated_at?: string
+          website?: string | null
+          zweck?: string
+        }
+        Relationships: []
+      }
+      mail_empfaenger: {
+        Row: {
+          abmelde_token: string
+          beantwortet_at: string | null
+          betreff_start: string | null
+          created_at: string
+          email: string
+          gestartet_at: string | null
+          hinzugefuegt_von: string | null
+          id: string
+          in_arbeit: string | null
+          in_arbeit_seit: string | null
+          kampagne_id: string
+          lead_id: string
+          letzte_message_id: string | null
+          letzter_versand_at: string | null
+          naechster_versand_at: string | null
+          nr: number
+          postfach_id: string | null
+          referenzen: string | null
+          schritt: number
+          status: string
+          stopp_grund: string | null
+          updated_at: string
+          variablen: Json
+          versuche: number
+        }
+        Insert: {
+          abmelde_token?: string
+          beantwortet_at?: string | null
+          betreff_start?: string | null
+          created_at?: string
+          email: string
+          gestartet_at?: string | null
+          hinzugefuegt_von?: string | null
+          id?: string
+          in_arbeit?: string | null
+          in_arbeit_seit?: string | null
+          kampagne_id: string
+          lead_id: string
+          letzte_message_id?: string | null
+          letzter_versand_at?: string | null
+          naechster_versand_at?: string | null
+          nr?: never
+          postfach_id?: string | null
+          referenzen?: string | null
+          schritt?: number
+          status?: string
+          stopp_grund?: string | null
+          updated_at?: string
+          variablen?: Json
+          versuche?: number
+        }
+        Update: {
+          abmelde_token?: string
+          beantwortet_at?: string | null
+          betreff_start?: string | null
+          created_at?: string
+          email?: string
+          gestartet_at?: string | null
+          hinzugefuegt_von?: string | null
+          id?: string
+          in_arbeit?: string | null
+          in_arbeit_seit?: string | null
+          kampagne_id?: string
+          lead_id?: string
+          letzte_message_id?: string | null
+          letzter_versand_at?: string | null
+          naechster_versand_at?: string | null
+          nr?: never
+          postfach_id?: string | null
+          referenzen?: string | null
+          schritt?: number
+          status?: string
+          stopp_grund?: string | null
+          updated_at?: string
+          variablen?: Json
+          versuche?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'mail_empfaenger_kampagne_id_fkey'
+            columns: ['kampagne_id']
+            isOneToOne: false
+            referencedRelation: 'mail_kampagnen'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_empfaenger_kampagne_id_fkey'
+            columns: ['kampagne_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_kampagnen'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_empfaenger_lead_id_fkey'
+            columns: ['lead_id']
+            isOneToOne: false
+            referencedRelation: 'leads'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_empfaenger_lead_id_fkey'
+            columns: ['lead_id']
+            isOneToOne: false
+            referencedRelation: 'v_leads_ohne_bewegung'
+            referencedColumns: ['lead_id']
+          },
+          {
+            foreignKeyName: 'mail_empfaenger_postfach_id_fkey'
+            columns: ['postfach_id']
+            isOneToOne: false
+            referencedRelation: 'mail_postfaecher'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_empfaenger_postfach_id_fkey'
+            columns: ['postfach_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_postfaecher'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      mail_kampagne_postfaecher: {
+        Row: {
+          kampagne_id: string
+          postfach_id: string
+        }
+        Insert: {
+          kampagne_id: string
+          postfach_id: string
+        }
+        Update: {
+          kampagne_id?: string
+          postfach_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'mail_kampagne_postfaecher_kampagne_id_fkey'
+            columns: ['kampagne_id']
+            isOneToOne: false
+            referencedRelation: 'mail_kampagnen'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_kampagne_postfaecher_kampagne_id_fkey'
+            columns: ['kampagne_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_kampagnen'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_kampagne_postfaecher_postfach_id_fkey'
+            columns: ['postfach_id']
+            isOneToOne: false
+            referencedRelation: 'mail_postfaecher'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_kampagne_postfaecher_postfach_id_fkey'
+            columns: ['postfach_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_postfaecher'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      mail_kampagnen: {
+        Row: {
+          abmelde_kopf: boolean
+          abmelde_satz: boolean
+          beendet_at: string | null
+          bounce_schutz: boolean
+          created_at: string
+          datenschutz_satz: boolean
+          gestartet_at: string | null
+          id: string
+          member_id: string
+          name: string
+          neue_pro_tag: number
+          notiz: string | null
+          status: string
+          status_text: string | null
+          stopp_firma: boolean
+          tageslimit: number
+          updated_at: string
+          zeitplan: Json
+        }
+        Insert: {
+          abmelde_kopf?: boolean
+          abmelde_satz?: boolean
+          beendet_at?: string | null
+          bounce_schutz?: boolean
+          created_at?: string
+          datenschutz_satz?: boolean
+          gestartet_at?: string | null
+          id?: string
+          member_id?: string
+          name: string
+          neue_pro_tag?: number
+          notiz?: string | null
+          status?: string
+          status_text?: string | null
+          stopp_firma?: boolean
+          tageslimit?: number
+          updated_at?: string
+          zeitplan?: Json
+        }
+        Update: {
+          abmelde_kopf?: boolean
+          abmelde_satz?: boolean
+          beendet_at?: string | null
+          bounce_schutz?: boolean
+          created_at?: string
+          datenschutz_satz?: boolean
+          gestartet_at?: string | null
+          id?: string
+          member_id?: string
+          name?: string
+          neue_pro_tag?: number
+          notiz?: string | null
+          status?: string
+          status_text?: string | null
+          stopp_firma?: boolean
+          tageslimit?: number
+          updated_at?: string
+          zeitplan?: Json
+        }
+        Relationships: []
+      }
+      mail_mx: {
+        Row: {
+          domain: string
+          geprueft_at: string
+          hosts: string[]
+          klasse: string
+        }
+        Insert: {
+          domain: string
+          geprueft_at?: string
+          hosts?: string[]
+          klasse: string
+        }
+        Update: {
+          domain?: string
+          geprueft_at?: string
+          hosts?: string[]
+          klasse?: string
+        }
+        Relationships: []
+      }
+      mail_platzierung: {
+        Row: {
+          betreff: string
+          created_at: string
+          created_by: string | null
+          fehler: string | null
+          geprueft_at: string | null
+          gesendet_at: string | null
+          id: string
+          message_id: string
+          ordner: string | null
+          saat_id: string
+          status: string
+          test: string
+          text: string
+          von_id: string
+        }
+        Insert: {
+          betreff: string
+          created_at?: string
+          created_by?: string | null
+          fehler?: string | null
+          geprueft_at?: string | null
+          gesendet_at?: string | null
+          id?: string
+          message_id: string
+          ordner?: string | null
+          saat_id: string
+          status?: string
+          test: string
+          text: string
+          von_id: string
+        }
+        Update: {
+          betreff?: string
+          created_at?: string
+          created_by?: string | null
+          fehler?: string | null
+          geprueft_at?: string | null
+          gesendet_at?: string | null
+          id?: string
+          message_id?: string
+          ordner?: string | null
+          saat_id?: string
+          status?: string
+          test?: string
+          text?: string
+          von_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'mail_platzierung_saat_id_fkey'
+            columns: ['saat_id']
+            isOneToOne: false
+            referencedRelation: 'mail_postfaecher'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_platzierung_saat_id_fkey'
+            columns: ['saat_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_postfaecher'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_platzierung_von_id_fkey'
+            columns: ['von_id']
+            isOneToOne: false
+            referencedRelation: 'mail_postfaecher'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_platzierung_von_id_fkey'
+            columns: ['von_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_postfaecher'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      mail_postfaecher: {
+        Row: {
+          abruf_at: string | null
+          abruf_ok_at: string | null
+          abruf_stand: Json
+          absender_name: string
+          adresse: string
+          anbieter: string
+          benutzer: string
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          fehler_folge: number
+          geheimnis_id: string | null
+          gesperrt_bis: string | null
+          hochlauf: boolean
+          hochlauf_start: string | null
+          id: string
+          imap_host: string
+          imap_port: number
+          member_id: string | null
+          mindestabstand_min: number
+          naechster_versand_at: string | null
+          rolle: string
+          signatur: string | null
+          smtp_host: string | null
+          smtp_port: number | null
+          smtp_sicherheit: string | null
+          status: string
+          status_at: string
+          status_text: string | null
+          tageslimit: number
+          test_ergebnis: Json | null
+          updated_at: string
+        }
+        Insert: {
+          abruf_at?: string | null
+          abruf_ok_at?: string | null
+          abruf_stand?: Json
+          absender_name: string
+          adresse: string
+          anbieter?: string
+          benutzer: string
+          created_at?: string
+          created_by?: string | null
+          domain?: string | null
+          fehler_folge?: number
+          geheimnis_id?: string | null
+          gesperrt_bis?: string | null
+          hochlauf?: boolean
+          hochlauf_start?: string | null
+          id?: string
+          imap_host: string
+          imap_port?: number
+          member_id?: string | null
+          mindestabstand_min?: number
+          naechster_versand_at?: string | null
+          rolle?: string
+          signatur?: string | null
+          smtp_host?: string | null
+          smtp_port?: number | null
+          smtp_sicherheit?: string | null
+          status?: string
+          status_at?: string
+          status_text?: string | null
+          tageslimit?: number
+          test_ergebnis?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          abruf_at?: string | null
+          abruf_ok_at?: string | null
+          abruf_stand?: Json
+          absender_name?: string
+          adresse?: string
+          anbieter?: string
+          benutzer?: string
+          created_at?: string
+          created_by?: string | null
+          domain?: string | null
+          fehler_folge?: number
+          geheimnis_id?: string | null
+          gesperrt_bis?: string | null
+          hochlauf?: boolean
+          hochlauf_start?: string | null
+          id?: string
+          imap_host?: string
+          imap_port?: number
+          member_id?: string | null
+          mindestabstand_min?: number
+          naechster_versand_at?: string | null
+          rolle?: string
+          signatur?: string | null
+          smtp_host?: string | null
+          smtp_port?: number | null
+          smtp_sicherheit?: string | null
+          status?: string
+          status_at?: string
+          status_text?: string | null
+          tageslimit?: number
+          test_ergebnis?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mail_schritte: {
+        Row: {
+          created_at: string
+          id: string
+          im_thread: boolean
+          kampagne_id: string
+          position: number
+          updated_at: string
+          wartetage: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          im_thread?: boolean
+          kampagne_id: string
+          position: number
+          updated_at?: string
+          wartetage?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          im_thread?: boolean
+          kampagne_id?: string
+          position?: number
+          updated_at?: string
+          wartetage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'mail_schritte_kampagne_id_fkey'
+            columns: ['kampagne_id']
+            isOneToOne: false
+            referencedRelation: 'mail_kampagnen'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_schritte_kampagne_id_fkey'
+            columns: ['kampagne_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_kampagnen'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      mail_sperrdomains: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          domain: string
+          grund: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          domain: string
+          grund?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          domain?: string
+          grund?: string | null
+        }
+        Relationships: []
+      }
+      mail_varianten: {
+        Row: {
+          aktiv: boolean
+          betreff: string
+          created_at: string
+          id: string
+          kennung: string
+          schritt_id: string
+          text: string
+          updated_at: string
+        }
+        Insert: {
+          aktiv?: boolean
+          betreff?: string
+          created_at?: string
+          id?: string
+          kennung: string
+          schritt_id: string
+          text?: string
+          updated_at?: string
+        }
+        Update: {
+          aktiv?: boolean
+          betreff?: string
+          created_at?: string
+          id?: string
+          kennung?: string
+          schritt_id?: string
+          text?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'mail_varianten_schritt_id_fkey'
+            columns: ['schritt_id']
+            isOneToOne: false
+            referencedRelation: 'mail_schritte'
             referencedColumns: ['id']
           },
         ]
@@ -2420,6 +3098,262 @@ export type Database = {
           },
         ]
       }
+      v_mail_anbieter: {
+        Row: {
+          beantwortet: number | null
+          bounces: number | null
+          gesendet: number | null
+          klasse: string | null
+        }
+        Relationships: []
+      }
+      v_mail_kampagnen: {
+        Row: {
+          abgemeldet: number | null
+          abmelde_kopf: boolean | null
+          abmelde_satz: boolean | null
+          antworten: number | null
+          beantwortet: number | null
+          beendet_at: string | null
+          bounce_schutz: boolean | null
+          bounces: number | null
+          created_at: string | null
+          datenschutz_satz: boolean | null
+          empfaenger: number | null
+          fertig: number | null
+          gesendet: number | null
+          gestartet_at: string | null
+          gestoppt: number | null
+          heute: number | null
+          id: string | null
+          interessiert: number | null
+          laufend: number | null
+          member_id: string | null
+          name: string | null
+          neue_pro_tag: number | null
+          notiz: string | null
+          status: string | null
+          status_text: string | null
+          stopp_firma: boolean | null
+          tageslimit: number | null
+          updated_at: string | null
+          wartend: number | null
+          zeitplan: Json | null
+        }
+        Insert: {
+          abgemeldet?: never
+          abmelde_kopf?: boolean | null
+          abmelde_satz?: boolean | null
+          antworten?: never
+          beantwortet?: never
+          beendet_at?: string | null
+          bounce_schutz?: boolean | null
+          bounces?: never
+          created_at?: string | null
+          datenschutz_satz?: boolean | null
+          empfaenger?: never
+          fertig?: never
+          gesendet?: never
+          gestartet_at?: string | null
+          gestoppt?: never
+          heute?: never
+          id?: string | null
+          interessiert?: never
+          laufend?: never
+          member_id?: string | null
+          name?: string | null
+          neue_pro_tag?: number | null
+          notiz?: string | null
+          status?: string | null
+          status_text?: string | null
+          stopp_firma?: boolean | null
+          tageslimit?: number | null
+          updated_at?: string | null
+          wartend?: never
+          zeitplan?: Json | null
+        }
+        Update: {
+          abgemeldet?: never
+          abmelde_kopf?: boolean | null
+          abmelde_satz?: boolean | null
+          antworten?: never
+          beantwortet?: never
+          beendet_at?: string | null
+          bounce_schutz?: boolean | null
+          bounces?: never
+          created_at?: string | null
+          datenschutz_satz?: boolean | null
+          empfaenger?: never
+          fertig?: never
+          gesendet?: never
+          gestartet_at?: string | null
+          gestoppt?: never
+          heute?: never
+          id?: string | null
+          interessiert?: never
+          laufend?: never
+          member_id?: string | null
+          name?: string | null
+          neue_pro_tag?: number | null
+          notiz?: string | null
+          status?: string | null
+          status_text?: string | null
+          stopp_firma?: boolean | null
+          tageslimit?: number | null
+          updated_at?: string | null
+          wartend?: never
+          zeitplan?: Json | null
+        }
+        Relationships: []
+      }
+      v_mail_postfaecher: {
+        Row: {
+          abruf_ok_at: string | null
+          absender_name: string | null
+          adresse: string | null
+          anbieter: string | null
+          benutzer: string | null
+          created_at: string | null
+          domain: string | null
+          gesperrt_bis: string | null
+          hochlauf: boolean | null
+          hochlauf_lage: Json | null
+          hochlauf_start: string | null
+          id: string | null
+          imap_host: string | null
+          member_id: string | null
+          mindestabstand_min: number | null
+          monat_antworten: number | null
+          rolle: string | null
+          signatur: string | null
+          smtp_host: string | null
+          status: string | null
+          status_at: string | null
+          status_text: string | null
+          tageslimit: number | null
+          test_ergebnis: Json | null
+        }
+        Insert: {
+          abruf_ok_at?: string | null
+          absender_name?: string | null
+          adresse?: string | null
+          anbieter?: string | null
+          benutzer?: string | null
+          created_at?: string | null
+          domain?: string | null
+          gesperrt_bis?: string | null
+          hochlauf?: boolean | null
+          hochlauf_lage?: never
+          hochlauf_start?: string | null
+          id?: string | null
+          imap_host?: string | null
+          member_id?: string | null
+          mindestabstand_min?: number | null
+          monat_antworten?: never
+          rolle?: string | null
+          signatur?: string | null
+          smtp_host?: string | null
+          status?: string | null
+          status_at?: string | null
+          status_text?: string | null
+          tageslimit?: number | null
+          test_ergebnis?: Json | null
+        }
+        Update: {
+          abruf_ok_at?: string | null
+          absender_name?: string | null
+          adresse?: string | null
+          anbieter?: string | null
+          benutzer?: string | null
+          created_at?: string | null
+          domain?: string | null
+          gesperrt_bis?: string | null
+          hochlauf?: boolean | null
+          hochlauf_lage?: never
+          hochlauf_start?: string | null
+          id?: string | null
+          imap_host?: string | null
+          member_id?: string | null
+          mindestabstand_min?: number | null
+          monat_antworten?: never
+          rolle?: string | null
+          signatur?: string | null
+          smtp_host?: string | null
+          status?: string | null
+          status_at?: string | null
+          status_text?: string | null
+          tageslimit?: number | null
+          test_ergebnis?: Json | null
+        }
+        Relationships: []
+      }
+      v_mail_tests: {
+        Row: {
+          betreff: string | null
+          details: Json | null
+          fehler: number | null
+          fehlt: number | null
+          gesamt: number | null
+          gestartet_at: string | null
+          offen: number | null
+          posteingang: number | null
+          spam: number | null
+          test: string | null
+          von_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'mail_platzierung_von_id_fkey'
+            columns: ['von_id']
+            isOneToOne: false
+            referencedRelation: 'mail_postfaecher'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_platzierung_von_id_fkey'
+            columns: ['von_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_postfaecher'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      v_mail_varianten: {
+        Row: {
+          aktiv: boolean | null
+          beantwortet: number | null
+          bounces: number | null
+          gesendet: number | null
+          kampagne_id: string | null
+          kennung: string | null
+          position: number | null
+          schritt_id: string | null
+          variante_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'mail_schritte_kampagne_id_fkey'
+            columns: ['kampagne_id']
+            isOneToOne: false
+            referencedRelation: 'mail_kampagnen'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_schritte_kampagne_id_fkey'
+            columns: ['kampagne_id']
+            isOneToOne: false
+            referencedRelation: 'v_mail_kampagnen'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'mail_varianten_schritt_id_fkey'
+            columns: ['schritt_id']
+            isOneToOne: false
+            referencedRelation: 'mail_schritte'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       v_metric_events: {
         Row: {
           day: string | null
@@ -2886,6 +3820,185 @@ export type Database = {
         SetofOptions: {
           from: '*'
           to: 'linkedin_connections'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mail_abmelden: { Args: { p_token: string }; Returns: boolean }
+      mail_antworten: {
+        Args: { p_eingang: string; p_text: string }
+        Returns: string
+      }
+      mail_empfaenger_hinzufuegen: {
+        Args: { p_kampagne: string; p_leads: string[] }
+        Returns: Json
+      }
+      mail_fuellen: {
+        Args: {
+          p_lead: string
+          p_postfach: string
+          p_text: string
+          p_variablen: Json
+        }
+        Returns: string
+      }
+      mail_gate: { Args: { p_empfaenger: string }; Returns: string }
+      mail_hochlauf: { Args: { p_postfach: string }; Returns: Json }
+      mail_kampagne_pruefen: {
+        Args: { p_kampagne: string }
+        Returns: {
+          empfaenger_id: string
+          grund: string
+        }[]
+      }
+      mail_kampagne_speichern: { Args: { p: Json }; Returns: string }
+      mail_kampagne_status: {
+        Args: { p_kampagne: string; p_status: string }
+        Returns: {
+          abmelde_kopf: boolean
+          abmelde_satz: boolean
+          beendet_at: string | null
+          bounce_schutz: boolean
+          created_at: string
+          datenschutz_satz: boolean
+          gestartet_at: string | null
+          id: string
+          member_id: string
+          name: string
+          neue_pro_tag: number
+          notiz: string | null
+          status: string
+          status_text: string | null
+          stopp_firma: boolean
+          tageslimit: number
+          updated_at: string
+          zeitplan: Json
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'mail_kampagnen'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mail_motor_abruf_fehler: {
+        Args: { p_anmeldung?: boolean; p_fehler: string; p_postfach: string }
+        Returns: undefined
+      }
+      mail_motor_abruf_liste: { Args: { p_max?: number }; Returns: Json }
+      mail_motor_auftraege: { Args: { p_max?: number }; Returns: Json }
+      mail_motor_eingang: {
+        Args: { p_posten: Json; p_postfach: string; p_stand: Json }
+        Returns: Json
+      }
+      mail_motor_ergebnis: {
+        Args: {
+          p_art: string
+          p_fehler?: string
+          p_fehlerart?: string
+          p_id: string
+          p_ok: boolean
+        }
+        Returns: undefined
+      }
+      mail_motor_mx_offen: { Args: { p_max?: number }; Returns: string[] }
+      mail_motor_mx_setzen: { Args: { p_eintraege: Json }; Returns: undefined }
+      mail_motor_platzierung_melden: {
+        Args: { p_funde: Json; p_postfach: string }
+        Returns: undefined
+      }
+      mail_motor_platzierung_offen: {
+        Args: { p_postfach: string }
+        Returns: string[]
+      }
+      mail_motor_schluessel: { Args: never; Returns: string }
+      mail_motor_test_ergebnis: {
+        Args: { p_ergebnis: Json; p_postfach: string }
+        Returns: {
+          abruf_at: string | null
+          abruf_ok_at: string | null
+          abruf_stand: Json
+          absender_name: string
+          adresse: string
+          anbieter: string
+          benutzer: string
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          fehler_folge: number
+          geheimnis_id: string | null
+          gesperrt_bis: string | null
+          hochlauf: boolean
+          hochlauf_start: string | null
+          id: string
+          imap_host: string
+          imap_port: number
+          member_id: string | null
+          mindestabstand_min: number
+          naechster_versand_at: string | null
+          rolle: string
+          signatur: string | null
+          smtp_host: string | null
+          smtp_port: number | null
+          smtp_sicherheit: string | null
+          status: string
+          status_at: string
+          status_text: string | null
+          tageslimit: number
+          test_ergebnis: Json | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'mail_postfaecher'
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mail_motor_zugang: { Args: { p_postfach: string }; Returns: Json }
+      mail_platzierung_starten: {
+        Args: { p_betreff: string; p_postfach: string; p_text: string }
+        Returns: string
+      }
+      mail_postfach_speichern: {
+        Args: { p: Json; p_passwort?: string }
+        Returns: {
+          abruf_at: string | null
+          abruf_ok_at: string | null
+          abruf_stand: Json
+          absender_name: string
+          adresse: string
+          anbieter: string
+          benutzer: string
+          created_at: string
+          created_by: string | null
+          domain: string | null
+          fehler_folge: number
+          geheimnis_id: string | null
+          gesperrt_bis: string | null
+          hochlauf: boolean
+          hochlauf_start: string | null
+          id: string
+          imap_host: string
+          imap_port: number
+          member_id: string | null
+          mindestabstand_min: number
+          naechster_versand_at: string | null
+          rolle: string
+          signatur: string | null
+          smtp_host: string | null
+          smtp_port: number | null
+          smtp_sicherheit: string | null
+          status: string
+          status_at: string
+          status_text: string | null
+          tageslimit: number
+          test_ergebnis: Json | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: '*'
+          to: 'mail_postfaecher'
           isOneToOne: true
           isSetofReturn: false
         }
@@ -3613,7 +4726,7 @@ export type Database = {
       channel: 'linkedin' | 'telefon' | 'email' | 'sonstiges'
       connection_status: 'ausstehend' | 'angenommen' | 'zurueckgezogen' | 'abgelaufen'
       counter_period: 'tag' | 'monat'
-      email_channel: 'gmail_compose' | 'gmail_api' | 'brevo' | 'mailto' | 'manual'
+      email_channel: 'gmail_compose' | 'gmail_api' | 'brevo' | 'mailto' | 'manual' | 'smtp'
       email_consent_basis:
         | 'none'
         | 'requested_linkedin'
@@ -4262,7 +5375,7 @@ export const Constants = {
       channel: ['linkedin', 'telefon', 'email', 'sonstiges'],
       connection_status: ['ausstehend', 'angenommen', 'zurueckgezogen', 'abgelaufen'],
       counter_period: ['tag', 'monat'],
-      email_channel: ['gmail_compose', 'gmail_api', 'brevo', 'mailto', 'manual'],
+      email_channel: ['gmail_compose', 'gmail_api', 'brevo', 'mailto', 'manual', 'smtp'],
       email_consent_basis: [
         'none',
         'requested_linkedin',

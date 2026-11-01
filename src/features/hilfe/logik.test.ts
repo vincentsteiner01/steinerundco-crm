@@ -231,7 +231,8 @@ describe('Themen', () => {
     // Runde 3: die LinkedIn-Brücke ist auffindbar
     expect(sucheThemen('script')[0]!.key).toBe('verbindungen')
     expect(sucheThemen('seitenleiste').map((t) => t.key)).toEqual(expect.arrayContaining(['linkedin', 'verbindungen']))
-    expect(sucheThemen('gmail verbinden').map((t) => t.key)).toEqual(['email', 'verbindungen'])
+    // seit 01.11.2026 auch die E-Mail-Kampagnen (Postfach verbinden) – E-Mail bleibt vorn
+    expect(sucheThemen('gmail verbinden').map((t) => t.key)).toEqual(['email', 'verbindungen', 'kampagnen'])
   })
 
   it('Dein Tag: die angemeldete Person steht oben', () => {

@@ -515,12 +515,83 @@ export const THEMEN: readonly Thema[] = [
       },
       {
         art: 'hinweis',
-        geplant: true,
-        text: 'Versand direkt aus dem CRM und das Erkennen von Antworten aus Gmail – vorbereitet, aber noch nicht eingeschaltet.',
+        text: 'Mehrere Leads auf einmal anschreiben, mit eigenem Postfach und automatischen Folgemails: [E-Mail-Kampagnen](/hilfe/kampagnen).',
       },
       {
         art: 'absatz',
         text: '„Erlaubnis erfassen“ und „Widerspruch erfassen“ findest du in der Palette ({⌘K}), wenn ein Lead geöffnet ist.',
+      },
+    ],
+  },
+  {
+    key: 'kampagnen',
+    titel: 'E-Mail-Kampagnen',
+    kurz: 'Kurze Mail-Folgen an Leads mit Erlaubnis – über eigene Postfächer, mit Hochlauf statt „Aufwärmen“.',
+    stichworte:
+      'instantly mailchimp kampagne sequenz postfach domain dns spf dkim dmarc aufwärmen warmup hochlauf unibox antworten abmelden bounce unzustellbar platzierungstest app-passwort',
+    bloecke: [
+      {
+        art: 'absatz',
+        text: 'Eine Kampagne schickt bis zu drei kurze Mails im selben Verlauf (Tag 0, +3, +8) an viele Leads – über ein echtes Postfach, mit Antworten an einem Ort ([Antworten](/email/antworten)). Sie stoppt bei jeder Antwort, auch für die ganze Firma.',
+      },
+      { art: 'zwischentitel', text: 'In fünf Schritten startklar' },
+      {
+        art: 'schritte',
+        punkte: [
+          '**Versand-Domain kaufen** (z. B. eine zweite .de-Domain mit „Steiner & Co.“ im Namen) – mindestens 30 Tage vor der ersten Kampagne. Warum: Wird sie gesperrt, bleibt steinerundco.de sauber.',
+          '**DNS-Einträge setzen**: unter [Postfächer](/email/postfaecher) die Domain eintragen, „Prüfen“ zeigt die Ampel, die Einträge stehen zum Kopieren da. Warum: Ohne SPF, DKIM und DMARC lehnen Gmail, Microsoft, GMX und T-Online ab.',
+          '**Postfach anlegen** – am besten in einem eigenen Google-Workspace-Konto. Warum: Sperrt Google bei Verdacht ein Konto, bleibt euer normales Postfach unberührt.',
+          '**Postfach verbinden**: „Postfach verbinden“, App-Passwort einfügen, das CRM testet sofort Anmeldung und Ordner.',
+          '**Hochlauf abwarten**: Woche 1–2 höchstens 10 Mails am Tag, 3–4 15, 5–6 25, danach das Tageslimit. Das CRM steigert selbst – nur, solange kaum etwas unzustellbar ist.',
+        ],
+      },
+      { art: 'zwischentitel', text: 'Warum kein „Aufwärmen“ wie bei Instantly?' },
+      {
+        art: 'absatz',
+        text: 'Instantly lässt Postfächer sich gegenseitig künstliche Mails schicken, öffnen und aus dem Spam holen. Seit September 2026 erkennt die Blockliste „Heatwave“ genau das und sperrt die Domain dauerhaft. Das CRM steigert die Menge deshalb nur mit echten Mails und bremst bei schlechten Werten selbst („Schonung“, „Pause“).',
+      },
+      { art: 'zwischentitel', text: 'Kampagne anlegen' },
+      {
+        art: 'schritte',
+        punkte: [
+          '[Kampagnen](/email/kampagnen) → „Neue Kampagne“. Die Vorlage hat drei Mails; alles in **[hier …]** ersetzen – sonst sendet das CRM nicht.',
+          'Ablauf: kurz schreiben (unter 120 Wörtern), erste Mail ohne Link. Platzhalter wie [Briefanrede] per Klick einfügen, rechts die Vorschau mit echtem Empfänger. Mit „Variante“ testet ihr zwei Betreffs (A/B).',
+          'Empfänger: „Leads hinzufügen“ – nur Leads mit E-Mail-Adresse und Erlaubnis.',
+          'Einstellungen: Postfach wählen, Versandzeiten (Mo–Fr 8–16 Uhr ist ein guter Start).',
+          'Übersicht: Sind alle Punkte unter „Vor dem Start“ grün, „Starten“.',
+        ],
+      },
+      { art: 'zwischentitel', text: 'Was automatisch passiert' },
+      {
+        art: 'liste',
+        punkte: [
+          'Antwort → Kampagne stoppt für diesen Lead (und seine Firma), der Lead steht in [Antworten](/email/antworten) und unter Heute.',
+          'Abwesenheitsnotiz → die nächste Mail wartet bis nach dem Rückkehrdatum.',
+          '„Nicht mehr im Unternehmen“ → Lead wird gestoppt.',
+          'Unzustellbar → Adresse auf die Sperrliste; über 3 % Unzustellbare hält die Kampagne an.',
+          '„Bitte keine Mails“ oder Klick auf „Abmelden“ → sofort auf die Sperrliste.',
+          'Echte Antworten, die im Spam gelandet sind, holt das CRM in den Posteingang.',
+          'Feiertage und Wochenenden werden übersprungen, zwischen zwei Mails liegen mindestens einige Minuten.',
+        ],
+      },
+      { art: 'zwischentitel', text: 'Wen darf ich anschreiben?' },
+      {
+        art: 'absatz',
+        text: 'Nur Leads mit **Erlaubnis-Grundlage**. Kalte Werbe-Mails an Firmen sind in Deutschland auch im B2B verboten (§ 7 Abs. 2 Nr. 2 UWG) – schon eine einzige kann eine Abmahnung kosten. Eine LinkedIn-Vernetzung ist keine Erlaubnis.',
+      },
+      {
+        art: 'liste',
+        punkte: [
+          'Telefon: „Darf ich Ihnen das kurz per Mail schicken?“ – Ja → im Lead „Erlaubnis erfassen“ (mit Wortlaut).',
+          'LinkedIn: ein schriftliches „Ja, gern an …@…“ im Chat ist eine Erlaubnis – Screenshot sichern.',
+          'Nach einem Gespräch und bei Bestandskunden.',
+          'Mehr als drei Mails ohne Antwort lässt das CRM nicht zu.',
+        ],
+      },
+      { art: 'zwischentitel', text: 'Platzierungstest' },
+      {
+        art: 'absatz',
+        text: 'Eigene Prüf-Postfächer bei GMX, WEB.DE, T-Online und Gmail verbinden, dann unter [Postfächer](/email/postfaecher) „Test starten“: Das CRM schickt die Mail dorthin und schaut nur nach, ob sie im Posteingang oder im Spam liegt – ohne etwas anzuklicken.',
       },
     ],
   },

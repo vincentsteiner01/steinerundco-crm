@@ -19,6 +19,8 @@ export const router = createBrowserRouter([
     errorElement: <RouteFehler />,
     HydrateFallback: ErstesLaden,
   },
+  // Öffentlich: Abmelden aus E-Mail-Kampagnen (Link aus der Kopfzeile List-Unsubscribe, 01.11.2026)
+  { path: '/abmelden', lazy: () => import('@/features/mailing/Abmelden'), HydrateFallback: ErstesLaden },
   {
     Component: RequireAuth, // Layout-Route ohne Pfad
     errorElement: <RouteFehler />,
@@ -46,6 +48,10 @@ export const router = createBrowserRouter([
           { path: 'umsatz', lazy: () => import('@/features/umsatz/UmsatzSeite') },
           { path: 'email', lazy: () => import('@/features/email/EmailSeite') },
           { path: 'email/verfassen', lazy: () => import('@/features/email/VerfassenSeite') },
+          { path: 'email/kampagnen', lazy: () => import('@/features/mailing/KampagnenSeite') },
+          { path: 'email/kampagnen/:id', lazy: () => import('@/features/mailing/KampagneSeite') },
+          { path: 'email/antworten', lazy: () => import('@/features/mailing/AntwortenSeite') },
+          { path: 'email/postfaecher', lazy: () => import('@/features/mailing/PostfaecherSeite') },
           { path: 'kpis', lazy: () => import('@/features/kpis/KpisSeite') },
           { path: 'leitfaeden', lazy: () => import('@/features/leitfaeden/LeitfaedenSeite') },
           { path: 'leitfaeden/:id', lazy: () => import('@/features/leitfaeden/LeitfadenSeite') },

@@ -1,5 +1,6 @@
 // BAUPLAN § 3.1.4 `/email` (`?tab=faellig|entwuerfe|gesendet`, `?lead=` → PeekOutlet), § 3.5 `EmailSeite.tsx`:
 // Hinweiszeile „Versand läuft über dein Gmail-Postfach (…). Antworten kommen dort an.“, Tabs Fällig · Entwürfe · Gesendet.
+// Seit 01.11.2026 „Einzelmails“ im Bereich E-Mail (Kampagnen, Antworten, Postfächer: features/mailing).
 import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { HinweisKarte } from '@/components/ui/HinweisKarte'
@@ -12,6 +13,7 @@ import { TabEntwuerfe } from './TabEntwuerfe'
 import { TabFaellig } from './TabFaellig'
 import { TabGesendet } from './TabGesendet'
 import { anzeigeName } from '@/lib/mitglied'
+import { MailNav } from '@/features/mailing/Teile'
 
 const HINWEIS_KEY = 'crm.email.hinweis'
 
@@ -67,6 +69,8 @@ export function Component() {
           />
         }
       />
+      {/* 01.11.2026: Bereiche Kampagnen · Antworten · Postfächer · Einzelmails */}
+      <MailNav />
       {hinweis ? (
         <HinweisKarte
           text={`Versand läuft über dein Gmail-Postfach${postfach}. Antworten kommen dort an.`}

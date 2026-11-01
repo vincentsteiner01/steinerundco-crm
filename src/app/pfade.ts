@@ -20,6 +20,11 @@ export const PFADE = {
   umsatz: '/umsatz',
   email: '/email',
   emailVerfassen: '/email/verfassen',
+  // Mailing (01.11.2026): Kampagnen, Antworten (Unibox), Postfächer
+  emailKampagnen: '/email/kampagnen',
+  emailKampagne: (id: string) => `/email/kampagnen/${id}`,
+  emailAntworten: '/email/antworten',
+  emailPostfaecher: '/email/postfaecher',
   kpis: '/kpis',
   leitfaeden: '/leitfaeden',
   leitfaden: (id: string) => `/leitfaeden/${id}`,

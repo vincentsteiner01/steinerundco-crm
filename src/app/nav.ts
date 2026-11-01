@@ -39,7 +39,7 @@ export type NavEintrag = {
   aktivBei?: { param: string; werte: readonly (string | null)[] }
 }
 export type NavGruppe = {
-  gruppe: 'leads' | 'linkedin' | 'mehr'
+  gruppe: 'leads' | 'linkedin' | 'email' | 'mehr'
   label: string
   icon: LucideIcon
   /** Zähler am Gruppenkopf, solange die Gruppe zu ist */
@@ -78,7 +78,20 @@ export const NAV_BAUM: NavKnoten[] = [
       { pfad: '/kpis?kanal=linkedin', label: 'KPIs', akkord: 'G K' },
     ],
   },
-  { pfad: '/email', label: 'E-Mail', icon: Mail, akkord: 'G M', zaehler: 'email' },
+  {
+    // 01.11.2026: Kampagnen, Antworten (Unibox), Postfächer – Einzelmails bleiben unter /email
+    gruppe: 'email',
+    label: 'E-Mail',
+    icon: Mail,
+    zaehler: 'email',
+    offenStandard: false,
+    kinder: [
+      { pfad: '/email/kampagnen', label: 'Kampagnen' },
+      { pfad: '/email/antworten', label: 'Antworten' },
+      { pfad: '/email/postfaecher', label: 'Postfächer' },
+      { pfad: '/email', label: 'Einzelmails', akkord: 'G M', zaehler: 'email' },
+    ],
+  },
   // Telefon & Sales · LinkedIn · E-Mail als Bereiche auf der Seite
   { pfad: '/leitfaeden', label: 'Leitfäden', icon: BookOpen, akkord: 'G F' },
   { pfad: '/umsatz', label: 'Umsatz', icon: Euro },
