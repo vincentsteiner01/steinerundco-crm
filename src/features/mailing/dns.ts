@@ -1,4 +1,5 @@
-// DNS-Prüfung einer Versand-Domain direkt aus dem Browser (DNS-over-HTTPS bei dns.google, CORS erlaubt – geprüft 01.11.2026).
+// DNS-Prüfung einer Versand-Domain direkt aus dem Browser (DNS-over-HTTPS bei dns.google, CORS erlaubt – geprüft 01.11.2026;
+// dns.google steht deshalb in connect-src der CSP, vite.config.ts und public/.htaccess).
 // Geprüft wird, was Gmail, Yahoo, Microsoft und die deutschen Anbieter verlangen (Recherche 02 § 3): MX, genau ein SPF mit dem
 // Dienst des Postfachs, DKIM (Schlüssellänge aus dem öffentlichen Schlüssel geschätzt) und DMARC mit Berichtsadresse.
 import type { Anbieter } from './logik'

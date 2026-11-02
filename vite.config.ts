@@ -11,7 +11,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 const CSP_META =
   "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; " +
   "img-src 'self' data: blob: https://ekaqkfgvisdngsskzbai.supabase.co; " +
-  "connect-src 'self' https://ekaqkfgvisdngsskzbai.supabase.co wss://ekaqkfgvisdngsskzbai.supabase.co; " +
+  "connect-src 'self' https://ekaqkfgvisdngsskzbai.supabase.co wss://ekaqkfgvisdngsskzbai.supabase.co https://dns.google; " +
   "worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests"
 const cspMeta = {
   name: 'csp-meta',
