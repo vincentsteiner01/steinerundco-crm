@@ -126,6 +126,27 @@ describe('DNS', () => {
     expect(e.dkim.hinweis).toBe('Kein DKIM-Schlüssel gefunden')
     expect(e.dmarc.hinweis).toBe('Kein DMARC-Eintrag')
   })
+  it('zwei DKIM-Schlüssel unter demselben Namen → nicht ok', async () => {
+    const g = ((url: string) => {
+      const u = new URL(url)
+      if (u.searchParams.get('name') === 'google._domainkey.versand-test.de')
+        return Promise.resolve(
+          new Response(
+            JSON.stringify({
+              Status: 0,
+              Answer: [
+                { type: 16, data: `"v=DKIM1; k=rsa; p=${'A'.repeat(392)}"` },
+                { type: 16, data: `"v=DKIM1; k=rsa; p=${'B'.repeat(392)}"` },
+              ],
+            }),
+          ),
+        )
+      return f(url)
+    }) as typeof fetch
+    const e = await dnsPruefen('versand-test.de', 'google', null, g)
+    expect(e.ok).toBe(false)
+    expect(e.dkim.hinweis).toMatch(/2 DKIM-Schlüssel/)
+  })
   it('dkimBits schätzt 1024/2048, spfLookups zählt die erste Ebene', () => {
     expect(dkimBits(`p=${'A'.repeat(216)}`)).toBe(1024)
     expect(dkimBits(`v=DKIM1; p=${'A'.repeat(392)}`)).toBe(2048)

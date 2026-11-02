@@ -96,15 +96,22 @@ export async function dnsPruefen(
   }
   for (const s of selektoren) {
     const t = await doh(`${s}._domainkey.${d}`, 'TXT', f)
-    const eintrag = (t ?? []).find((x) => /v=DKIM1|p=/i.test(x))
+    const eintraege = (t ?? []).filter((x) => /v=DKIM1|p=/i.test(x))
+    const eintrag = eintraege[0]
     if (eintrag) {
       const bits = dkimBits(eintrag)
+      // Zwei Schlüssel unter demselben Namen (z. B. alter Workspace + neuer): Empfänger nehmen einen zufälligen, DKIM scheitert mal.
+      const doppelt = eintraege.length > 1
       dkimTeil = {
-        ok: !!bits && bits >= 1024,
+        ok: !doppelt && !!bits && bits >= 1024,
         selector: s,
         bits,
         wert: `${eintrag.slice(0, 60)}…`,
-        hinweis: bits && bits < 2048 ? `Nur ${bits} Bit – 2048 Bit empfohlen` : null,
+        hinweis: doppelt
+          ? `${eintraege.length} DKIM-Schlüssel unter „${s}._domainkey“ – den alten löschen`
+          : bits && bits < 2048
+            ? `Nur ${bits} Bit – 2048 Bit empfohlen`
+            : null,
       }
       break
     }
