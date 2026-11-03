@@ -244,6 +244,9 @@ begin
     raise exception 'FEHLER: weiter %', chk;
   end if;
   execute 'reset role';
+  -- ein echter aktiver Lauf der anderen Person stört nicht: innerhalb der (zurückgerollten) Transaktion beiseitelegen
+  update crm.recherche_laeufe set status = 'abgebrochen', finished_at = now()
+   where member_id = (select id from crm.members where id <> v_me limit 1) and status in ('laeuft', 'pausiert');
   insert into crm.recherche_laeufe (member_id, ziel) values ((select id from crm.members where id <> v_me limit 1), 30) returning id into fremd;
   execute 'set local role authenticated';
   begin
