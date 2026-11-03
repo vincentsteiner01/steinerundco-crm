@@ -19,7 +19,8 @@ const WERKZEUGE = [
   {
     name: 'ausgangspunkte',
     aktion: 'ausgangspunkte',
-    description: 'Vernetzte Kontakte und ihre Firmen aus dem CRM als Startpunkte für die Recherche auf LinkedIn.',
+    description:
+      'Bis zu 30 Kontakte aus dem CRM, je Zeile eine andere Firma, als Startpunkte für die Recherche auf LinkedIn (jeder Lauf neu gemischt).',
     properties: {},
     required: [],
   },
@@ -27,14 +28,14 @@ const WERKZEUGE = [
     name: 'profil_pruefen',
     aktion: 'pruefen',
     description:
-      'Dublettenprüfung vor jeder Anfrage: Lauf, CRM, Sperrliste, bestehende Verbindungen, gleicher Name + Firma, frühere Absagen. Nur bei frei = true darf vernetzt werden.',
+      'Dublettenprüfung und Firmengrenze (höchstens 2 Personen je Unternehmen) vor jeder Anfrage: Lauf, CRM, Sperrliste, bestehende Verbindungen, gleicher Name + Firma, frühere Absagen. Immer mit Firma aufrufen. Nur bei frei = true darf vernetzt werden.',
     properties: {
       url: text('LinkedIn-Profil-URL (https://www.linkedin.com/in/…)'),
       vorname: text('Vorname'),
       nachname: text('Nachname'),
-      firma: text('Aktueller Arbeitgeber'),
+      firma: text('Aktueller Arbeitgeber (Pflicht – für die Grenze je Unternehmen)'),
     },
-    required: ['url'],
+    required: ['url', 'firma'],
   },
   {
     name: 'profil_eintragen',

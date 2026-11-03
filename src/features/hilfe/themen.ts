@@ -394,7 +394,7 @@ export const THEMEN: readonly Thema[] = [
     titel: 'LinkedIn-Recherche mit ChatGPT',
     kurz: 'Der blaue Knopf unter der Suche: ChatGPT findet passende Energie- und Solarbetriebe und vernetzt dich nach deiner Freigabe – alles landet im CRM.',
     stichworte:
-      'play recherche starten agent chatgpt codex claude limit nutzungslimit ersatz vernetzen leads finden icp dienst einrichten freigabe automatisch terminal mac windows powershell computer use',
+      'play recherche starten agent chatgpt codex claude limit nutzungslimit ersatz vernetzen leads finden icp dienst einrichten freigabe automatisch terminal mac windows powershell computer use unternehmen firma grenze zwei ausgangspunkte',
     tour: 'recherche',
     bloecke: [
       {
@@ -417,6 +417,8 @@ export const THEMEN: readonly Thema[] = [
         punkte: [
           'Vor dem Vernetzen fragt ChatGPT einmal für den ganzen Lauf nach: Am blauen Knopf und auf der Laufseite steht „Freigabe nötig“ mit Name, Position, Firma und Grund aller gefundenen Personen. „Freigeben“ oder „Nicht freigeben“, gern mit Anmerkung, auch vom iPhone aus – zusätzlich kommt eine Mitteilung auf dem Mac.',
           'Jede Person wird Lead mit der Quelle des Laufs. Dubletten (CRM, Sperrliste, bestehende Verbindungen, frühere Absagen) erkennt das CRM selbst, die KPIs zählen mit.',
+          'Je Unternehmen höchstens zwei Personen – über alle Läufe und für euch beide zusammen, Schwesterfirmen derselben Gruppe zählen gemeinsam. ChatGPT nimmt die wichtigsten (Geschäftsführung vor Projekt/Vertrieb) bzw. die auf LinkedIn aktivsten. Stehen in einer Freigabeliste trotzdem mehr, zeigt das CRM es an und „Freigeben“ schickt mit, wer nicht vernetzt wird.',
+          'Startpunkte sind 30 verschiedene Firmen aus dem CRM, jeder Lauf bekommt eine neue Auswahl.',
           '„Pausieren“ hält ChatGPT sofort an, „Fortsetzen“ startet es neu – Eingetragenes bleibt, niemand wird doppelt angefragt.',
           'Zeigt LinkedIn eine Warnung oder ein Limit, hält der Lauf an und zeigt den Wortlaut.',
           'Erreicht ChatGPT sein Nutzungslimit, macht Claude im selben Lauf weiter – mit allem, was schon erledigt und freigegeben ist. Voraussetzung: die Claude-App ist auf dem Mac angemeldet. Der Schalter „Bei ChatGPT-Limit mit Claude weitermachen“ steht unter dem Recherche-Dienst.',

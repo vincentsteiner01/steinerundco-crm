@@ -1,4 +1,4 @@
--- Integrationstest Recherchelauf (Migrationen 17–20) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
+-- Integrationstest Recherchelauf (Migrationen 17–20, 23) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
 -- per Exception zurückgerollt wird (es bleibt nichts zurück). Aufruf: bash tools/db-query.sh -f supabase/tests/recherche_test.sql
 -- Ergebnis steht in der Fehlermeldung „TESTERGEBNIS: …“ (oder „FEHLER: …“ bei einer verletzten Annahme).
 do $$
@@ -218,7 +218,8 @@ begin
   if not (chk -> 'laeufe') @> jsonb_build_array(jsonb_build_object('id', r.id, 'agent_status', 'wartet')) then raise exception 'FEHLER: abholen %', chk; end if;
   chk := crm.recherche_dienst(schluessel, 'uebernehmen', jsonb_build_object('lauf', r.id, 'rechner', 'Testrechner'));
   if chk ->> 'art' <> 'neu' then raise exception 'FEHLER: übernehmen %', chk; end if;
-  chk := crm.recherche_dienst(schluessel, 'pruefen', jsonb_build_object('lauf', r.id, 'url', 'https://www.linkedin.com/in/claude-recherche-test-dienst'));
+  chk := crm.recherche_dienst(schluessel, 'pruefen', jsonb_build_object('lauf', r.id, 'url', 'https://www.linkedin.com/in/claude-recherche-test-dienst',
+    'firma', 'Dienst Solar GmbH'));
   if not (chk ->> 'frei')::boolean then raise exception 'FEHLER: prüfen über Dienst %', chk; end if;
   chk := crm.recherche_dienst(schluessel, 'eintragen', jsonb_build_object('lauf', r.id,
     'url', 'https://www.linkedin.com/in/claude-recherche-test-dienst', 'ergebnis', 'gesendet', 'vorname', 'Teste',
@@ -280,7 +281,34 @@ begin
   exception when others then
     if sqlerrm like 'FEHLER:%' then raise; end if;
   end;
-  out := out || '13 Claude-Ersatz (Übergabe, Wechsel, Schalter, Neustart) ok';
+  out := out || '13 Claude-Ersatz (Übergabe, Wechsel, Schalter, Neustart) ok; ';
+
+  -- 14. Höchstens 2 Personen je Unternehmen (Migration 23): Firmengruppe, Prüfen, Dienst ohne Firma, Ausgangspunkte
+  if crm.firma_gruppe('Lichtfang Projekt GmbH') <> 'lichtfang' or crm.firma_gruppe('BEISPIEL SOLAR & ENERGIE GmbH & Co. KG') <> 'beispiel'
+     or crm.firma_gruppe('Solar- & Elektrotechnik Testmann GmbH') <> 'solar elektrotechnik testmann' or crm.firma_gruppe('  ') is not null then
+    raise exception 'FEHLER: firma_gruppe';
+  end if;
+  for i in 1..2 loop
+    insert into crm.leads (first_name, last_name, linkedin_url, company_name, source, owner_id, created_by)
+    values ('Grenze' || i, 'Recherchetest', 'https://www.linkedin.com/in/claude-grenze-' || i,
+            'Claudegrenze ' || case i when 1 then 'AC' else 'Projekt' end || ' GmbH', 'recherche', v_me, v_me)
+    returning * into l;
+    perform crm.log_request(l.id, v_me, null, 'ohne');
+  end loop;
+  chk := crm.recherche_pruefen(r.id, 'https://www.linkedin.com/in/claude-grenze-3', 'Grenze3', 'Recherchetest', 'Claudegrenze Service GmbH');
+  if (chk ->> 'frei')::boolean or chk ->> 'art' <> 'firma' or (chk ->> 'firma_belegt')::int <> 2 then
+    raise exception 'FEHLER: Firmengrenze nicht erkannt %', chk;
+  end if;
+  chk := crm.recherche_pruefen(r.id, 'https://www.linkedin.com/in/claude-grenze-3', 'Grenze3', 'Recherchetest', 'Ganz Andere Testfirma GmbH');
+  if not (chk ->> 'frei')::boolean or (chk ->> 'firma_belegt')::int <> 0 then raise exception 'FEHLER: andere Firma nicht frei %', chk; end if;
+  chk := crm.recherche_dienst(schluessel, 'pruefen', jsonb_build_object('lauf', r.id, 'url', 'https://www.linkedin.com/in/claude-grenze-3'));
+  if (chk ->> 'frei')::boolean or chk ->> 'art' <> 'firma_fehlt' then raise exception 'FEHLER: Dienst-Prüfen ohne Firma %', chk; end if;
+  chk := crm.recherche_dienst(schluessel, 'ausgangspunkte', jsonb_build_object('lauf', r.id));
+  n := jsonb_array_length(chk -> 'personen');
+  if n < 1 or n > 30 or n <> (select count(distinct crm.firma_gruppe(x ->> 'firma')) from jsonb_array_elements(chk -> 'personen') x) then
+    raise exception 'FEHLER: Ausgangspunkte nicht je Firma eine Person (%): %', n, chk;
+  end if;
+  out := out || '14 je Unternehmen höchstens 2 (Gruppe, Prüfen, Dienst ohne Firma) ok, Ausgangspunkte ' || n || ' Firmen';
 
   raise exception 'TESTERGEBNIS: %', out;
 end

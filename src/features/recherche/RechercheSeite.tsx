@@ -51,6 +51,8 @@ import {
   ausgangspunkteFuer,
   dienstLage,
   fehlerText,
+  firmenEinschraenkung,
+  firmenUeberGrenze,
   formularFehler,
   gesendetErlaubt,
   LEERES_FORMULAR,
@@ -63,6 +65,7 @@ import {
   agentAuftrag,
   ALLE_ABSCHNITTE,
   ERGEBNIS_LABEL,
+  JE_FIRMA,
   KATEGORIEN,
   KONTROLLE,
   kontrolleFaellig,
@@ -199,7 +202,14 @@ function AgentPanel({
 function Antworten({ lauf, zustand, fremd }: { lauf: RechercheLauf; zustand: AgentZustand; fremd: boolean }) {
   const antworten = useRechercheAgentAntworten()
   const [text, setText] = useState('')
-  const senden = (freigabe: boolean | null, t = text) => antworten.mutate({ lauf: lauf.id, freigabe, text: t.trim() })
+  const ueber = zustand.freigabe ? firmenUeberGrenze(zustand.text ?? '') : []
+  const senden = (freigabe: boolean | null, t = text) =>
+    antworten.mutate({
+      lauf: lauf.id,
+      freigabe,
+      // Grenze je Unternehmen: „Freigeben“ schickt die Einschränkung automatisch mit
+      text: [t.trim(), freigabe ? firmenEinschraenkung(ueber) : ''].filter(Boolean).join(' '),
+    })
   return (
     <div className="grid gap-2.5" data-recherche-frage>
       {zustand.text ? (
@@ -216,6 +226,23 @@ function Antworten({ lauf, zustand, fremd }: { lauf: RechercheLauf; zustand: Age
               </li>
             ))}
         </ul>
+      ) : null}
+      {ueber.length ? (
+        <div
+          className="bg-overdue-tint/40 border-overdue text-ink rounded-sm border px-3.5 py-2.5 text-[13.5px]"
+          role="note"
+        >
+          <p className="font-medium">Mehr als {JE_FIRMA} Personen aus einem Unternehmen</p>
+          <ul className="mt-1 grid gap-0.5">
+            {ueber.map((u) => (
+              <li key={u.firma}>
+                {u.firma}: {u.anzahl} Personen – bleiben {u.bleiben.join(' und ')}, nicht vernetzt:{' '}
+                {u.weglassen.join(', ')}
+              </li>
+            ))}
+          </ul>
+          <p className="text-ink-3 mt-1">„Freigeben“ schickt das dem Agenten automatisch mit.</p>
+        </div>
       ) : null}
       {fremd ? (
         <p className="text-small text-ink-3">Antworten kann nur die Person, deren Lauf das ist.</p>
@@ -676,46 +703,38 @@ export function Component() {
 
       <Abschnitt nr={2} titel="Ausgangspunkte">
         <p className="text-small text-ink-3 max-w-[75ch]">
-          Vernetzte Kontakte und ihre Firmen aus dem CRM, passende Positionen zuerst. Von hier aus „Weitere Profile
-          ansehen“, den Reiter „Personen“ der Unternehmensseite und Netzwerkvorschläge nutzen. Jeder Lauf bekommt eine
-          andere Auswahl.
+          Je Zeile eine andere Firma aus dem CRM ({start.personen.length}), jeder Lauf bekommt eine neue Auswahl. Von
+          hier aus „Weitere Profile ansehen“, den Reiter „Personen“ der Unternehmensseite und Netzwerkvorschläge nutzen
+          – je Unternehmen höchstens {JE_FIRMA} Personen anfragen.
         </p>
-        <div className="grid gap-6 md:grid-cols-2">
-          <ul className="grid gap-1.5" aria-label="Startprofile">
-            {start.personen.map((p) => (
-              <li key={p.id} className="text-[13.5px]">
-                <a
-                  href={p.linkedin_url ?? '#'}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-ink-bright inline-flex items-center gap-1 font-medium hover:underline"
-                >
-                  {p.full_name}
-                  <ExternalLink size={12} strokeWidth={1.75} aria-hidden />
-                </a>
-                <span className="text-ink-3"> · {[p.role_title, p.company_name].filter(Boolean).join(' · ')}</span>
-              </li>
-            ))}
-            {start.personen.length === 0 ? (
-              <li className="text-small text-ink-3">Noch keine qualifizierten Kontakte im CRM.</li>
-            ) : null}
-          </ul>
-          <ul className="grid gap-1.5" aria-label="Startfirmen">
-            {start.firmen.map((f) => (
-              <li key={f} className="text-[13.5px]">
-                <a
-                  href={`https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(f)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-ink inline-flex items-center gap-1 hover:underline"
-                >
-                  {f}
-                  <ExternalLink size={12} strokeWidth={1.75} aria-hidden />
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ul className="grid gap-x-8 gap-y-1.5 md:grid-cols-2" aria-label="Ausgangspunkte">
+          {start.personen.map((p) => (
+            <li key={p.id} className="min-w-0 text-[13.5px]">
+              <a
+                href={p.linkedin_url ?? '#'}
+                target="_blank"
+                rel="noreferrer"
+                className="text-ink-bright inline-flex items-center gap-1 font-medium hover:underline"
+              >
+                {p.full_name}
+                <ExternalLink size={12} strokeWidth={1.75} aria-hidden />
+              </a>
+              <span className="text-ink-3">{p.role_title ? ` · ${p.role_title}` : ''} · </span>
+              <a
+                href={`https://www.linkedin.com/search/results/companies/?keywords=${encodeURIComponent(p.company_name ?? '')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-ink inline-flex items-center gap-1 hover:underline"
+              >
+                {p.company_name}
+                <ExternalLink size={12} strokeWidth={1.75} aria-hidden />
+              </a>
+            </li>
+          ))}
+          {start.personen.length === 0 ? (
+            <li className="text-small text-ink-3">Noch keine qualifizierten Kontakte im CRM.</li>
+          ) : null}
+        </ul>
       </Abschnitt>
 
       <Abschnitt nr={3} titel="Regeln" id="regeln">

@@ -96,7 +96,9 @@ export function useAusgangspunkte() {
           .is('deleted_at', null)
           .not('linkedin_url', 'is', null)
           .not('company_name', 'is', null)
+          .eq('do_not_contact', false)
           .in('stage', [
+            'vernetzung_gesendet',
             'vernetzt',
             'gespraech_eroeffnet',
             'dm_follow_up',
@@ -112,7 +114,7 @@ export function useAusgangspunkte() {
             'langfristig',
           ])
           .order('stage_changed_at', { ascending: false })
-          .range(0, 299),
+          .range(0, 999),
       ),
   })
 }

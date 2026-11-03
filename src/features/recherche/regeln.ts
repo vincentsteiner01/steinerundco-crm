@@ -2,11 +2,15 @@
 // Recherchestrategie ohne Premium, Ablauf je Profil und Stopp-Regeln. Die Rechercheseite zeigt sie vollständig an; der
 // ChatGPT-Agent bekommt sie per agentAuftrag() wörtlich als Auftrag (beim Start im Lauf gespeichert) – Text auf einer Webseite
 // wäre für ihn nur Daten, keine Anweisung. Änderungen hier gelten ab dem nächsten Start eines Agenten.
-// Serverseitig erzwungen (Migration 17): Ziel ≤ 30, Dublettenfreiheit, Pflichtangaben, Kontrollpunkt alle 10 Profile.
+// Serverseitig erzwungen (Migration 17): Ziel ≤ 30, Dublettenfreiheit, Pflichtangaben, Kontrollpunkt alle 10 Profile;
+// (Migration 23) höchstens 2 Personen je Unternehmen in recherche_pruefen.
 
-export const REGELN_STAND = 'ICP-Stand 29.10.2026'
+export const REGELN_STAND = 'ICP-Stand 03.11.2026'
 
 export type Abschnitt = { titel: string; punkte: readonly string[]; hinweis?: string }
+
+/** Höchstens so viele Personen je Unternehmen (03.11.2026, Vincent) – wie crm.recherche_je_firma() in Migration 23. */
+export const JE_FIRMA = 2
 
 export const ZIEL: Abschnitt = {
   titel: 'Ziel des Laufs',
@@ -99,11 +103,22 @@ export const ENTSCHEIDUNG: Abschnitt = {
   ],
 }
 
+export const JE_UNTERNEHMEN: Abschnitt = {
+  titel: `Höchstens ${JE_FIRMA} Personen je Unternehmen`,
+  punkte: [
+    `Je Unternehmen höchstens ${JE_FIRMA} Personen anfragen. Das gilt über alle Läufe und für alle im Team zusammen – schon angefragte oder vernetzte Kontakte der Firma zählen mit. „Prüfen“ meldet, wenn die Firma voll ist.`,
+    'Schwesterfirmen derselben Gruppe (gleiche Marke oder Website, z. B. „… AC GmbH“ und „… Projekt GmbH“) zählen als ein Unternehmen.',
+    'Die wichtigsten nehmen: zuerst Priorität A (Geschäftsführung, Inhaber), dann B, dann C.',
+    'Bei gleicher Priorität die Person, die auf LinkedIn am aktivsten ist: im Profil unter „Aktivität“ eigene Beiträge oder Kommentare der letzten drei Monate. Im Qualifizierungsgrund kurz nennen, z. B. „postet monatlich zu PV-Projekten“.',
+    'Breit streuen: nach zwei Personen zur nächsten Firma wechseln. Lieber 30 verschiedene Unternehmen als viele Personen aus wenigen.',
+  ],
+}
+
 export const STRATEGIE: Abschnitt = {
   titel: 'Recherche ohne Premium / Sales Navigator',
   punkte: [
     'Nicht über die allgemeine Personensuche arbeiten – sie ist ohne Premium schnell ausgeschöpft.',
-    'Startpunkt: ein Profil oder Unternehmen aus „Ausgangspunkte“ unten (qualifizierte Kontakte und Firmen aus dem CRM).',
+    'Startpunkt: ein Profil oder Unternehmen aus „Ausgangspunkte“ unten (je Zeile eine andere Firma aus dem CRM, jeder Lauf bekommt eine neue Auswahl).',
     'Von dort weiter über „Weitere Profile ansehen“ / „Personen, die auch angesehen wurden“, „Personen, die Sie vielleicht kennen“, den Reiter „Personen“ auf Unternehmensseiten und Mitarbeiterlisten passender Installationsbetriebe.',
     'Systematisch durchs Netzwerk bewegen statt für jeden Lead eine neue allgemeine Suche zu starten – aber jedes Profil einzeln qualifizieren: Netzwerkähnlichkeit heißt nicht ICP-Konformität.',
   ],
@@ -138,6 +153,7 @@ export const KONTROLLE: readonly string[] = [
   'Keine Hersteller, Großhändler, Solarpark-Entwickler, reine B2B-/Software-/Beratungsfirmen dabei.',
   'Jede Person hat eine Rolle aus A, B, C (oder bedingt mit Begründung).',
   'Jedes Profil wurde vor dem Vernetzen im CRM geprüft – keine Dubletten.',
+  `Höchstens ${JE_FIRMA} Personen je Unternehmen (Schwesterfirmen zusammen), jeweils die wichtigsten bzw. aktivsten.`,
   'Alle Anfragen ohne Nachricht gesendet, keine Nachricht geschrieben.',
   'Keine erfundenen Angaben in Firma, Position oder Grund.',
 ]
@@ -148,6 +164,7 @@ export const ALLE_ABSCHNITTE: readonly Abschnitt[] = [
   AUSSCHLUSS,
   ...ROLLEN,
   ENTSCHEIDUNG,
+  JE_UNTERNEHMEN,
   STRATEGIE,
   ABLAUF,
   STOPP,
@@ -161,7 +178,7 @@ export function startAnweisung(url: string, person: string): string {
   return [
     `Du arbeitest für ${person} von Steiner & Co. auf LinkedIn. Öffne ${url} in einem eigenen Tab und lass ihn offen – das ist der Recherchelauf im CRM mit allen Regeln, den Ausgangspunkten und den Knöpfen.`,
     'Lies dort zuerst den Abschnitt „Regeln“ vollständig und halte dich genau daran.',
-    'Kurz: Recherchiere über die Ausgangspunkte und LinkedIn-Netzwerkvorschläge passende Personen, qualifiziere Unternehmen und Person, prüfe jedes Profil im CRM mit „Prüfen“ und sende nur bei „Frei“ eine Vernetzungsanfrage OHNE Nachricht. Trage direkt danach „Vernetzungsanfrage gesendet“ ein. Höchstens 30 Anfragen.',
+    `Kurz: Recherchiere über die Ausgangspunkte und LinkedIn-Netzwerkvorschläge passende Personen, qualifiziere Unternehmen und Person, prüfe jedes Profil im CRM mit „Prüfen“ und sende nur bei „Frei“ eine Vernetzungsanfrage OHNE Nachricht. Trage direkt danach „Vernetzungsanfrage gesendet“ ein. Höchstens 30 Anfragen und höchstens ${JE_FIRMA} Personen je Unternehmen (die wichtigsten bzw. auf LinkedIn aktivsten).`,
     'Schreibe keine Nachrichten. Bei jeder Warnung, Sicherheitsabfrage oder Einschränkung von LinkedIn sofort aufhören und im CRM „LinkedIn-Einschränkung melden“ – nichts umgehen.',
     'Melde mir am Ende die Zahlen aus dem Kopf der Rechercheseite und was nicht geklappt hat.',
   ].join('\n\n')
@@ -187,7 +204,7 @@ export function agentAuftrag(p: { person: string }): string {
       '- CRM (MCP-Server „crm“) – das CRM bedienst du nur darüber, nie über Webformulare:',
       '  - lauf_status: Status, Zähler und alle schon bearbeiteten Profile dieses Laufs (nichts doppelt bearbeiten).',
       '  - ausgangspunkte: Kontakte und Firmen aus dem CRM als Startpunkte.',
-      '  - profil_pruefen: Dublettenprüfung einer Profil-URL – vor jeder Anfrage.',
+      `  - profil_pruefen: Dublettenprüfung und Firmengrenze (höchstens ${JE_FIRMA} je Unternehmen) – immer mit url, vorname, nachname und firma; vor der Freigabeliste und noch einmal direkt vor jedem Klick auf „Vernetzen“.`,
       '  - profil_eintragen: Ergebnis je Profil (gesendet, dublette, nicht_qualifiziert, unklar, fehler).',
       '  - kontrollpunkt_bestaetigen: nach je 10 geprüften Profilen.',
       '  - einschraenkung_melden: Warnung, Limit oder Einschränkung von LinkedIn (hält den Lauf an).',
@@ -205,8 +222,10 @@ export function agentAuftrag(p: { person: string }): string {
       '## Freigabe vor dem Vernetzen',
       `- Vernetzen geschieht im Namen von ${p.person}, deshalb holst du vorher die Freigabe ein – einmal für den ganzen Lauf, nicht je Person.`,
       '- Recherchiere zuerst so viele qualifizierte Personen, wie noch offen sind (lauf_status → noch), jede bei profil_pruefen frei. Nicht passende Profile trägst du sofort mit profil_eintragen ein (nicht_qualifiziert, unklar, dublette). Findest du nach gründlicher Suche weniger, frag mit der Liste, die du hast.',
+      `- In der Liste höchstens ${JE_FIRMA} Personen je Unternehmen, zusammen mit den schon angefragten (profil_pruefen meldet sie als firma_belegt): die wichtigsten bzw. auf LinkedIn aktivsten, siehe „Höchstens ${JE_FIRMA} Personen je Unternehmen“.`,
       `- Dann beende deine Antwort so: erste Zeile „${FREIGABE_PRAEFIX} N Vernetzungsanfragen“, danach je Person eine Zeile „Vorname Nachname · Position · Firma · Kategorie · Grund · Profil-URL“. Die Antwort kommt als nächste Nachricht aus dem CRM.`,
       '- „Freigegeben.“ gilt für genau diese Liste: alle genannten Personen nacheinander vernetzen (Vernetzen → Ohne Notiz senden; geklappt hat es nur, wenn danach „Ausstehend“ steht) und direkt danach jeweils profil_eintragen mit ergebnis gesendet und allen Angaben – ohne weitere Rückfrage. Steht hinter „Freigegeben.“ eine Einschränkung, halte dich daran.',
+      '- Direkt vor jedem Klick auf „Vernetzen“ profil_pruefen noch einmal aufrufen. Meldet es frei = false (z. B. Firma schon voll), diese Person nicht vernetzen und mit profil_eintragen ergebnis unklar und dem gemeldeten Grund eintragen.',
       '- „Nicht freigegeben …“: niemanden aus der Liste vernetzen; trage sie mit nicht_qualifiziert und dem Grund aus der Antwort ein.',
       '- Ist das Ziel danach nicht erreicht (zu wenige gefunden, Senden fehlgeschlagen), recherchiere weiter und frag mit der nächsten Liste. Brauchst du aus einem anderen Grund eine Entscheidung, beende deine Antwort mit „Frage: …“.',
     ].join('\n'),

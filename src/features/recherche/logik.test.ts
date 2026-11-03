@@ -6,6 +6,9 @@ import {
   AGENT_UEBERNAHME_S,
   ausgangspunkteFuer,
   dienstLage,
+  firmaGruppe,
+  firmenEinschraenkung,
+  firmenUeberGrenze,
   DIENST_VERBUNDEN_S,
   type DienstLage,
   einrichtungsBefehl,
@@ -28,29 +31,73 @@ const p = (i: number, firma = `Firma ${i % 5}`): Ausgangspunkt => ({
 })
 
 describe('Ausgangspunkte', () => {
-  const liste = Array.from({ length: 40 }, (_, i) => p(i))
+  const liste = Array.from({ length: 80 }, (_, i) => p(i, `Betrieb${i % 40} Solar GmbH`))
 
-  it('gleicher Lauf → gleiche Auswahl, anderer Lauf → andere', () => {
+  it('gleicher Lauf → gleiche Auswahl, anderer Lauf → andere; 30 Firmen', () => {
     const a = ausgangspunkteFuer(liste, 'lauf-1')
     expect(ausgangspunkteFuer(liste, 'lauf-1')).toEqual(a)
     expect(ausgangspunkteFuer(liste, 'lauf-2').personen.map((x) => x.id)).not.toEqual(a.personen.map((x) => x.id))
-    expect(a.personen).toHaveLength(12)
+    expect(a.personen).toHaveLength(30)
+    expect(a.firmen).toHaveLength(30)
   })
 
-  it('ICP-nahe Positionen zuerst', () => {
+  it('je Firmengruppe genau eine Person – vernetzt und ICP-nahe Position zuerst', () => {
     const mix = [
-      { ...p(1), role_title: 'Einkauf' },
-      { ...p(2), role_title: 'Leiterin Kundenservice' },
-      { ...p(3), role_title: null },
-      { ...p(4), role_title: 'Geschäftsführer' },
+      { ...p(1, 'Lichtfang AC GmbH'), role_title: 'Einkauf' },
+      { ...p(2, 'Lichtfang Projekt GmbH'), role_title: 'Geschäftsführer', stage: 'vernetzung_gesendet' as const },
+      { ...p(3, 'Lichtfang AC GmbH'), role_title: 'Leiterin Kundenservice' },
+      { ...p(4, 'PV Muster GmbH'), role_title: null },
     ]
-    const r = ausgangspunkteFuer(mix, 'x', 2)
-    expect(r.personen.map((x) => x.id).sort()).toEqual(['l2', 'l4'])
+    const r = ausgangspunkteFuer(mix, 'x')
+    expect(r.personen.map((x) => x.id).sort()).toEqual(['l3', 'l4'])
+    expect(r.firmen).toHaveLength(2)
   })
 
-  it('Firmen eindeutig (ohne Groß/Klein)', () => {
-    const r = ausgangspunkteFuer([p(1, 'Solar GmbH'), p(2, 'solar gmbh'), p(3, 'PV Nord')], 'x')
+  it('Firmen eindeutig (ohne Groß/Klein), ohne Firma fällt weg', () => {
+    const r = ausgangspunkteFuer([p(1, 'Solar GmbH'), p(2, 'solar gmbh'), p(3, 'PV Nord'), p(5, '  ')], 'x')
     expect(r.firmen).toHaveLength(2)
+  })
+})
+
+describe('Firmengrenze', () => {
+  it('firmaGruppe: erstes Wort ohne Rechtsform, Gattungswörter → ganzer Name', () => {
+    expect(firmaGruppe('Lichtfang AC GmbH')).toBe('lichtfang')
+    expect(firmaGruppe('Lichtfang Projekt GmbH')).toBe('lichtfang')
+    expect(firmaGruppe('BEISPIEL SOLAR & ENERGIE GmbH & Co. KG')).toBe('beispiel')
+    expect(firmaGruppe('Solar- & Elektrotechnik Testmann GmbH')).toBe('solar elektrotechnik testmann')
+    expect(firmaGruppe('PV Muster GmbH')).toBe('pv muster')
+    expect(firmaGruppe('My Solar Beispiel')).toBe('my solar beispiel')
+    expect(firmaGruppe('TESTA-ENERGY GmbH')).toBe('testa')
+    expect(firmaGruppe('SOLARIX and more GmbH')).toBe('solarix')
+    expect(firmaGruppe('Energie Muster AG')).toBe('energie muster')
+    expect(firmaGruppe('  ')).toBeNull()
+    expect(firmaGruppe(null)).toBeNull()
+  })
+
+  it('firmenUeberGrenze: A vor B, sonst Reihenfolge; Einschränkung für „Freigeben“', () => {
+    const liste = [
+      'Anna Beispiel · CEO & Founder · Lichtfang AC GmbH · A · Führt … · https://www.linkedin.com/in/a/',
+      'Bernd Muster · CEO / Founder · Lichtfang Projekt GmbH · A · Verantwortet … · https://www.linkedin.com/in/b/',
+      'Carla Probe · Bauleiter · Lichtfang Projekt GmbH · B · Bau … · https://www.linkedin.com/in/c/',
+      'Daniel Test · Operations Manager · Lichtfang AC GmbH · A · Abläufe … · https://www.linkedin.com/in/d/',
+      'Eva Erfunden · Projektleiter · Fokus Test GmbH · B · Leitet … · https://www.linkedin.com/in/e/',
+      'Felix Fiktiv · Geschäftsführer · Solar- & Elektrotechnik Testmann GmbH · A · Führt … · https://www.linkedin.com/in/f/',
+      'Gina Platzhalter · Projektleiter · Solar- & Elektrotechnik Testmann GmbH · B · Leitet … · https://www.linkedin.com/in/g/',
+    ].join('\n')
+    const u = firmenUeberGrenze(liste)
+    expect(u).toEqual([
+      {
+        firma: 'Lichtfang AC GmbH',
+        anzahl: 4,
+        bleiben: ['Anna Beispiel', 'Bernd Muster'],
+        weglassen: ['Daniel Test', 'Carla Probe'],
+      },
+    ])
+    expect(firmenEinschraenkung(u)).toBe(
+      'Höchstens 2 Personen je Unternehmen – nicht vernetzen: Daniel Test, Carla Probe.',
+    )
+    expect(firmenEinschraenkung([])).toBe('')
+    expect(firmenUeberGrenze('Kopfzeile ohne Trenner\n')).toEqual([])
   })
 })
 
