@@ -417,7 +417,7 @@ export const THEMEN: readonly Thema[] = [
         punkte: [
           'Vor dem Vernetzen fragt ChatGPT einmal für den ganzen Lauf nach: Am blauen Knopf und auf der Laufseite steht „Freigabe nötig“ mit Name, Position, Firma und Grund aller gefundenen Personen. „Freigeben“ oder „Nicht freigeben“, gern mit Anmerkung, auch vom iPhone aus – zusätzlich kommt eine Mitteilung auf dem Mac.',
           'Jede Person wird Lead mit der Quelle des Laufs. Dubletten (CRM, Sperrliste, bestehende Verbindungen, frühere Absagen) erkennt das CRM selbst, die KPIs zählen mit.',
-          'Je Unternehmen höchstens zwei Personen – über alle Läufe und für euch beide zusammen, Schwesterfirmen derselben Gruppe zählen gemeinsam. ChatGPT nimmt die wichtigsten (Geschäftsführung vor Projekt/Vertrieb) bzw. die auf LinkedIn aktivsten. Stehen in einer Freigabeliste trotzdem mehr, zeigt das CRM es an und „Freigeben“ schickt mit, wer nicht vernetzt wird.',
+          'Je Unternehmen höchstens zwei Personen – über alle Läufe und für euch beide zusammen, Schwesterfirmen derselben Gruppe zählen gemeinsam, Franchise-Standorte (enerix, 1Komma5) einzeln. ChatGPT nimmt die wichtigsten (Geschäftsführung vor Projekt/Vertrieb) bzw. die auf LinkedIn aktivsten. Stehen in einer Freigabeliste trotzdem mehr, zeigt das CRM es an und „Freigeben“ schickt mit, wer nicht vernetzt wird.',
           'Startpunkte sind 30 verschiedene Firmen aus dem CRM, jeder Lauf bekommt eine neue Auswahl.',
           '„Pausieren“ hält ChatGPT sofort an, „Fortsetzen“ startet es neu – Eingetragenes bleibt, niemand wird doppelt angefragt.',
           'Zeigt LinkedIn eine Warnung oder ein Limit, hält der Lauf an und zeigt den Wortlaut.',

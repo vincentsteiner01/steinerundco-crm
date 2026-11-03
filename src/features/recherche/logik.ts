@@ -32,9 +32,13 @@ const GATTUNGSWOERTER = new Set(
   ).split(' '),
 )
 
+/** Franchise-Marken: jeder Standort ist ein eigener Betrieb (03.11.2026, Vincent) – wie Migration 24. */
+const FRANCHISE = new Set(['enerix', '1komma5'])
+
 /**
- * Firmengruppe wie crm.firma_gruppe (Migration 23): erstes Wort ohne Rechtsform, damit „Lichtfang AC GmbH“ und „Lichtfang
- * Projekt GmbH“ als ein Unternehmen zählen – bei Gattungswörtern („Solar- & Elektrotechnik Testmann“) der ganze Name.
+ * Firmengruppe wie crm.firma_gruppe (Migrationen 23/24): erstes Wort ohne Rechtsform, damit „Lichtfang AC GmbH“ und „Lichtfang
+ * Projekt GmbH“ als ein Unternehmen zählen – bei Gattungswörtern („Solar- & Elektrotechnik Testmann“) und Franchise-Marken
+ * („enerix Musterstadt“) der ganze Name.
  */
 export function firmaGruppe(firma: string | null | undefined): string | null {
   const kern = (firma ?? '')
@@ -47,7 +51,7 @@ export function firmaGruppe(firma: string | null | undefined): string | null {
     .replace(/[^a-z0-9äöüßéèáà]+/g, ' ')
     .trim()
   const erstes = kern.split(' ')[0] ?? ''
-  return (erstes.length >= 4 && !GATTUNGSWOERTER.has(erstes) ? erstes : kern) || null
+  return (erstes.length >= 4 && !GATTUNGSWOERTER.has(erstes) && !FRANCHISE.has(erstes) ? erstes : kern) || null
 }
 
 /** Vernetzt oder weiter – vor „Anfrage gesendet“ (beides sind geprüfte Firmen, Vernetzte kennen wir besser). */

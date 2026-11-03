@@ -1,4 +1,4 @@
--- Integrationstest Recherchelauf (Migrationen 17–20, 23) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
+-- Integrationstest Recherchelauf (Migrationen 17–20, 23, 24) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
 -- per Exception zurückgerollt wird (es bleibt nichts zurück). Aufruf: bash tools/db-query.sh -f supabase/tests/recherche_test.sql
 -- Ergebnis steht in der Fehlermeldung „TESTERGEBNIS: …“ (oder „FEHLER: …“ bei einer verletzten Annahme).
 do $$
@@ -288,7 +288,8 @@ begin
 
   -- 14. Höchstens 2 Personen je Unternehmen (Migration 23): Firmengruppe, Prüfen, Dienst ohne Firma, Ausgangspunkte
   if crm.firma_gruppe('Lichtfang Projekt GmbH') <> 'lichtfang' or crm.firma_gruppe('BEISPIEL SOLAR & ENERGIE GmbH & Co. KG') <> 'beispiel'
-     or crm.firma_gruppe('Solar- & Elektrotechnik Testmann GmbH') <> 'solar elektrotechnik testmann' or crm.firma_gruppe('  ') is not null then
+     or crm.firma_gruppe('Solar- & Elektrotechnik Testmann GmbH') <> 'solar elektrotechnik testmann' or crm.firma_gruppe('  ') is not null
+     or crm.firma_gruppe('enerix Musterstadt') <> 'enerix musterstadt' or crm.firma_gruppe('1Komma5° Testdorf') <> '1komma5 testdorf' then
     raise exception 'FEHLER: firma_gruppe';
   end if;
   for i in 1..2 loop
