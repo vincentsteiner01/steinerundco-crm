@@ -1,0 +1,1 @@
+import{i as e}from"./cn-BHvbeyhY.js";import{t,v as n}from"./vendor-react-p22SwLs9.js";import{t as r}from"./Dialog-CnaqNB9o.js";var i=e(n(),1),a=t();function o(){let[e,t]=(0,i.useState)(null);return{dialog:e?(0,a.jsx)(r,{offen:!0,onOpenChange:e=>!e&&t(null),titel:e.titel,text:e.text,primaer:{label:e.label,danger:!0,onClick:()=>{e.los(),t(null)}}}):null,fragen:t}}export{o as t};

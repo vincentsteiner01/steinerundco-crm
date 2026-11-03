@@ -1,0 +1,1 @@
+import{i as e}from"./supabase-vyi9NpZf.js";import"./errors-eWJoH3ea.js";import{B as t,Ct as n,P as r}from"./index-BPk2gbd9.js";function i(i){return n({queryKey:r.views(i),queryFn:async()=>t(await e.from(`saved_views`).select(`*`).eq(`entity`,i).order(`sort_order`).order(`name`))})}export{i as t};

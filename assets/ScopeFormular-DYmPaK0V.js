@@ -1,0 +1,1 @@
+import{h as e}from"./index-BPk2gbd9.js";function t(){return e(`formular`),null}export{t};
