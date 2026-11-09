@@ -2,6 +2,7 @@
 // anfängt), Formularprüfung wie in recherche_eintragen, die Sperre „Gesendet nur nach Prüfen derselben URL“ und der Zustand des
 // Agenten aus den Meldungen des Recherche-Diensts (Migration 18).
 import type {
+  Anbieter,
   Ausgangspunkt,
   PruefErgebnis,
   RechercheErgebnis,
@@ -259,9 +260,27 @@ const KEIN_DIENST: Record<DienstLage, string> = {
   verbunden: 'Der Recherche-Dienst hat den Lauf nicht übernommen. Läuft gerade ein anderer Agent?',
 }
 
-/** Claude übernimmt, wenn ChatGPT sein Nutzungslimit erreicht (Migration 20) – sonst arbeitet ChatGPT. */
+export const ANBIETER_NAME: Record<Anbieter, string> = { chatgpt: 'ChatGPT', claude: 'Claude' }
+
+/** Wer den Lauf gerade stellt: die Wahl der Person beim Start (Migration 25) bzw. Claude nach ChatGPT-Limit (Migration 20). */
 export const agentName = (l: Pick<RechercheLauf, 'agent_anbieter'>) =>
-  l.agent_anbieter === 'claude' ? 'Claude' : 'ChatGPT'
+  ANBIETER_NAME[l.agent_anbieter === 'claude' ? 'claude' : 'chatgpt']
+
+export type AgentWahl = {
+  /** gewählt im Schalter „Agent“ (für alle Rechner der Person gleich) */
+  gewaehlt: Anbieter
+  /** meldet ein Rechner der Person ein angemeldetes Claude Code? */
+  claudeDa: boolean
+  /** wer beim nächsten Agent-Start tatsächlich arbeitet – wie private.recherche_anbieter */
+  startet: Anbieter
+}
+
+/** Wahl „Agent: ChatGPT | Claude“ aus den Recherche-Diensten der Person: Claude nur, wenn gewählt und irgendwo angemeldet. */
+export function agentWahl(dienste: readonly { anbieter: string; claude: string | null }[] | undefined): AgentWahl {
+  const gewaehlt: Anbieter = dienste?.some((d) => d.anbieter === 'claude') ? 'claude' : 'chatgpt'
+  const claudeDa = !!dienste?.some((d) => d.claude)
+  return { gewaehlt, claudeDa, startet: gewaehlt === 'claude' && claudeDa ? 'claude' : 'chatgpt' }
+}
 
 /** Was der Agent gerade tut – aus Laufstatus, den Meldungen des Recherche-Diensts und ob ein Dienst verbunden ist. */
 export function agentZustand(l: AgentFelder, jetzt = Date.now(), dienst?: DienstLage): AgentZustand {

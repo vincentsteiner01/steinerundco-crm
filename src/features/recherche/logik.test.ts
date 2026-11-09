@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Ausgangspunkt } from '@/data/recherche'
 import {
+  agentWahl,
   agentZustand,
   AGENT_STILL_S,
   AGENT_UEBERNAHME_S,
@@ -279,6 +280,29 @@ describe('Agent-Zustand', () => {
     expect(dienstLage([{ zuletzt_gesehen: vor(DIENST_VERBUNDEN_S + 30) }, { zuletzt_gesehen: vor(8) }], jetzt)).toBe(
       'verbunden',
     )
+  })
+})
+
+describe('Agent wählen', () => {
+  it('Claude nur, wenn gewählt und auf einem Rechner angemeldet', () => {
+    expect(agentWahl(undefined)).toEqual({ gewaehlt: 'chatgpt', claudeDa: false, startet: 'chatgpt' })
+    expect(agentWahl([{ anbieter: 'chatgpt', claude: '2.1.317' }])).toEqual({
+      gewaehlt: 'chatgpt',
+      claudeDa: true,
+      startet: 'chatgpt',
+    })
+    expect(agentWahl([{ anbieter: 'claude', claude: null }])).toEqual({
+      gewaehlt: 'claude',
+      claudeDa: false,
+      startet: 'chatgpt',
+    })
+    // zwei Rechner: Claude auf dem einen angemeldet genügt
+    expect(
+      agentWahl([
+        { anbieter: 'claude', claude: null },
+        { anbieter: 'claude', claude: '2.1.317' },
+      ]).startet,
+    ).toBe('claude')
   })
 })
 

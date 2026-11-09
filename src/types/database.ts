@@ -2240,6 +2240,7 @@ export type Database = {
       }
       recherche_dienste: {
         Row: {
+          anbieter: string
           claude: string | null
           claude_ersatz: boolean
           created_at: string
@@ -2251,6 +2252,7 @@ export type Database = {
           zuletzt_gesehen: string | null
         }
         Insert: {
+          anbieter?: string
           claude?: string | null
           claude_ersatz?: boolean
           created_at?: string
@@ -2262,6 +2264,7 @@ export type Database = {
           zuletzt_gesehen?: string | null
         }
         Update: {
+          anbieter?: string
           claude?: string | null
           claude_ersatz?: boolean
           created_at?: string
@@ -4132,6 +4135,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      recherche_anbieter_waehlen: { Args: { p_anbieter: string }; Returns: string }
       recherche_claude_ersatz: { Args: { p_an: boolean }; Returns: undefined }
       recherche_dienst: {
         Args: { p_aktion: string; p_daten?: Json; p_schluessel: string }

@@ -1,6 +1,7 @@
 // LinkedIn-Recherchelauf (Migration 17, 29.10.2026): Läufe, geprüfte Profile, Ausgangspunkte aus dem CRM und die RPCs
 // recherche_starten · _pruefen · _eintragen · _kontrolle · _status · _agent_starten · _agent_antworten, dazu die Recherche-Dienste
-// je Mac (Migrationen 18/19) samt Schalter „Claude als Ersatz bei ChatGPT-Limit“ (Migration 20). Die Regeln erzwingt die Datenbank; diese Hooks rufen nur auf.
+// je Mac (Migrationen 18/19) samt Schalter „Claude als Ersatz bei ChatGPT-Limit“ (Migration 20) und der Wahl „Agent: ChatGPT | Claude“
+// (Migration 25). Die Regeln erzwingt die Datenbank; diese Hooks rufen nur auf.
 // Fortschritt per Abfrage alle 4 s, solange ein Lauf aktiv ist (die Seite ist auch für einen zuschauenden Menschen gedacht).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Database } from '@/types/database'
@@ -258,6 +259,7 @@ export function useRechercheAgentAntworten() {
 }
 
 export type RechercheDienst = Database['crm']['Tables']['recherche_dienste']['Row']
+export type Anbieter = 'chatgpt' | 'claude'
 
 /** Recherche-Dienste (je Mac) der Person – „verbunden“, wenn einer sich in der letzten Minute gemeldet hat. */
 export function useRechercheDienste(memberId: string | null | undefined, abfragen = false) {
@@ -282,6 +284,18 @@ export function useRechercheClaudeErsatz() {
   return useMutation({
     mutationFn: async (an: boolean): Promise<void> => {
       pruefe(await supabase.rpc('recherche_claude_ersatz', { p_an: an }))
+    },
+    onError: mutationFehler,
+    onSettled: inval,
+  })
+}
+
+/** Wahl „Agent: ChatGPT | Claude“ – gilt für alle Recherche-Dienste der Person, ab dem nächsten Agent-Start. */
+export function useRechercheAnbieter() {
+  const inval = useInvalidieren()
+  return useMutation({
+    mutationFn: async (anbieter: Anbieter): Promise<void> => {
+      pruefe(await supabase.rpc('recherche_anbieter_waehlen', { p_anbieter: anbieter }))
     },
     onError: mutationFehler,
     onSettled: inval,

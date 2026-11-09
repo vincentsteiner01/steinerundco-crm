@@ -394,7 +394,7 @@ export const THEMEN: readonly Thema[] = [
     titel: 'LinkedIn-Recherche mit ChatGPT',
     kurz: 'Der blaue Knopf unter der Suche: ChatGPT findet passende Energie- und Solarbetriebe und vernetzt dich nach deiner Freigabe – alles landet im CRM.',
     stichworte:
-      'play recherche starten agent chatgpt codex claude limit nutzungslimit ersatz vernetzen leads finden icp dienst einrichten freigabe automatisch terminal mac windows powershell computer use unternehmen firma grenze zwei ausgangspunkte',
+      'play recherche starten agent chatgpt codex claude wählen umschalten toggle limit nutzungslimit ersatz vernetzen leads finden icp dienst einrichten freigabe automatisch terminal mac windows powershell computer use unternehmen firma grenze zwei ausgangspunkte',
     tour: 'recherche',
     bloecke: [
       {
@@ -421,7 +421,8 @@ export const THEMEN: readonly Thema[] = [
           'Startpunkte sind 30 verschiedene Firmen aus dem CRM, jeder Lauf bekommt eine neue Auswahl.',
           '„Pausieren“ hält ChatGPT sofort an, „Fortsetzen“ startet es neu – Eingetragenes bleibt, niemand wird doppelt angefragt.',
           'Zeigt LinkedIn eine Warnung oder ein Limit, hält der Lauf an und zeigt den Wortlaut.',
-          'Erreicht ChatGPT sein Nutzungslimit, macht Claude im selben Lauf weiter – mit allem, was schon erledigt und freigegeben ist. Voraussetzung: die Claude-App ist auf dem Mac angemeldet. Der Schalter „Bei ChatGPT-Limit mit Claude weitermachen“ steht unter dem Recherche-Dienst.',
+          'Welcher Agent arbeitet, wählst du unter dem Recherche-Dienst: „Agent: ChatGPT | Claude“. Die Wahl gilt für alle deine Rechner ab dem nächsten Agent-Start (neuer Lauf, „Agent neu starten“, „Fortsetzen“); eine laufende Runde macht der bisherige Agent zu Ende. Claude geht nur, wenn die Claude-App auf dem Rechner angemeldet ist.',
+          'Arbeitet ChatGPT und erreicht sein Nutzungslimit, macht Claude im selben Lauf weiter – mit allem, was schon erledigt und freigegeben ist. Voraussetzung: die Claude-App ist auf dem Mac angemeldet. Der Schalter „Bei ChatGPT-Limit mit Claude weitermachen“ steht unter dem Recherche-Dienst.',
         ],
       },
       {

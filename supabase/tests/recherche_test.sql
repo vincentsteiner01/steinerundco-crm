@@ -1,4 +1,4 @@
--- Integrationstest Recherchelauf (Migrationen 17–20, 23, 24) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
+-- Integrationstest Recherchelauf (Migrationen 17–20, 23–25) gegen die echte Datenbank – läuft vollständig in EINER Transaktion, die am Ende
 -- per Exception zurückgerollt wird (es bleibt nichts zurück). Aufruf: bash tools/db-query.sh -f supabase/tests/recherche_test.sql
 -- Ergebnis steht in der Fehlermeldung „TESTERGEBNIS: …“ (oder „FEHLER: …“ bei einer verletzten Annahme).
 do $$
@@ -312,7 +312,50 @@ begin
   if n < 1 or n > 30 or n <> (select count(distinct crm.firma_gruppe(x ->> 'firma')) from jsonb_array_elements(chk -> 'personen') x) then
     raise exception 'FEHLER: Ausgangspunkte nicht je Firma eine Person (%): %', n, chk;
   end if;
-  out := out || '14 je Unternehmen höchstens 2 (Gruppe, Prüfen, Dienst ohne Firma) ok, Ausgangspunkte ' || n || ' Firmen';
+  out := out || '14 je Unternehmen höchstens 2 (Gruppe, Prüfen, Dienst ohne Firma) ok, Ausgangspunkte ' || n || ' Firmen; ';
+
+  -- 15. Agent wählen (Migration 25): Claude für Neustart, Fortsetzen und neuen Lauf; wartender Agent wechselt mit; ohne Claude kein Claude
+  perform crm.recherche_dienst(schluessel, 'melden', jsonb_build_object('lauf', r.id, 'agent_status', 'fehler', 'meldung', 'Test'));
+  if crm.recherche_anbieter_waehlen('claude') <> 'claude' then raise exception 'FEHLER: Wahl nicht bestätigt'; end if;
+  if exists (select 1 from crm.recherche_dienste where member_id = v_me and anbieter <> 'claude') then
+    raise exception 'FEHLER: Wahl nicht für alle Dienste der Person gespeichert';
+  end if;
+  r := crm.recherche_agent_starten(r.id);
+  if r.agent_anbieter <> 'claude' then raise exception 'FEHLER: Neustart nicht mit Claude: %', r.agent_anbieter; end if;
+  perform crm.recherche_anbieter_waehlen('chatgpt');
+  select * into r from crm.recherche_laeufe where id = r.id;
+  if r.agent_anbieter <> 'chatgpt' then raise exception 'FEHLER: wartender Agent wechselt nicht mit'; end if;
+  chk := crm.recherche_dienst(schluessel, 'uebernehmen', jsonb_build_object('lauf', r.id, 'rechner', 'Testrechner'));
+  perform crm.recherche_anbieter_waehlen('claude');
+  select * into r from crm.recherche_laeufe where id = r.id;
+  if chk ->> 'anbieter' <> 'chatgpt' or r.agent_anbieter <> 'chatgpt' then
+    raise exception 'FEHLER: arbeitender Agent wechselt mitten in der Runde: % / %', chk ->> 'anbieter', r.agent_anbieter;
+  end if;
+  r := crm.recherche_status(r.id, 'pausiert');
+  r := crm.recherche_status(r.id, 'laeuft');
+  if r.agent_anbieter <> 'claude' then raise exception 'FEHLER: Fortsetzen nicht mit Claude: %', r.agent_anbieter; end if;
+  r := crm.recherche_status(r.id, 'abgebrochen');
+  r2 := crm.recherche_starten(30);
+  if r2.agent_anbieter <> 'claude' then raise exception 'FEHLER: neuer Lauf nicht mit Claude: %', r2.agent_anbieter; end if;
+  -- Claude meldet sich ab: gewählt bleibt Claude, starten muss ChatGPT – und neu wählen lässt sich Claude nicht
+  execute 'reset role'; -- die Tabelle darf nur der Dienst schreiben; alle Rechner der Person (auch die echten) melden kein Claude
+  update crm.recherche_dienste set claude = null where member_id = v_me;
+  execute 'set local role authenticated';
+  r2 := crm.recherche_agent_starten(r2.id);
+  if r2.agent_anbieter <> 'chatgpt' then raise exception 'FEHLER: ohne angemeldetes Claude startet %', r2.agent_anbieter; end if;
+  begin
+    perform crm.recherche_anbieter_waehlen('claude');
+    raise exception 'FEHLER: Claude wählbar, obwohl nirgends angemeldet';
+  exception when others then
+    if sqlerrm like 'FEHLER:%' then raise; end if;
+  end;
+  begin
+    perform crm.recherche_anbieter_waehlen('gemini');
+    raise exception 'FEHLER: unbekannter Agent angenommen';
+  exception when others then
+    if sqlerrm like 'FEHLER:%' then raise; end if;
+  end;
+  out := out || '15 Agent wählen (Neustart, wartend, arbeitend, Fortsetzen, neuer Lauf, ohne Claude) ok';
 
   raise exception 'TESTERGEBNIS: %', out;
 end

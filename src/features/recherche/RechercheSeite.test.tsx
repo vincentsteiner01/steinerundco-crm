@@ -2,7 +2,7 @@
 // Grund aus der Prüfung, Sperre bei fälligem Kontrollpunkt und nach Laufende. Datenhooks sind gemockt – die Regeln selbst
 // prüft supabase/tests/recherche_test.sql gegen die echte Datenbank.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/Tooltip'
@@ -17,6 +17,7 @@ const m = vi.hoisted(() => ({
   agent: vi.fn(),
   antworten: vi.fn(),
   ersatz: vi.fn(),
+  anbieter: vi.fn(),
   einrichten: vi.fn(),
   dienste: [{ zuletzt_gesehen: new Date().toISOString(), rechner: 'MacBook Pro' }] as unknown[],
 }))
@@ -38,6 +39,7 @@ vi.mock('@/data/recherche', () => ({
   useRechercheDienste: () => ({ data: m.dienste }),
   useRechercheDienstEinrichten: () => ({ mutate: m.einrichten, isPending: false }),
   useRechercheClaudeErsatz: () => ({ mutate: m.ersatz, isPending: false }),
+  useRechercheAnbieter: () => ({ mutate: m.anbieter, isPending: false }),
   useRechercheEintragen: () => ({ mutate: m.eintragen, isPending: false }),
   recherchePruefen: m.pruefen,
 }))
@@ -103,6 +105,7 @@ beforeEach(() => {
   m.agent.mockReset()
   m.antworten.mockReset()
   m.ersatz.mockReset()
+  m.anbieter.mockReset()
   m.dienste = [{ zuletzt_gesehen: new Date().toISOString(), rechner: 'MacBook Pro' }]
 })
 
@@ -249,6 +252,51 @@ describe('RechercheSeite', () => {
     expect(schalter).toHaveAttribute('aria-checked', 'true')
     fireEvent.click(schalter)
     expect(m.ersatz).toHaveBeenCalledWith(false)
+  })
+
+  it('Agent wählen: Claude statt ChatGPT – Ersatz-Schalter verschwindet, laufende Runde macht ChatGPT zu Ende', () => {
+    m.dienste = [
+      {
+        zuletzt_gesehen: new Date().toISOString(),
+        rechner: 'MacBook Pro',
+        claude: '2.1.317',
+        claude_ersatz: true,
+        anbieter: 'chatgpt',
+      },
+    ]
+    rendern()
+    const agent = screen.getByRole('group', { name: 'Agent' })
+    expect(within(agent).getByRole('button', { name: 'ChatGPT' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('switch', { name: 'Bei ChatGPT-Limit mit Claude weitermachen' })).toBeInTheDocument()
+    fireEvent.click(within(agent).getByRole('button', { name: 'Claude' }))
+    expect(m.anbieter).toHaveBeenCalledWith('claude')
+  })
+
+  it('Agent Claude gewählt: kein Ersatz-Schalter, Hinweis solange ChatGPT die Runde zu Ende macht', () => {
+    m.dienste = [
+      {
+        zuletzt_gesehen: new Date().toISOString(),
+        rechner: 'MacBook Pro',
+        claude: '2.1.317',
+        claude_ersatz: true,
+        anbieter: 'claude',
+      },
+    ]
+    rendern({ agent_status: 'arbeitet', agent_anbieter: 'chatgpt' })
+    expect(
+      within(screen.getByRole('group', { name: 'Agent' })).getByRole('button', { name: 'Claude' }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('switch')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Agent' })).toHaveTextContent(
+      'Gilt ab dem nächsten Agent-Start – diese Runde macht ChatGPT zu Ende.',
+    )
+  })
+
+  it('Agent wählen ohne angemeldetes Claude: Claude lässt sich nicht wählen', () => {
+    m.dienste = [{ zuletzt_gesehen: new Date().toISOString(), rechner: 'DESKTOP', claude: null, anbieter: 'chatgpt' }]
+    rendern()
+    fireEvent.click(within(screen.getByRole('group', { name: 'Agent' })).getByRole('button', { name: 'Claude' }))
+    expect(m.anbieter).not.toHaveBeenCalled()
   })
 
   it('Einrichten für Windows: Kopieren-Knöpfe statt Code, vier farbige Schritte mit „Warum?“', async () => {

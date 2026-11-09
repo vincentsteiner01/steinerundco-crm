@@ -7,6 +7,8 @@
 // Claude als Ersatz (30.10.2026, Migration 20): Meldet Codex das Nutzungslimit von ChatGPT und ist der Schalter im CRM an, übernimmt
 // Claude Code der Claude-Desktop-App (Claude in Chrome, dieselben CRM-Werkzeuge) den Lauf mit einer Übergabe – Auftrag, Stand aus
 // lauf_status, zuletzt beantwortete Frage samt Freigabe. Bis das Limit abläuft, starten neue Runden gleich mit Claude.
+// Agent wählen (09.11.2026, Migration 25): Steht im CRM „Agent: Claude“, kommt der Lauf schon mit anbieter 'claude' – Claude
+// startet dann von Anfang an, mit denselben Hinweisen zu Claude in Chrome wie bei der Übergabe.
 // Windows: Codex kommt aus der ChatGPT-App für Windows – den Pfad trägt die App in ihr Computer-Use-Plugin ein (CODEX_CLI_PATH in
 // %USERPROFILE%\.codex\plugins\cache\openai-bundled\unified-computer-use\<version>\.mcp.json) und ändert ihn bei jedem Update.
 // Einrichten: Befehl aus dem CRM (Laufseite → „Recherche-Dienst einrichten“) · Protokolle: ~/Library/Logs/steinerundco-recherche/
@@ -19,7 +21,7 @@ import { homedir, hostname } from 'node:os'
 import { join } from 'node:path'
 import { BASIS, dienst, LOGS, WINDOWS } from './gemeinsam.mjs'
 
-const VERSION = '2026-10-30'
+const VERSION = '2026-11-09'
 const EFFORT = process.env.RECHERCHE_EFFORT || 'high'
 const MODELL = process.env.RECHERCHE_MODELL || ''
 const CLAUDE_MODELL = process.env.RECHERCHE_CLAUDE_MODELL || 'opus'
@@ -204,13 +206,15 @@ const probeAuftrag = () =>
     'Kommt danach „Freigegeben.“, antworte nur mit „Fertig: Probelauf ok“ und den beiden Werten.',
   ].join('\n')
 
-/** Auftrag für Claude, wenn es einen ChatGPT-Lauf übernimmt. */
+/** Auftrag für Claude: Übergabe eines ChatGPT-Laufs (mit Grund) oder – ohne Grund – Claude als im CRM gewählter Agent. */
 function uebergabe(r, grund) {
   const z = [
-    `Übergabe: Dieser Recherchelauf lief bisher mit ChatGPT.${grund ? ` ${grund}` : ''} Du übernimmst ihn ab hier mit demselben Auftrag (unten).`,
+    grund
+      ? `Übergabe: Dieser Recherchelauf lief bisher mit ChatGPT. ${grund} Du übernimmst ihn ab hier mit demselben Auftrag (unten).`
+      : 'Im CRM ist Claude als Agent gewählt – du arbeitest diesen Recherchelauf mit dem Auftrag unten ab. Er wurde für ChatGPT geschrieben; dafür gilt:',
     '- Chrome bedienst du mit den Werkzeugen von Claude in Chrome – wo der Auftrag „Chrome-Plugin“ oder „ChatGPT for Chrome“ nennt, sind diese gemeint. Das CRM bedienst du mit den Werkzeugen des MCP-Servers crm.',
     '- Sind mehrere Chrome-Browser verbunden, frag nicht nach: nimm den mit „onThisComputer: true“, sonst den zuletzt verwendeten, den list_connected_browsers nennt (select_browser). Ist dort LinkedIn nicht angemeldet, nimm den anderen, bevor du abbrichst.',
-    '- Was schon erledigt ist, steht in lauf_status (bearbeitete_profile): nichts doppelt bearbeiten, niemanden doppelt anfragen.',
+    '- Was schon erledigt ist (auch aus früheren Runden), steht in lauf_status (bearbeitete_profile): nichts doppelt bearbeiten, niemanden doppelt anfragen.',
     '- Deine Schlussnachricht beginnt direkt mit „Freigabe nötig: …“, „Frage: …“, „Fertig: …“ oder „Abbruch: …“ – ohne Text davor und ohne Markdown.',
   ]
   if (r.frage && r.antwort)
@@ -244,7 +248,9 @@ async function starten(lauf) {
 
   if (u.anbieter === 'claude') {
     if (!claude.bin)
-      return fehler('Claude Code ist auf diesem Mac nicht angemeldet – im CRM „Agent neu starten“ (mit ChatGPT).')
+      return fehler(
+        `Claude Code ist auf ${RECHNER} nicht angemeldet – Claude-App öffnen und anmelden oder im CRM „Agent: ChatGPT“ wählen, dann „Agent neu starten“.`,
+      )
     return agentStarten(
       runde,
       'claude',

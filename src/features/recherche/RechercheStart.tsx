@@ -1,18 +1,20 @@
 // Startkarte auf /auftrag (29.10.2026): Play-Button für den LinkedIn-Recherchelauf (derselbe Start wie der blaue Knopf in der
-// Seitenleiste). Der Start fordert zugleich den ChatGPT-Agenten an, den der Recherche-Dienst auf dem Rechner startet (Migrationen
-// 18/19). Läuft schon ein Lauf, öffnet der Knopf diesen statt einen zweiten anzulegen.
+// Seitenleiste). Der Start fordert zugleich den Agenten an – ChatGPT oder Claude, je nach Wahl (Migration 25) –, den der
+// Recherche-Dienst auf dem Rechner startet (Migrationen 18/19). Läuft schon ein Lauf, öffnet der Knopf diesen statt einen zweiten anzulegen.
 import { Play } from 'lucide-react'
 import { Link } from 'react-router'
 import { PFADE } from '@/app/pfade'
 import { Button, Chip } from '@/components/ui'
+import { useRechercheDienste } from '@/data/recherche'
 import { fmtDatumZeit } from '@/lib/format'
-import { agentZustand } from './logik'
+import { agentWahl, agentZustand, ANBIETER_NAME } from './logik'
 import { DienstZeile } from './RechercheDienst'
 import { useRechercheOeffnen } from './start'
 import { STATUS_LABEL } from './regeln'
 
 export function RechercheStart({ me }: { me: string | null }) {
   const { laeufe, aktiv, los, busy } = useRechercheOeffnen()
+  const { data: dienste } = useRechercheDienste(me)
   const fruehere = (laeufe ?? []).filter((l) => l !== aktiv).slice(0, 3)
 
   return (
@@ -25,17 +27,17 @@ export function RechercheStart({ me }: { me: string | null }) {
         <div className="grid max-w-[60ch] min-w-0 gap-1">
           <h2 className="text-ink-bright text-[15px] font-semibold">Neue Leads recherchieren und vernetzen</h2>
           <p className="text-small text-ink-2">
-            ChatGPT sucht passende Energie- und Solarbetriebe, prüft Firma und Rolle, gleicht jedes Profil mit dem CRM
-            ab und vernetzt dich mit bis zu 30 Personen – ohne Nachricht und erst nach deiner Freigabe. Jede Person
-            landet als Lead im CRM, die KPIs zählen mit. Es startet von selbst in deinem Chrome, sobald der
-            Recherche-Dienst auf deinem Rechner (Mac oder Windows) eingerichtet ist.
+            {ANBIETER_NAME[agentWahl(dienste).startet]} sucht passende Energie- und Solarbetriebe, prüft Firma und
+            Rolle, gleicht jedes Profil mit dem CRM ab und vernetzt dich mit bis zu 30 Personen – ohne Nachricht und
+            erst nach deiner Freigabe. Jede Person landet als Lead im CRM, die KPIs zählen mit. Es startet von selbst in
+            deinem Chrome, sobald der Recherche-Dienst auf deinem Rechner (Mac oder Windows) eingerichtet ist.
           </p>
         </div>
         <Button variante="primary" icon={Play} busy={busy} onClick={los}>
           {aktiv ? 'Laufenden Lauf öffnen' : 'Recherche starten'}
         </Button>
       </div>
-      <DienstZeile memberId={me} />
+      <DienstZeile memberId={me} lauf={aktiv ?? undefined} />
       {aktiv ? (
         <p className="text-small text-ink-2" role="status">
           {STATUS_LABEL[aktiv.status]} seit {fmtDatumZeit(aktiv.started_at)} · {agentZustand(aktiv).titel} ·{' '}

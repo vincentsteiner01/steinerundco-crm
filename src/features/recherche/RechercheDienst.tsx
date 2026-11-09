@@ -1,29 +1,76 @@
 // Recherche-Dienst (29.10.2026): Lage des Diensts auf den Rechnern einer Person und die Einrichtung mit persönlichem Dienst-Schlüssel
 // (crm.recherche_dienst_einrichten, Migration 19). Der erzeugte Befehl lädt public/recherche-dienst/einrichten.sh (Mac) bzw.
 // einrichten.ps1 (Windows, 30.10.2026) – so richtet jede Person den Dienst selbst ein, ohne Repository und ohne
-// Entwicklerzugang. Meldet ein Dienst ein angemeldetes Claude Code (Migration 20), steht darunter der Schalter „Bei
-// ChatGPT-Limit mit Claude weitermachen“.
+// Entwicklerzugang. Darunter die Wahl „Agent: ChatGPT | Claude“ (Migration 25, gilt ab dem nächsten Agent-Start) und – bei ChatGPT
+// und angemeldetem Claude Code (Migration 20) – der Schalter „Bei ChatGPT-Limit mit Claude weitermachen“.
 import { Copy } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from '@/components/toast'
 import { Button, cn, Dialog, Segment, type SegmentOption, Switch } from '@/components/ui'
-import { useRechercheClaudeErsatz, useRechercheDienste, useRechercheDienstEinrichten } from '@/data/recherche'
+import {
+  type Anbieter,
+  type RechercheLauf,
+  useRechercheAnbieter,
+  useRechercheClaudeErsatz,
+  useRechercheDienste,
+  useRechercheDienstEinrichten,
+} from '@/data/recherche'
 import { fmtDatumZeit } from '@/lib/format'
 import { kopieren } from '@/lib/zwischenablage'
-import { dienstLage, einrichtungsBefehl, type System, systemVon, WINDOWS_TITEL } from './logik'
+import {
+  agentWahl,
+  ANBIETER_NAME,
+  dienstLage,
+  einrichtungsBefehl,
+  type System,
+  systemVon,
+  WINDOWS_TITEL,
+} from './logik'
 import { Fortschritt, WindowsSeite } from './WindowsAnleitung'
 
 const PUNKT = { verbunden: 'bg-done', getrennt: 'bg-overdue', keiner: 'bg-deco' } as const
 
-/** Eine Zeile: Recherche-Dienst verbunden, getrennt oder nicht eingerichtet – mit „Recherche-Dienst einrichten“. */
-export function DienstZeile({ memberId, fremd = false }: { memberId: string | null; fremd?: boolean }) {
+const ANBIETER: SegmentOption<Anbieter>[] = [
+  { key: 'chatgpt', label: ANBIETER_NAME.chatgpt },
+  { key: 'claude', label: ANBIETER_NAME.claude },
+]
+
+/**
+ * Eine Zeile: Recherche-Dienst verbunden, getrennt oder nicht eingerichtet – mit „Recherche-Dienst einrichten“, der Wahl des
+ * Agenten und dem Ersatz-Schalter. `lauf`: arbeitet dort gerade der andere Agent, gilt die Wahl erst ab dem nächsten Start.
+ */
+export function DienstZeile({
+  memberId,
+  fremd = false,
+  lauf,
+}: {
+  memberId: string | null
+  fremd?: boolean
+  lauf?: Pick<RechercheLauf, 'agent_status' | 'agent_anbieter'>
+}) {
   const { data } = useRechercheDienste(memberId, true)
   const [offen, setOffen] = useState(false)
   const ersatz = useRechercheClaudeErsatz()
+  const waehlen = useRechercheAnbieter()
   const lage = dienstLage(data)
   if (!lage) return null
   const neuester = data?.find((d) => d.zuletzt_gesehen)
   const mitClaude = data?.filter((d) => d.claude) ?? []
+  const wahl = agentWahl(data)
+  const gewaehlt = waehlen.isPending && waehlen.variables ? waehlen.variables : wahl.gewaehlt
+  const amWerk = lauf && ['arbeitet', 'frage', 'antwort'].includes(lauf.agent_status) ? lauf.agent_anbieter : null
+  const hinweis =
+    gewaehlt === 'claude' && !wahl.claudeDa
+      ? 'Claude ist auf keinem deiner Rechner angemeldet – solange arbeitet ChatGPT.'
+      : amWerk && amWerk !== gewaehlt
+        ? `Gilt ab dem nächsten Agent-Start – diese Runde macht ${ANBIETER_NAME[amWerk === 'claude' ? 'claude' : 'chatgpt']} zu Ende.`
+        : null
+  const umstellen = (a: Anbieter) => {
+    if (a === gewaehlt) return
+    if (a === 'claude' && !wahl.claudeDa)
+      return void toast('Claude ist auf keinem deiner Rechner angemeldet – erst die Claude-App öffnen und anmelden.')
+    waehlen.mutate(a)
+  }
   const text =
     lage === 'verbunden'
       ? `Recherche-Dienst verbunden${neuester?.rechner ? ` · ${neuester.rechner}` : ''}`
@@ -40,7 +87,14 @@ export function DienstZeile({ memberId, fremd = false }: { memberId: string | nu
         </Button>
       ) : null}
       {!fremd ? <DienstEinrichten offen={offen} onOpenChange={setOffen} verbunden={lage === 'verbunden'} /> : null}
-      {!fremd && mitClaude.length ? (
+      {!fremd && lage !== 'keiner' ? (
+        <div className="flex basis-full flex-wrap items-center gap-x-2 gap-y-1">
+          <span>Agent</span>
+          <Segment optionen={ANBIETER} wert={gewaehlt} onChange={umstellen} ariaLabel="Agent" klein />
+          {hinweis ? <span className="text-ink-3">{hinweis}</span> : null}
+        </div>
+      ) : null}
+      {!fremd && mitClaude.length && gewaehlt === 'chatgpt' ? (
         <label className="flex basis-full cursor-pointer items-center gap-2">
           <Switch
             checked={mitClaude.some((d) => d.claude_ersatz)}
@@ -178,8 +232,8 @@ export function DienstEinrichten({
                 ))}
               </ol>
               <p className="text-small text-ink-3">
-                Ist auf dem Mac auch die Claude-App angemeldet, macht Claude weiter, sobald ChatGPT sein Nutzungslimit
-                erreicht.
+                Ist auf dem Mac auch die Claude-App angemeldet, kannst du auf der Rechercheseite Claude als Agent wählen
+                – oder Claude macht weiter, sobald ChatGPT sein Nutzungslimit erreicht.
               </p>
               {befehl ? (
                 <div className="grid gap-1.5">
