@@ -292,6 +292,14 @@ describe('RechercheSeite', () => {
     )
   })
 
+  it('pausierter Lauf: Agent vor „Fortsetzen“ wählbar', () => {
+    m.dienste = [
+      { zuletzt_gesehen: new Date().toISOString(), rechner: 'MacBook Pro', claude: '2.1.317', anbieter: 'chatgpt' },
+    ]
+    rendern({ status: 'pausiert', agent_status: 'beendet' })
+    expect(screen.getByRole('group', { name: 'Agent' })).toBeInTheDocument()
+  })
+
   it('Agent wählen ohne angemeldetes Claude: Claude lässt sich nicht wählen', () => {
     m.dienste = [{ zuletzt_gesehen: new Date().toISOString(), rechner: 'DESKTOP', claude: null, anbieter: 'chatgpt' }]
     rendern()

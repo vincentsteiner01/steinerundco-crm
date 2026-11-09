@@ -169,7 +169,10 @@ function AgentPanel({
       ) : z.text ? (
         <p className="text-small text-ink-2 max-w-[75ch] whitespace-pre-line">{z.text}</p>
       ) : null}
-      {lauf.status === 'laeuft' ? <DienstZeile memberId={lauf.member_id} fremd={fremd} lauf={lauf} /> : null}
+      {/* auch pausiert: vor „Fortsetzen“ den Agenten wählen */}
+      {lauf.status === 'laeuft' || lauf.status === 'pausiert' ? (
+        <DienstZeile memberId={lauf.member_id} fremd={fremd} lauf={lauf} />
+      ) : null}
       {!fremd && lauf.status === 'laeuft' ? (
         <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
           <span className="text-small text-ink-3 mr-1">Ohne Recherche-Dienst:</span>
