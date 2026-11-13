@@ -1,0 +1,1 @@
+import{h as e}from"./index-Cn1X5cSB.js";function t(){return e(`formular`),null}export{t};
