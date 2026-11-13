@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { QueueItem } from '@/types/domain'
-import { annahmenText, chatgptPrompt, gruppiere, istLinkedin, profilUrl } from './auftrag'
+import { STELLEN_WAHL } from '@/lib/vorlagenKeys'
+import type { QueueItem, Template } from '@/types/domain'
+import { annahmenText, chatgptPrompt, gruppiere, istLinkedin, profilUrl, stellenAuswahl } from './auftrag'
 
 const item = (p: Partial<QueueItem>): QueueItem =>
   ({
@@ -83,6 +84,14 @@ describe('chatgptPrompt', () => {
     expect(p).not.toMatch(/!/)
   })
 
+  it('erklärt die Stellen-Wahl mit genau den Knopf-Namen der Auftragsseite (13.11.2026)', () => {
+    const p = chatgptPrompt()
+    const schritt = p.split('\n').find((z) => z.includes('„Stellenanzeige prüfen“')) ?? ''
+    for (const s of STELLEN_WAHL) expect(schritt).toContain(`„${s.label}“`)
+    expect(schritt).toContain('Website der Firma')
+    expect(schritt).toContain('Reiter „Jobs“')
+  })
+
   it('lässt beantwortete Chats auf LinkedIn wieder als ungelesen markieren (29.10.2026, Feedback 448a060a)', () => {
     const p = chatgptPrompt()
     const schrittB = p.split('\n').find((z) => z.trimStart().startsWith('b)')) ?? ''
@@ -112,5 +121,32 @@ describe('annahmenText', () => {
     expect(s).toContain('18 als angenommen eingetragen')
     expect(s).toContain('19 Annahmen nicht gespeichert')
     expect(s).toContain('noch einmal „Eintragen“')
+  })
+})
+
+describe('stellenAuswahl', () => {
+  const t = (id: string, key: string, active = true) => ({ id, key, active }) as Template
+  const alle = [
+    t('pl', 'li_projektleiter_neue_eroeffnung'),
+    t('bu', 'li_bueromitarbeiter_neue_eroeffnung'),
+    t('el', 'li_elektriker_neue_eroeffnung'),
+    t('ke', 'li_keine_mitarbeitersuche_neue_eroeffnung'),
+    t('k1', 'li_fu_kurz_1'),
+  ]
+
+  it('bietet die vier Stellen an, wenn der Schritt eine Stellen-Vorlage hat', () => {
+    expect(stellenAuswahl(alle, 'ke')).toEqual([
+      { label: 'Projektleiter', id: 'pl' },
+      { label: 'Büro', id: 'bu' },
+      { label: 'Elektriker', id: 'el' },
+      { label: 'Keine passende Stelle', id: 'ke' },
+    ])
+  })
+
+  it('sonst keine Auswahl; inaktive Vorlagen fallen weg', () => {
+    expect(stellenAuswahl(alle, 'k1')).toEqual([])
+    expect(stellenAuswahl(undefined, 'ke')).toEqual([])
+    const ohneBuero = alle.map((x) => (x.id === 'bu' ? { ...x, active: false } : x))
+    expect(stellenAuswahl(ohneBuero, 'ke').map((s) => s.id)).toEqual(['pl', 'el', 'ke'])
   })
 })

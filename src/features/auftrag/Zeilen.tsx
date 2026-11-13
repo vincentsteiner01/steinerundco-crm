@@ -20,7 +20,7 @@ import type { QueueItem } from '@/types/domain'
 import { SCHRITT_TYPEN } from '@/features/heute/daten/nachlese'
 import { useKartenStore } from '@/features/heute/kartenStore'
 import { useKarteDaten } from '@/features/heute/useKarteDaten'
-import { profilUrl, type AuftragArt } from './auftrag'
+import { profilUrl, stellenAuswahl, type AuftragArt } from './auftrag'
 
 const istKompliment = (name: string) => /kompliment/i.test(name)
 const KOMPLIMENT_BEISPIEL =
@@ -215,18 +215,24 @@ export function NachrichtZeile({
   // 29.10.2026 (Vincent adbd7d5f): frei zu formulierende Platzhalter (z. B. [Kurzes individuelles Kompliment]) schreibt der
   // Agent hier hinein – das Feld bleibt stehen, solange daran getippt wird (nicht nur, solange der Platzhalter offen ist)
   const setzeWert = useKartenStore((s) => s.setzeWert)
+  const setzeKarte = useKartenStore((s) => s.setze)
   const freieFelder = daten.ergebnis.alle.filter(
     (n) => n !== 'Anrede' && (daten.ergebnis.offen.includes(n) || daten.zustand.werte[n] !== undefined),
   )
+  // 13.11.2026 (Mikes Gesprächsöffnungen): Bei der Wiedereröffnung wählt der Agent erst die Stelle, die die Firma gerade sucht
+  const stellen = stellenAuswahl(daten.templates, item.template_id)
+  const stelleOffen = stellen.length > 0 && !stellen.some((s) => s.id === daten.zustand.vorlageId)
   const gesperrtGrund = !item.linkedin_url
     ? 'Kein LinkedIn-Link'
     : !daten.vorlage
       ? 'Keine Vorlage'
-      : anredeFehlt
-        ? 'Erst Anrede wählen'
-        : andereOffen.length
-          ? `Platzhalter offen: ${andereOffen.join(', ')}`
-          : null
+      : stelleOffen
+        ? 'Erst Stellenanzeige prüfen'
+        : anredeFehlt
+          ? 'Erst Anrede wählen'
+          : andereOffen.length
+            ? `Platzhalter offen: ${andereOffen.join(', ')}`
+            : null
 
   const gesendet = async (schonVorher: boolean) => {
     if (!item.lead_id) return
@@ -318,6 +324,29 @@ export function NachrichtZeile({
         <Erledigt status={status} onUndo={status.activityId ? () => void rueckgaengig(status, setStatus) : null} />
       ) : (
         <>
+          {stellen.length ? (
+            <div className="mt-3 grid gap-2" data-auftrag-stelle>
+              <span className={cn('text-[13.5px]', stelleOffen ? 'text-overdue' : 'text-ink-2')}>
+                Stellenanzeige prüfen – die Firma sucht gerade:
+              </span>
+              <div className="flex flex-wrap items-center gap-2">
+                {stellen.map((s) => {
+                  const gewaehlt = s.id === daten.zustand.vorlageId
+                  return (
+                    <Button
+                      key={s.id}
+                      variante={gewaehlt ? 'primary' : 'secondary'}
+                      groesse="S"
+                      aria-pressed={gewaehlt}
+                      onClick={() => setzeKarte(daten.key, { vorlageId: s.id })}
+                    >
+                      {s.label}
+                    </Button>
+                  )
+                })}
+              </div>
+            </div>
+          ) : null}
           {anredeFehlt ? (
             <div className="mt-3 flex flex-wrap items-center gap-2" data-auftrag-anrede>
               <span className="text-overdue text-[13.5px]">Anrede fehlt:</span>

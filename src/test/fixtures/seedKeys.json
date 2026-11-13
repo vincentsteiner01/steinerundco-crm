@@ -18,6 +18,8 @@
     "li_bedarf_nein_mit_grund",
     "li_bedarf_nein_ohne_grund",
     "li_bedarf_vernetzt_ohne_antwort",
+    "li_bueromitarbeiter_neue_eroeffnung",
+    "li_elektriker_neue_eroeffnung",
     "li_eroeffnung_kundenbetreuer",
     "li_eroeffnung_v1",
     "li_eroeffnung_v2",
@@ -27,8 +29,10 @@
     "li_fu_kurz_3",
     "li_fu_lang_1",
     "li_fu_lang_2",
+    "li_keine_mitarbeitersuche_neue_eroeffnung",
     "li_pitch_a",
     "li_pitch_b",
+    "li_projektleiter_neue_eroeffnung",
     "li_vernetzung_v1",
     "li_vernetzung_v2",
     "tel_abschluss_1",
@@ -75,6 +79,7 @@
     "linkedin_sheet_regel",
     "linkedin_standard",
     "linkedin_vernetzt_ohne_antwort",
+    "linkedin_wiedereroeffnung",
     "telefon_standard"
   ]
 }

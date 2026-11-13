@@ -24,6 +24,10 @@ export const VORLAGE = {
   li_fu_kurz_3: 'li_fu_kurz_3',
   li_fu_lang_1: 'li_fu_lang_1',
   li_fu_lang_2: 'li_fu_lang_2',
+  li_projektleiter_neue_eroeffnung: 'li_projektleiter_neue_eroeffnung',
+  li_bueromitarbeiter_neue_eroeffnung: 'li_bueromitarbeiter_neue_eroeffnung',
+  li_elektriker_neue_eroeffnung: 'li_elektriker_neue_eroeffnung',
+  li_keine_mitarbeitersuche_neue_eroeffnung: 'li_keine_mitarbeitersuche_neue_eroeffnung',
   tel_einstieg_1: 'tel_einstieg_1',
   tel_einstieg_2: 'tel_einstieg_2',
   tel_mailbox_1: 'tel_mailbox_1',
@@ -44,6 +48,7 @@ export const VORLAGE = {
 export const SEQUENZ = {
   linkedin_standard: 'linkedin_standard',
   linkedin_vernetzt_ohne_antwort: 'linkedin_vernetzt_ohne_antwort',
+  linkedin_wiedereroeffnung: 'linkedin_wiedereroeffnung',
   linkedin_nachfassen_im_gespraech: 'linkedin_nachfassen_im_gespraech',
   linkedin_sheet_regel: 'linkedin_sheet_regel',
   telefon_standard: 'telefon_standard',
@@ -79,4 +84,21 @@ export function phase2Vorlage(label: ReplyLabel, mitNote: boolean): keyof typeof
 /** Opener nach Rolle: Kundenbetreuer/Innendienst bekommen die eigene Eröffnung, sonst `null` (= Schritt-Vorlage). */
 export function OPENER_NACH_ROLLE(role: LeadRole): keyof typeof VORLAGE | null {
   return role === 'kundenbetreuer' || role === 'innendienst' ? 'li_eroeffnung_kundenbetreuer' : null
+}
+
+/**
+ * Wiedereröffnung nach Stellenanzeige (13.11.2026, Mikes Gesprächsöffnungen): Welche Vorlage rausgeht, hängt davon ab, ob die
+ * Firma gerade Projektleiter, Büro oder Elektriker sucht – sonst „Keine Mitarbeitersuche“. Die letzte ist die Standard-Vorlage
+ * des Schritts (Sequenz linkedin_wiedereroeffnung); auf der Auftragsseite muss trotzdem eine Stelle gewählt werden.
+ */
+export const STELLEN_WAHL = [
+  { label: 'Projektleiter', vorlage: VORLAGE.li_projektleiter_neue_eroeffnung },
+  { label: 'Büro', vorlage: VORLAGE.li_bueromitarbeiter_neue_eroeffnung },
+  { label: 'Elektriker', vorlage: VORLAGE.li_elektriker_neue_eroeffnung },
+  { label: 'Keine passende Stelle', vorlage: VORLAGE.li_keine_mitarbeitersuche_neue_eroeffnung },
+] as const
+
+/** Gehört die Vorlage zur Stellen-Familie (dann wählt der Agent die Stelle, bevor er sendet)? */
+export function istStellenVorlage(key: string | null | undefined): boolean {
+  return !!key && STELLEN_WAHL.some((s) => s.vorlage === key)
 }

@@ -1,6 +1,8 @@
 // Auftragsseite für Browser-Agenten (ChatGPT in Chrome): welche LinkedIn-Aufgaben heute dran sind – aus derselben Queue wie
 // „Heute“ (crm.v_today_queue), nur flach und stabil sortiert, damit ein Agent sie zuverlässig von oben nach unten abarbeitet.
-import type { QueueItem } from '@/types/domain'
+import { nachId } from '@/features/heute/nachricht'
+import { istStellenVorlage, STELLEN_WAHL } from '@/lib/vorlagenKeys'
+import type { QueueItem, Template } from '@/types/domain'
 
 export type AuftragArt = 'annahme' | 'opener' | 'follow_up'
 
@@ -65,6 +67,21 @@ export function profilUrl(url: string | null | undefined): string | null {
   return `https://www.${u.replace(/^www\./i, '')}`
 }
 
+/**
+ * Wiedereröffnung nach Stellenanzeige (13.11.2026): die wählbaren Stellen mit ihrer aktiven Vorlage – leer, wenn die Vorlage des
+ * Schritts nicht zur Stellen-Familie gehört. Der Agent muss eine davon wählen, bevor „Gesendet“ frei wird.
+ */
+export function stellenAuswahl(
+  templates: readonly Template[] | undefined,
+  schrittVorlageId: string | null | undefined,
+): { label: string; id: string }[] {
+  if (!istStellenVorlage(nachId(templates, schrittVorlageId)?.key)) return []
+  return STELLEN_WAHL.flatMap((s) => {
+    const t = templates?.find((x) => x.key === s.vorlage && x.active)
+    return t ? [{ label: s.label, id: t.id }] : []
+  })
+}
+
 export const AUFTRAG_URL = 'https://crm.steinerundco.de/auftrag'
 
 /** Prompt für den ChatGPT-Agenten in Chrome. Bewusst kleinschrittig und ohne Interpretationsspielraum. */
@@ -85,10 +102,11 @@ export function chatgptPrompt(url: string = AUFTRAG_URL, maxNachrichten = 25): s
     '   a) Öffne über den LinkedIn-Link das Profil der Person und dann den Chat mit ihr.',
     '   b) Hat die Person bereits geantwortet: Sende NICHTS. Klicke im CRM „Hat geantwortet“, kopiere ihre letzte Nachricht in das Feld darunter und klicke „Antwort eintragen“. Markiere den Chat danach auf LinkedIn wieder als ungelesen (im Chat oben „…“ bzw. Rechtsklick in der Chatliste → „Als ungelesen markieren“) – sonst sieht Vincent nicht, dass dort eine neue Nachricht wartet.',
     '   c) Steht im Chat schon genau diese Nachricht von Vincent: Sende sie nicht noch einmal. Klicke im CRM „War schon gesendet“.',
-    '   d) Steht im CRM „Anrede fehlt“: Klicke „Herr“ oder „Frau“, passend zur Person. Danach erscheint der fertige Text.',
-    '   e) Steht im CRM ein Feld „Kurzes individuelles Kompliment“ (Vorlage „Individuelles Kompliment“): Schau dir das Profil der Person und die Unternehmensseite an (Info, Erfahrung, letzte Beiträge, Website) und schreibe in das Feld EIN kurzes, ehrliches Kompliment – ein Satz, höchstens etwa 20 Wörter. Es muss sich auf etwas Konkretes beziehen, das diese Person oder Firma wirklich tut, und darf ruhig nebenbei zeigen, warum das bemerkenswert ist. Beispiel: „Es ist spannend, dass Sie KI in Ihrem Unternehmen mit einbinden – bei vielen Energie- und Solarunternehmen ist das noch nicht so.“ Nicht schmeicheln, keine Übertreibungen („beeindruckend“, „großartig“, „toll“), kein Honig ums Maul, nichts aus dem Profil abschreiben, keine Fragen, kein Ausrufezeichen. Findest du nichts Konkretes, überspringe die Aufgabe und melde sie am Ende. Der Text im Feld „Nachricht“ aktualisiert sich, sobald du tippst.',
-    '   f) Sende den Text aus dem Feld „Nachricht“ genau so, ohne ihn zu verändern, als eine einzige Nachricht.',
-    '   g) Klicke sofort danach im CRM bei dieser Person „Gesendet“. Erst dann weiter zur nächsten Aufgabe.',
+    '   d) Steht im CRM „Stellenanzeige prüfen“: Finde heraus, welche Stellen die Firma der Person gerade ausgeschrieben hat. Schau zuerst auf der Website der Firma (Karriere, Jobs, Stellenangebote) und erst danach auf der LinkedIn-Unternehmensseite im Reiter „Jobs“. Es zählen nur Anzeigen, die jetzt online sind. Klicke dann im CRM genau einen Knopf: „Projektleiter“ (auch Bauleiter, Projektmanager), „Büro“ (Büro, Verwaltung, Innendienst, Kundenservice, Sachbearbeitung, Assistenz), „Elektriker“ (auch Elektroniker, Elektroinstallateur, PV- oder Solarmonteur, Servicetechniker) – sonst „Keine passende Stelle“. Sucht die Firma mehrere davon, nimm den ersten passenden Knopf in dieser Reihenfolge. Danach erscheint der fertige Text.',
+    '   e) Steht im CRM „Anrede fehlt“: Klicke „Herr“ oder „Frau“, passend zur Person. Danach erscheint der fertige Text.',
+    '   f) Steht im CRM ein Feld „Kurzes individuelles Kompliment“ (Vorlage „Individuelles Kompliment“): Schau dir das Profil der Person und die Unternehmensseite an (Info, Erfahrung, letzte Beiträge, Website) und schreibe in das Feld EIN kurzes, ehrliches Kompliment – ein Satz, höchstens etwa 20 Wörter. Es muss sich auf etwas Konkretes beziehen, das diese Person oder Firma wirklich tut, und darf ruhig nebenbei zeigen, warum das bemerkenswert ist. Beispiel: „Es ist spannend, dass Sie KI in Ihrem Unternehmen mit einbinden – bei vielen Energie- und Solarunternehmen ist das noch nicht so.“ Nicht schmeicheln, keine Übertreibungen („beeindruckend“, „großartig“, „toll“), kein Honig ums Maul, nichts aus dem Profil abschreiben, keine Fragen, kein Ausrufezeichen. Findest du nichts Konkretes, überspringe die Aufgabe und melde sie am Ende. Der Text im Feld „Nachricht“ aktualisiert sich, sobald du tippst.',
+    '   g) Sende den Text aus dem Feld „Nachricht“ genau so, ohne ihn zu verändern, als eine einzige Nachricht.',
+    '   h) Klicke sofort danach im CRM bei dieser Person „Gesendet“. Erst dann weiter zur nächsten Aufgabe.',
     '',
     '5. Regeln:',
     '   – Schreibe nur Personen an, die auf der Auftragsseite stehen, und jede höchstens einmal.',
