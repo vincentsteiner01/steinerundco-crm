@@ -175,6 +175,9 @@ begin
             'rolle', 'saat', 'imap_host', 'imap.gmx.net'), 'geheim1234');
   execute 'set local role service_role';
   perform crm.mail_motor_test_ergebnis(saat.id, '{"ok": true}');
+  -- echte Prüf-Postfächer (seit 13.11.2026) in dieser Transaktion beiseite, sonst geht der Test-Auftrag zufällig an sie
+  execute 'reset role';
+  update crm.mail_postfaecher set status = 'pausiert' where rolle = 'saat' and id <> saat.id;
   execute 'set local role authenticated';
   v_test := crm.mail_platzierung_starten(pf.id, 'Kurze Frage', 'Hallo, das ist ein Platzierungstest.');
   execute 'set local role service_role';
