@@ -1,23 +1,11 @@
 // BAUPLAN § 3.1.4 – Module verlinken nur über PFADE (auch aus router.tsx re-exportiert).
+// Neustart 25.11.2026: Es gibt nur noch Leads (Board), Leitfäden, E-Mail, Team, Einstellungen, Hilfe. Alte Adressen
+// (/pipeline, /telefon, /kpis …) kennt nur noch der Router – er leitet sie um.
 export const PFADE = {
   anmelden: '/anmelden',
-  heute: '/heute',
-  auftrag: '/auftrag',
-  /** LinkedIn-Recherchelauf (29.10.2026) */
-  recherche: (id: string) => `/auftrag/recherche/${id}`,
   leads: '/leads',
-  leadNeu: '/leads/neu',
-  papierkorb: '/leads/papierkorb',
-  lead: (id: string) => `/leads/${id}`,
-  pipeline: '/pipeline',
-  telefon: '/telefon',
-  anruf: (leadId: string) => `/telefon/anruf/${leadId}`,
-  // Telefon-Bereiche nach Mikes Sales Hub (23.10.2026)
-  telefonKontakte: '/telefon/kontakte',
-  dealPipeline: '/leads/pipeline',
-  followUps: '/telefon/follow-ups',
-  salesKpis: '/telefon/kpis',
-  umsatz: '/umsatz',
+  /** Lead-Blatt über dem Board (die Hülle öffnet es aus `?lead=` auf jeder Seite) */
+  lead: (id: string) => `/leads?lead=${encodeURIComponent(id)}`,
   email: '/email',
   emailVerfassen: '/email/verfassen',
   // Mailing (01.11.2026): Kampagnen, Antworten (Unibox), Postfächer
@@ -25,18 +13,9 @@ export const PFADE = {
   emailKampagne: (id: string) => `/email/kampagnen/${id}`,
   emailAntworten: '/email/antworten',
   emailPostfaecher: '/email/postfaecher',
-  kpis: '/kpis',
   leitfaeden: '/leitfaeden',
-  leitfaden: (id: string) => `/leitfaeden/${id}`,
-  /** Neuer Leitfaden (Kennung `neu` auf `/leitfaeden/:id`, M6) – optional mit Kanal-Vorbelegung */
-  leitfadenNeu: (kanal?: string) => (kanal ? `/leitfaeden/neu?kanal=${encodeURIComponent(kanal)}` : '/leitfaeden/neu'),
-  import: '/import',
-  schnellimport: (zurueck?: string) =>
-    zurueck ? `/import/schnell?zurueck=${encodeURIComponent(zurueck)}` : '/import/schnell',
-  importErgebnis: (batchId: string) => `/import/${batchId}`,
   team: '/team',
   hilfe: (thema?: string) => (thema ? `/hilfe/${thema}` : '/hilfe'),
-  feedback: '/feedback',
   // Runde 3: 'verbindungen' (LinkedIn-Brücke, Eingang – Wunsch verbindungen.md Nr. 2)
   einstellungen: (
     bereich: 'profil' | 'passcode' | 'ziele' | 'sequenzen' | 'sperrliste' | 'export' | 'verbindungen' = 'profil',

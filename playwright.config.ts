@@ -11,8 +11,8 @@ export default defineConfig({
     timezoneId: 'Europe/Berlin',
   },
   webServer: { command: 'npm run dev', url: 'http://127.0.0.1:8768', reuseExistingServer: true },
+  // 25.11.2026: Das iPhone-Projekt lief nur gegen die Heute-Spec, die es nicht mehr gibt – es kommt mit der ersten Board-Spec zurück.
   projects: [
     { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
-    { name: 'iphone-13', use: { ...devices['iPhone 13'] }, testMatch: /heute\.spec\.ts/ },
   ],
 })

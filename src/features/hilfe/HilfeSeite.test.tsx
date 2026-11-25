@@ -1,5 +1,5 @@
-// Hilfe-Seite: Übersicht mit häufigen Fragen, Themen mit Inhalt aus themen.ts, Suche (Enter öffnet), „Zeig’s mir“ startet die
-// Mini-Tour, „Tour erneut starten“ die Einführung, Tastenkürzel aus der Registry, unbekanntes Thema → /hilfe.
+// Hilfe-Seite: Übersicht mit häufigen Fragen, Themen mit Inhalt aus themen.ts, Suche (Enter öffnet), unbekanntes Thema → /hilfe.
+// 25.11.2026: keine Touren mehr – „Zeig’s mir“ und „Tour erneut starten“ dürfen nicht mehr erscheinen.
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryRouter, RouterProvider } from 'react-router'
@@ -8,7 +8,6 @@ vi.mock('@/data/supabase', async () => (await import('@/test/supabaseMock')).sup
 
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { useAuth } from '@/features/auth/authStore'
-import { TOUR_EVENT } from './ereignis'
 import { Component as HilfeSeite } from './HilfeSeite'
 
 function rendern(start: string) {
@@ -28,13 +27,7 @@ function rendern(start: string) {
   return router
 }
 
-const touren: string[] = []
-const merke = (e: Event) => touren.push((e as CustomEvent<{ tour: string }>).detail.tour)
-
 beforeEach(() => {
-  touren.length = 0
-  window.removeEventListener(TOUR_EVENT, merke)
-  window.addEventListener(TOUR_EVENT, merke)
   useAuth.setState({
     status: 'mitglied',
     member: { user_id: 'u1', email: 'vincent@steinerundco.de', display_name: 'Vincent' },
@@ -58,13 +51,13 @@ describe('Hilfe', () => {
     )
   })
 
-  it('„Tour erneut starten“ startet die Einführung', () => {
+  it('Übersicht ohne „Tour erneut starten“ und ohne Verweis auf die alte Feedback-Seite', () => {
     rendern('/hilfe')
-    fireEvent.click(screen.getByRole('button', { name: /Tour erneut starten/ }))
-    expect(touren).toEqual(['onboarding'])
+    expect(screen.queryByRole('button', { name: /Tour erneut starten/ })).toBeNull()
+    expect(document.querySelector('a[href="/feedback"]')).toBeNull()
   })
 
-  it('Thema LinkedIn (Runde 3): Gmail-Brücke, Seitenleiste, was manuell bleibt; „Zeig’s mir“ startet die Mini-Tour', () => {
+  it('Thema LinkedIn (Runde 3): Gmail-Brücke, Seitenleiste, was manuell bleibt', () => {
     rendern('/hilfe/linkedin')
     expect(screen.getByRole('heading', { level: 2, name: /LinkedIn: was automatisch geht/ })).toBeInTheDocument()
     expect(screen.getByText(/berührt das CRM LinkedIn nie/)).toBeInTheDocument()
@@ -93,8 +86,7 @@ describe('Hilfe', () => {
     const geplant = [...document.querySelectorAll('[data-geplant]')].map((e) => e.textContent)
     expect(geplant).toHaveLength(1)
     expect(geplant[0]).toMatch(/Connections\.csv/)
-    fireEvent.click(screen.getByRole('button', { name: /Zeig’s mir/ }))
-    expect(touren).toEqual(['linkedin'])
+    expect(screen.queryByRole('button', { name: /Zeig’s mir/ })).toBeNull()
     // Weiter-Navigation zum nächsten Thema
     expect(screen.getByRole('navigation', { name: 'Weitere Themen' })).toHaveTextContent('Verbindungen einrichten')
   })
@@ -131,18 +123,6 @@ describe('Hilfe', () => {
     expect(screen.getByText(/Nichts gefunden/)).toBeInTheDocument()
   })
 
-  it('Tastenkürzel kommen aus der Registry (src/app/tasten.ts) plus Hilfe-Gruppe', () => {
-    rendern('/hilfe/tastenkuerzel')
-    const register = document.querySelector('[data-tastenregister]') as HTMLElement
-    expect(within(register).getByRole('region', { name: 'Global' })).toBeInTheDocument()
-    expect(within(register).getByRole('region', { name: 'Heute' })).toBeInTheDocument()
-    expect(within(register).getByRole('region', { name: 'Hilfe & Tour' })).toBeInTheDocument()
-    // ⌥F und G A stehen in der Liste – aus der Registry oder aus der Ergänzung, nie doppelt
-    expect(within(register).getAllByText('⌥F')).toHaveLength(1)
-    expect(within(register).getAllByText('A').length).toBeGreaterThan(0)
-    expect(screen.getByRole('button', { name: /Tastenliste öffnen/ })).toBeInTheDocument()
-  })
-
   it('Dein Tag zeigt die Routine der angemeldeten Person zuerst', () => {
     useAuth.setState({
       status: 'mitglied',
@@ -151,9 +131,6 @@ describe('Hilfe', () => {
     rendern('/hilfe/dein-tag')
     const titel = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
     expect(titel[0]).toMatch(/^Mike/)
-    // Mikes „Zeig’s mir“ führt durch Telefon statt LinkedIn
-    fireEvent.click(screen.getByRole('button', { name: /Zeig’s mir/ }))
-    expect(touren).toEqual(['telefon'])
   })
 
   it('unbekanntes Thema → Übersicht', () => {

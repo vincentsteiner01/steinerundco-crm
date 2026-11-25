@@ -365,6 +365,3 @@ export function useLeadsOhneBewegung() {
       ),
   })
 }
-
-// Zähler je Stufe: eigenes Modul (Start-Bundle der Navigation), hier weiter erreichbar
-export { usePipelineCounts } from './pipelineCounts'

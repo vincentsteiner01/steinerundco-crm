@@ -1,5 +1,5 @@
 // DataTable: 200 Zeilen virtualisiert, Cursor J/K, Auswahl Space/⇧↓/⌘A/Esc, Gruppierung, Sortierung, E/Doppelklick (BAUPLAN § 3.1.10)
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUiStore } from '@/app/uiStore'
@@ -55,7 +55,7 @@ const taste = (key: string, init: KeyboardEventInit = {}) => fireEvent.keyDown(d
 
 describe('DataTable', () => {
   beforeEach(() => {
-    useUiStore.setState({ hotkeyScope: 'global', scopeStack: [], peekLeadId: null, peekListe: [] })
+    useUiStore.setState({ hotkeyScope: 'global', scopeStack: [] })
     _akkordZuruecksetzen()
     // jsdom kennt window.scrollTo nicht (Virtualizer.scrollToIndex beim Cursorwechsel)
     Object.defineProperty(window, 'scrollTo', { configurable: true, writable: true, value: vi.fn() })
@@ -137,27 +137,23 @@ describe('DataTable', () => {
     expect(gewaehlt()).toEqual(['z002', 'z003', 'z004', 'z005'])
   })
 
-  it('Esc hebt die Auswahl nicht auf, solange ein Peek offen ist (eine Ebene je Druck)', () => {
-    render(<Harness daten={zeilen(3)} />)
-    taste('j')
-    taste(' ')
-    useUiStore.setState({ peekLeadId: 'z001' })
-    taste('Escape')
-    expect(screen.getByRole('table').querySelectorAll('tr[data-ausgewaehlt]')).toHaveLength(1)
-  })
-
-  it('offener Peek: Tab/⇧Tab bleiben beim Dialog (kein preventDefault), E und Space wirken nicht auf die Zeile dahinter – Review', () => {
+  it('offenes Lead-Blatt oder Dialog (Scope formular): Esc, Tab/⇧Tab, E und Space gehören dem Blatt – die Tabelle dahinter ruht', () => {
     const onZelle = vi.fn()
     render(<Harness daten={zeilen(3)} onZelleBearbeiten={onZelle} />)
     taste('j')
-    useUiStore.setState({ peekLeadId: 'z001' })
-    expect(taste('Tab')).toBe(true) // true = Standardverhalten (Fokusfalle des Peek) bleibt
+    taste(' ')
+    expect(screen.getByRole('table').querySelectorAll('tr[data-ausgewaehlt]')).toHaveLength(1)
+    // die Hülle setzt den Scope, solange das Lead-Blatt offen ist (LeadOutlet → ScopeFormular)
+    act(() => useUiStore.getState().pushScope('formular'))
+    taste('Escape')
+    expect(screen.getByRole('table').querySelectorAll('tr[data-ausgewaehlt]')).toHaveLength(1)
+    expect(taste('Tab')).toBe(true) // true = Standardverhalten (Fokusfalle des Blatts) bleibt
     expect(taste('Tab', { shiftKey: true })).toBe(true)
     taste('e')
     taste(' ')
     expect(onZelle).not.toHaveBeenCalled()
-    expect(screen.getByRole('table').querySelectorAll('tr[data-ausgewaehlt]')).toHaveLength(0)
-    useUiStore.setState({ peekLeadId: null })
+    expect(screen.getByRole('table').querySelectorAll('tr[data-ausgewaehlt]')).toHaveLength(1)
+    act(() => useUiStore.getState().popScope('formular'))
     expect(taste('Tab')).toBe(false)
     taste('e')
     expect(onZelle).toHaveBeenCalledTimes(1)

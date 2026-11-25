@@ -1,11 +1,11 @@
-// Runde 2 (900 px): Im Icon-Rail trug JEDER Eintrag den Lime-Balken – der Tooltip-Trigger (Radix Slot) verkettete die
+// Runde 2 (900 px): Im Icon-Rail trug JEDER Eintrag den Aktiv-Balken – der Tooltip-Trigger (Radix Slot) verkettete die
 // className-Funktion von NavLink als Text. Nur der aktive Eintrag darf die Aktiv-Klassen tragen.
-import { fireEvent, render, screen } from '@testing-library/react'
+// Neustart 25.11.2026: sechs Ikonen, E-Mail als eine Ikone für alle E-Mail-Seiten, unten nur Person und „Abmelden“.
+import { render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/Tooltip'
 
-vi.mock('@/data/nav', () => ({ useNavZaehler: () => ({ heute: 3 }) }))
 vi.mock('@/features/auth/authStore', () => ({
   useAuth: (sel: (s: { member: null; abmelden: () => Promise<void> }) => unknown) =>
     sel({ member: null, abmelden: async () => {} }),
@@ -13,26 +13,34 @@ vi.mock('@/features/auth/authStore', () => ({
 
 import { IconRail } from './IconRail'
 
+function rendern(start: string) {
+  const router = createMemoryRouter(
+    [
+      {
+        path: '*',
+        element: (
+          <TooltipProvider>
+            <IconRail />
+          </TooltipProvider>
+        ),
+      },
+    ],
+    { initialEntries: [start] },
+  )
+  render(<RouterProvider router={router} />)
+}
+
 describe('IconRail', () => {
   it('nur der aktive Eintrag ist markiert; kein Funktions-Quelltext in className', () => {
-    const router = createMemoryRouter(
-      [
-        {
-          path: '*',
-          element: (
-            <TooltipProvider>
-              <IconRail />
-            </TooltipProvider>
-          ),
-        },
-      ],
-      { initialEntries: ['/leads'] },
-    )
-    render(<RouterProvider router={router} />)
-    const leads = screen.getByRole('link', { name: 'Leads' })
-    const heute = screen.getByRole('link', { name: 'Heute' })
-    expect(leads).toHaveAttribute('aria-current', 'page')
-    expect(heute).not.toHaveAttribute('aria-current')
+    rendern('/leads')
+    const nav = screen.getByRole('navigation', { name: 'Hauptnavigation' })
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((a) => a.getAttribute('aria-label')),
+    ).toEqual(['Leads', 'Leitfäden', 'E-Mail', 'Team', 'Einstellungen', 'Hilfe'])
+    expect(within(nav).getByRole('link', { name: 'Leads' })).toHaveAttribute('aria-current', 'page')
+    expect(within(nav).getByRole('link', { name: 'Leitfäden' })).not.toHaveAttribute('aria-current')
     for (const a of screen.getAllByRole('link')) {
       expect(a.className).not.toMatch(/isActive|=>/)
       // Aktiv-Balken nur über die aria-current-Variante, nie als unbedingte Klasse
@@ -40,27 +48,16 @@ describe('IconRail', () => {
     }
   })
 
-  it('Runde 2: „Feedback geben (⌥F)“ sitzt in der Rail (statt schwebend über dem Inhalt) und öffnet den Dialog', () => {
-    const router = createMemoryRouter(
-      [
-        {
-          path: '*',
-          element: (
-            <TooltipProvider>
-              <IconRail />
-            </TooltipProvider>
-          ),
-        },
-      ],
-      { initialEntries: ['/heute'] },
-    )
-    render(<RouterProvider router={router} />)
-    const h = vi.fn()
-    window.addEventListener('crm:feedback', h)
-    const knopf = screen.getByRole('button', { name: 'Feedback geben (⌥F)' })
-    expect(knopf).toHaveAttribute('data-tour', 'feedback')
-    fireEvent.click(knopf)
-    expect(h).toHaveBeenCalledTimes(1)
-    window.removeEventListener('crm:feedback', h)
+  it('E-Mail ist auf jeder E-Mail-Seite die aktive Ikone und führt zu den Kampagnen', () => {
+    rendern('/email/antworten')
+    const email = screen.getByRole('link', { name: 'E-Mail' })
+    expect(email).toHaveAttribute('href', '/email/kampagnen')
+    expect(email).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Leads' })).not.toHaveAttribute('aria-current')
+  })
+
+  it('sonst nichts: keine Suche, kein Feedback – nur „Abmelden“ als Knopf', () => {
+    rendern('/leads')
+    expect(screen.getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['Abmelden'])
   })
 })

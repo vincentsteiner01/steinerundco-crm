@@ -2,8 +2,7 @@
 // 560 px; Bereich aus der Route `/einstellungen/:bereich`; unbekannter Bereich → Profil; mobil: Liste (Tabs) → Formular.
 import { Navigate, NavLink, useNavigate, useParams } from 'react-router'
 import { PFADE } from '@/app/pfade'
-import { Kbd, SeitenKopf, Tabs, cn } from '@/components/ui'
-import { useHotkeys } from '@/lib/keyboard'
+import { SeitenKopf, Tabs, cn } from '@/components/ui'
 import { BEREICHE, STANDARD_BEREICH, istBereich, type Bereich } from './bereiche'
 import { Export } from './Export'
 import { Passcode } from './Passcode'
@@ -26,10 +25,6 @@ const INHALT: Record<Bereich, () => React.JSX.Element> = {
 export function Component() {
   const { bereich } = useParams()
   const navigate = useNavigate()
-
-  useHotkeys('global', Object.fromEntries(BEREICHE.map((b) => [b.taste, () => navigate(PFADE.einstellungen(b.key))])), [
-    navigate,
-  ])
 
   // Mobil: den aktiven Tab der quer scrollenden Leiste hält `Tabs` selbst in Sicht (Runde 3, 7. Tab „Verbindungen“ bei 390 px)
   if (!istBereich(bereich)) return <Navigate to={PFADE.einstellungen(STANDARD_BEREICH)} replace />
@@ -54,7 +49,6 @@ export function Component() {
                   }
                 >
                   <span>{b.label}</span>
-                  <Kbd>{b.taste}</Kbd>
                 </NavLink>
               </li>
             ))}

@@ -1,5 +1,5 @@
 // Eingang-Liste: Standardfilter „Offen“, Filter Person/Status über die URL, Zuordnen (Lead-Suche → eingang_zuordnen) und
-// Ignorieren (eingang_ignorieren), Realtime-Kanal crm:eingang lädt neu; Badge zeigt offene Einträge und verlinkt den Eingang.
+// Ignorieren (eingang_ignorieren), Realtime-Kanal crm:eingang lädt neu.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactElement } from 'react'
@@ -22,9 +22,8 @@ import { toast, toastFehler } from '@/components/toast'
 import { supabase } from '@/data/supabase'
 import { useAuth } from '@/features/auth/authStore'
 import type { KanalMock } from '@/test/supabaseMock'
-import { EingangBadge, EINGANG_PFAD } from './EingangBadge'
 import { EingangListe } from './EingangListe'
-import { LEAD_A, MEMBER_M, MEMBER_V, ZEILEN, zustand } from './_testDaten'
+import { LEAD_A, MEMBER_V, ZEILEN, zustand } from './_testDaten'
 
 function rendern(ui: ReactElement, start = '/einstellungen/verbindungen?tab=eingang') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -183,27 +182,5 @@ describe('EingangListe', () => {
     zustand.zeilen = []
     rendern(<EingangListe />)
     expect(await screen.findByText('Nichts zuzuordnen.')).toBeInTheDocument()
-  })
-})
-
-describe('EingangBadge', () => {
-  beforeEach(() => {
-    zustand.zeilen = ZEILEN
-  })
-
-  it('zeigt die offenen Einträge und verlinkt den Eingang', async () => {
-    zustand.offen = 3
-    rendern(<EingangBadge />, '/heute')
-    const link = await screen.findByRole('link', { name: '3 LinkedIn-Mails warten im Eingang' })
-    expect(link).toHaveAttribute('href', EINGANG_PFAD)
-    expect(link).toHaveTextContent('Eingang3zuordnen')
-  })
-
-  it('rendert bei 0 nichts', async () => {
-    zustand.offen = 0
-    rendern(<EingangBadge kompakt />, '/heute')
-    await waitFor(() => expect(vi.mocked(supabase.from)).toHaveBeenCalledWith('eingang'))
-    expect(screen.queryByRole('link')).not.toBeInTheDocument()
-    expect(MEMBER_M).toBeTruthy()
   })
 })

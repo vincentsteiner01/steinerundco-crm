@@ -1,5 +1,5 @@
-// modul.test.tsx: Verträge des Moduls (BAUPLAN § 3.0 Nr. 3, § 3.1.8) – befehle.ts (nur mit Lead sichtbar, ⌥M), tasten.ts (Anhang A),
-// links.ts (Composer-URL, Rücksprung ohne Open Redirect), VerfassenSeite (Sheet, ohne Lead Leerzustand, Esc → zurück).
+// modul.test.tsx: Verträge des Moduls (BAUPLAN § 3.0 Nr. 3) – links.ts (Composer-URL, Rücksprung ohne Open Redirect),
+// VerfassenSeite (Sheet, ohne Lead Leerzustand, Esc → zurück). befehle.ts/tasten.ts sind mit der Palette entfallen (25.11.2026).
 import { screen, waitFor } from '@testing-library/react'
 import { useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -18,46 +18,15 @@ vi.mock('@/components/toast', () => ({
 
 import { useUiStore } from '@/app/uiStore'
 import { useAuth } from '@/features/auth/authStore'
-import { anzeigeNachBinding, VERBOTEN } from '@/lib/keyboard'
 import { MEMBER_V } from '@/test/fixtures/leads'
-import type { Member } from '@/types/domain'
 import { LEAD_ID, rendern, taste, zuruecksetzen } from './_testHilfe'
-import { BEFEHLE } from './befehle'
 import { emailTabUrl, istEmailTab, sicheresZurueck, verfassenUrl } from './links'
-import { TASTEN } from './tasten'
 import { Component as VerfassenSeite } from './VerfassenSeite'
 
 function Ort() {
   const l = useLocation()
   return <span data-testid="ort">{`${l.pathname}${l.search}`}</span>
 }
-
-describe('befehle.ts / tasten.ts', () => {
-  it('Lead-Befehle nur mit Lead sichtbar; ⌥M navigiert zum Composer mit zurueck', () => {
-    const navigate = vi.fn()
-    const me = { id: MEMBER_V } as Member
-    const verfassen = BEFEHLE.find((b) => b.id === 'email-verfassen')
-    expect(verfassen?.tasten).toEqual(['⌥M'])
-    expect(verfassen?.sichtbar?.({ navigate, leadId: null, me })).toBe(false)
-    expect(verfassen?.sichtbar?.({ navigate, leadId: LEAD_ID, me })).toBe(true)
-    verfassen?.ausfuehren({ navigate, leadId: LEAD_ID, me })
-    expect(navigate).toHaveBeenCalledWith(expect.stringMatching(/^\/email\/verfassen\?lead=.*&zurueck=/))
-    for (const id of ['email-erlaubnis-erfassen', 'email-widerspruch-erfassen']) {
-      const b = BEFEHLE.find((x) => x.id === id)
-      expect(b?.sichtbar?.({ navigate, leadId: null, me })).toBe(false)
-      b?.ausfuehren({ navigate, leadId: LEAD_ID, me })
-    }
-    expect(navigate).toHaveBeenLastCalledWith(expect.stringContaining('widerspruch=1'))
-    expect(BEFEHLE.map((b) => b.label)).toContain('Erlaubnis erfassen …')
-  })
-
-  it('keine verbotene Taste, Gruppe „E-Mail“ mit ⌘↵, Esc, [', () => {
-    expect(TASTEN[0]?.gruppe).toBe('E-Mail')
-    const alle = TASTEN.flatMap((g) => g.eintraege.flatMap((e) => e.tasten))
-    expect(alle).toEqual(expect.arrayContaining(['⌘↵', 'Esc', '[', '⌥M']))
-    for (const t of alle) if (/[⌘⌥⇧]/.test(t)) expect(VERBOTEN).not.toContain(anzeigeNachBinding(t))
-  })
-})
 
 describe('links.ts', () => {
   it('verfassenUrl kodiert alle Parameter; sicheresZurueck lehnt // und Hosts ab', () => {

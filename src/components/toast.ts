@@ -1,10 +1,9 @@
 // Toasts (DESIGN-SYSTEM § 5.21, BAUPLAN § 3.1.10): sonner mit eigenen Klassen (base.css .toast-brand).
-// Varianten: neutral · undo (2-px-Sage-Rand, 6 s, „Rückgängig Z“) · error (2-px-danger-Rand, bleibt bis R/Esc) · realtime (Avatar, Klick öffnet Lead).
+// Varianten: neutral · undo (2-px-Sage-Rand, 6 s, „Rückgängig Z“) · error (2-px-danger-Rand, bleibt bis R/Esc).
 // Die Ausführung von Rückgängig gehört der Daten-Schicht: src/data/undo.ts registriert sie über `registriereUndo(fn)`.
 import { createElement, type ReactElement, type ReactNode } from 'react'
 import { toast as sonner } from 'sonner'
 import { useUiStore } from '@/app/uiStore'
-import { Avatar, type AvatarMember } from '@/components/ui/Avatar'
 
 export const UNDO_MS = 6000
 export const TOAST_MS = 4000
@@ -47,16 +46,10 @@ function knopf(
   )
 }
 
-function karte(
-  variante: 'neutral' | 'undo' | 'error' | 'realtime',
-  text: ReactNode,
-  aktion?: ReactNode,
-  links?: ReactNode,
-): ReactElement {
+function karte(variante: 'neutral' | 'undo' | 'error', text: ReactNode, aktion?: ReactNode): ReactElement {
   return createElement(
     'div',
     { className: 'toast-brand', 'data-variante': variante, role: variante === 'error' ? 'alert' : 'status' },
-    links ?? null,
     createElement('span', { className: 'toast-text' }, text),
     aktion ?? null,
   )
@@ -144,24 +137,5 @@ export function fehlerSchliessen(): boolean {
   return true
 }
 export const hatFehlerToast = (): boolean => fehlerToastId !== null
-
-/** Realtime-Toast (max. 2): Avatar 22 px links, Klick öffnet den Lead im Peek (Event `crm:peek`, PeekOutlet hört zu). */
-export function toastRealtime(text: string, member: AvatarMember | null, leadId: string): string | number {
-  let id: string | number = 0
-  const oeffnen = () => {
-    window.dispatchEvent(new CustomEvent('crm:peek', { detail: { leadId } }))
-    sonner.dismiss(id)
-  }
-  id = sonner.custom(
-    () =>
-      createElement(
-        'button',
-        { type: 'button', onClick: oeffnen, className: 'text-left', 'aria-label': `${text} – Lead öffnen` },
-        karte('realtime', text, null, createElement(Avatar, { member, groesse: 22 })),
-      ),
-    { duration: UNDO_MS },
-  )
-  return id
-}
 
 export { sonner as sonnerToast }

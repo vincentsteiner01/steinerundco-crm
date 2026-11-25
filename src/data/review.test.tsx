@@ -1,5 +1,5 @@
 // Review-Korrekturen der Daten-Schicht: Überfällig-Filter (vor heute 00:00), Sequenz fortsetzen (§ 5.1 max(alt, heute 09:00)),
-// doppelte Sequenz-Mail ausblenden, Firma per Name verknüpfen, Widerspruchs-Kanäle im Zeitraum-Select.
+// doppelte Sequenz-Mail ausblenden, Widerspruchs-Kanäle im Zeitraum-Select.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MEMBER_V } from '@/test/fixtures/leads'
 import { SETTINGS } from '@/test/fixtures/settings'
 
-const stand = vi.hoisted(() => ({ firmen: [] as unknown[], enrollment: null as unknown }))
+const stand = vi.hoisted(() => ({ enrollment: null as unknown }))
 
 vi.mock('@/data/supabase', async () => {
   const { supabaseMock } = await import('@/test/supabaseMock')
@@ -15,7 +15,6 @@ vi.mock('@/data/supabase', async () => {
   return supabaseMock((tabelle) => {
     if (tabelle === 'settings')
       return { data: Object.entries(SETTINGS).map(([key, value]) => ({ key, value })), error: null }
-    if (tabelle === 'companies') return { data: stand.firmen, error: null }
     if (tabelle === 'enrollments') return { data: stand.enrollment, error: null }
     return { data: [], error: null, count: 0 }
   })
@@ -35,7 +34,6 @@ import { supabase } from '@/data/supabase'
 import { kette } from '@/test/supabaseMock'
 import { berlinMitternachtIso, heuteBerlin } from './_helfer'
 import { ohneDoppelteEmailSendung, ZEITRAUM_SPALTEN } from './activities'
-import { firmaFuerName, firmaInListe, firmaNorm } from './companies'
 import { fortsetzenFaellig, useEnrollmentFortsetzen } from './enrollments'
 import { wendeLeadFilterAn } from './leads'
 
@@ -48,7 +46,6 @@ const vonMock = () => vi.mocked(supabase.from)
 beforeEach(() => {
   qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   vonMock().mockClear()
-  stand.firmen = []
   stand.enrollment = null
   useAuth.setState({ status: 'mitglied', member: { user_id: MEMBER_V, email: 'v@x', display_name: 'Vincent' } })
 })
@@ -113,30 +110,5 @@ describe('Doppelte Sequenz-Mail (M-06: emails_after_write + complete_step)', () 
   it('Zeitraum-Select liest email_id und die Widerspruchs-Kanäle (metadata->channels)', () => {
     expect(ZEITRAUM_SPALTEN).toContain('email_id')
     expect(ZEITRAUM_SPALTEN).toContain('kanaele:metadata->channels')
-  })
-})
-
-describe('Firma per Name (company_id statt nur company_name)', () => {
-  it('firmaNorm wie crm.company_norm; firmaInListe findet über name_norm', () => {
-    expect(firmaNorm('  Sperrfirma   Energie ')).toBe('sperrfirma energie')
-    expect(firmaNorm('   ')).toBeNull()
-    const liste = [{ id: 'c1', name: 'Sperrfirma Energie', name_norm: 'sperrfirma energie', do_not_contact: true }]
-    expect(firmaInListe(liste as never, 'SPERRFIRMA energie')?.id).toBe('c1')
-    expect(firmaInListe(liste as never, 'Andere')).toBeNull()
-  })
-
-  it('firmaFuerName nimmt die vorhandene Firma, sonst Insert', async () => {
-    stand.firmen = [{ id: 'c1', name: 'Solar Nord GmbH', name_norm: 'solar nord gmbh' }]
-    expect((await firmaFuerName('solar  nord gmbh')).id).toBe('c1')
-    const k = vonMock().mock.results.at(-1)?.value as ReturnType<typeof kette>
-    expect(k['eq']).toHaveBeenCalledWith('name_norm', 'solar nord gmbh')
-
-    stand.firmen = []
-    vonMock()
-      .mockImplementationOnce(() => kette({ data: [], error: null }))
-      .mockImplementationOnce(() => kette({ data: { id: 'c9', name: 'Neu GmbH' }, error: null }))
-    expect((await firmaFuerName(' Neu  GmbH ')).id).toBe('c9')
-    const ins = vonMock().mock.results.at(-1)?.value as ReturnType<typeof kette>
-    expect(ins['insert']).toHaveBeenCalledWith({ name: 'Neu GmbH' })
   })
 })

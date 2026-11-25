@@ -1,5 +1,4 @@
-// src/features/eingang/public.ts – Exporte für andere Module (Heute, Sidebar, Einstellungen → Verbindungen).
-export { EingangBadge, EINGANG_PFAD, type EingangBadgeProps } from './EingangBadge'
+// src/features/eingang/public.ts – Exporte für Einstellungen → Verbindungen (25.11.2026: der Badge für Heute/Sidebar ist mit der alten Hülle entfallen).
 export { EingangListe } from './EingangListe'
 export {
   qkEingang,

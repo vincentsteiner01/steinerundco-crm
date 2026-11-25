@@ -204,8 +204,8 @@ function Detail({ e }: { e: Eingang }) {
         {abmeldung ? (
           <p className="bg-danger-tint text-small text-danger rounded-sm px-3 py-2">
             Abmeldung erkannt – die Adresse steht schon auf der Sperrliste, Kampagnen schreiben sie nicht mehr an. Soll
-            der Lead gar nicht mehr kontaktiert werden (auch nicht per Telefon oder LinkedIn), im Lead „Widerspruch
-            erfassen“.
+            der Lead gar nicht mehr kontaktiert werden (auch nicht per Telefon oder LinkedIn), in der Lead-Karte
+            „Widerspruch erfassen“.
           </p>
         ) : null}
         <ol className="grid gap-2.5" aria-label="Verlauf">

@@ -1,9 +1,8 @@
-// Lint-Test (BAUPLAN § 3.1.8 / § 1.5 Nr. 23): alle Registries gegen VERBOTEN; Literal-Scan src/features/** (§ 4.6).
+// Lint-Test (BAUPLAN § 3.1.8 / § 1.5 Nr. 23): kbd-Props gegen VERBOTEN; Literal-Scan src/features/** (§ 4.6).
+// Die Registries (app/tasten.ts, app/befehle.ts) sind mit Palette und Tastenliste entfallen (Neustart 25.11.2026).
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { TASTEN } from '@/app/tasten'
-import { BEFEHLE } from '@/app/befehle'
 import { anzeigeNachBinding, VERBOTEN } from './keyboard'
 
 const wurzel = join(process.cwd(), 'src')
@@ -35,22 +34,6 @@ describe('VERBOTEN', () => {
       'mod+shift+v',
     ]) {
       expect(VERBOTEN).toContain(k)
-    }
-  })
-
-  it('keine Registry-Taste (tasten.ts, befehle.ts) ist verboten', () => {
-    const alle: string[] = []
-    for (const g of TASTEN) for (const e of g.eintraege) for (const t of e.tasten) alle.push(t)
-    for (const b of BEFEHLE) for (const t of b.tasten ?? []) alle.push(t)
-    expect(alle.length).toBeGreaterThan(10)
-    for (const anzeige of alle) {
-      // Mehrfach-Tasten in einer Zelle („G H“, „1–9 0 X“, „⌥1–9“) werden einzeln geprüft, soweit sie Modifier tragen
-      const teile =
-        anzeige.includes(' ') && !/^[A-Za-zÄÖÜ]( [A-Za-zÄÖÜ])+$/.test(anzeige) ? anzeige.split(' ') : [anzeige]
-      for (const t of teile) {
-        if (!/[⌘⌥⇧]|Ctrl/.test(t)) continue
-        expect(VERBOTEN, `verbotene Taste „${t}“`).not.toContain(anzeigeNachBinding(t))
-      }
     }
   })
 

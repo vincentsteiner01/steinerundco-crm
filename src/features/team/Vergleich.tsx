@@ -3,7 +3,6 @@
 // Zahlen Geist Mono display (Phone display-sm), Balken 1 px line-strong mit 3-px-Füllung ink (wie die Funnel-Konversion), keine
 // Farbe für Personen. Mobil: Köpfe untereinander, Zeilen bleiben dreispaltig mit Namenszeile darüber.
 import { useMemo } from 'react'
-import { Link } from 'react-router'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/components/ui/cn'
@@ -32,20 +31,15 @@ import {
 } from './kennzahlen'
 import { monatsanfang, type TeamZeitraum, type TeamZeitraumArt } from './zeitraum'
 
-/** Genitiv für „Mikes Heute-Liste“ (Vincent → Vincents). */
-const genitiv = (name: string): string => (/[sßxz]$/i.test(name) ? `${name}’` : `${name}s`)
-
 export function Vergleich({
   links,
   rechts,
-  meId,
   z,
   heute,
   onZeitraum,
 }: {
   links: TeamPerson
   rechts: TeamPerson
-  meId: string | null
   z: TeamZeitraum
   heute: Tag
   onZeitraum: (a: TeamZeitraumArt) => void
@@ -75,13 +69,11 @@ export function Vergleich({
         <PersonKopf
           person={links}
           seite="links"
-          ich={links.id === meId}
           erledigt={erledigt.istLaden ? null : erledigtJePerson(links.id, erledigt.data)}
         />
         <PersonKopf
           person={rechts}
           seite="rechts"
-          ich={rechts.id === meId}
           erledigt={erledigt.istLaden ? null : erledigtJePerson(rechts.id, erledigt.data)}
         />
       </div>
@@ -113,12 +105,12 @@ export function Vergleich({
           </p>
           <div className="mt-4 flex flex-wrap gap-1.5">
             {z.art !== 'woche' ? (
-              <Button groesse="S" onClick={() => onZeitraum('woche')} kbd="2">
+              <Button groesse="S" onClick={() => onZeitraum('woche')}>
                 Woche ansehen
               </Button>
             ) : null}
             {z.art !== 'monat' ? (
-              <Button groesse="S" variante="quiet" onClick={() => onZeitraum('monat')} kbd="3">
+              <Button groesse="S" variante="quiet" onClick={() => onZeitraum('monat')}>
                 Monat ansehen
               </Button>
             ) : null}
@@ -134,8 +126,8 @@ export function Vergleich({
 
       {!laden && !fehler && !z.monatszaehler && sheetPersonen.length ? (
         <p className="text-small text-ink-3 mt-3 max-w-[72ch]" data-hinweis="sheet">
-          Zahlen wie auf der KPI-Seite. Für {sheetPersonen.map((p) => p.name).join(' und ')} gelten in diesem Monat die
-          Werte aus dem KPI-Sheet: In „Heute“ und „Woche“ zählen nur Tageszähler und neu erfasste Ereignisse.{' '}
+          Für {sheetPersonen.map((p) => p.name).join(' und ')} gelten in diesem Monat die Werte aus dem KPI-Sheet: In
+          „Heute“ und „Woche“ zählen nur Tageszähler und neu erfasste Ereignisse.{' '}
           <button
             type="button"
             onClick={() => onZeitraum('monat')}
@@ -144,8 +136,6 @@ export function Vergleich({
             Monat ansehen
           </button>
         </p>
-      ) : !laden && !fehler ? (
-        <p className="text-small text-ink-3 mt-3">Zahlen wie auf der KPI-Seite.</p>
       ) : null}
     </section>
   )
@@ -154,12 +144,10 @@ export function Vergleich({
 function PersonKopf({
   person,
   seite,
-  ich,
   erledigt,
 }: {
   person: TeamPerson
   seite: 'links' | 'rechts'
-  ich: boolean
   erledigt: number | null
 }) {
   const jetzt = useJetzt()
@@ -168,7 +156,6 @@ function PersonKopf({
   const { data: seqIdx } = useSequencesIndex()
   const queue = useQueueZaehler(person.id, undefined, (id) => !!(id && seqIdx?.stepsById.get(id)?.is_opener))
   const rechts = seite === 'rechts'
-  const heuteLink = ich ? '/heute' : `/heute?person=${person.slug}`
   const zahl = (n: number | null | undefined) => (n === null || n === undefined ? '–' : fmtZahl(n))
   return (
     <div
@@ -215,15 +202,6 @@ function PersonKopf({
             <b className="text-ink-bright text-[15px] font-medium">{zahl(erledigt)}</b> erledigt
           </span>
         </p>
-        <Link
-          to={heuteLink}
-          className={cn(
-            'text-small text-ink-2 hover:text-ink mt-0.5 justify-self-start underline-offset-2 hover:underline',
-            rechts && 'md:justify-self-end',
-          )}
-        >
-          {ich ? 'Deine Heute-Liste' : `${genitiv(person.name)} Heute-Liste`} →
-        </Link>
       </div>
     </div>
   )

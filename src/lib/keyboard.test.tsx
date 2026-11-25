@@ -6,7 +6,6 @@ import {
   anzeigeNachBinding,
   eventNachBinding,
   normalisiere,
-  TastenBereich,
   useHotkeys,
   useHotkeyScope,
   VERBOTEN,
@@ -154,28 +153,28 @@ describe('keyboard', () => {
     expect(frage).toHaveBeenCalledTimes(1)
     expect(slash).toHaveBeenCalledTimes(1)
   })
-  it('Karten-Tasten der Seite schweigen bei offenem Peek; im Peek (TastenBereich peek) gelten sie – Review', () => {
-    const seite = vi.fn()
-    const peek = vi.fn()
+  it('Karten- und Listen-Tasten der Seite ruhen, solange ein Formular offen ist (Lead-Blatt, Dialog) – globale bleiben', () => {
+    const karte = vi.fn()
     const liste = vi.fn()
+    const global = vi.fn()
     render(
       <>
-        <Haken scope="karte" bindings={{ b: seite }} />
+        <Haken scope="karte" bindings={{ b: karte }} />
         <Haken scope="liste" bindings={{ j: liste }} />
-        <TastenBereich.Provider value="peek">
-          <Haken scope="karte" bindings={{ b: peek }} />
-        </TastenBereich.Provider>
+        <Haken scope="global" bindings={{ z: global }} />
       </>,
     )
     taste({ key: 'b' })
-    expect(seite).toHaveBeenCalledTimes(1)
-    expect(peek).toHaveBeenCalledTimes(1)
-    act(() => useUiStore.setState({ peekLeadId: 'l1' }))
+    taste({ key: 'j' })
+    expect(karte).toHaveBeenCalledTimes(1)
+    expect(liste).toHaveBeenCalledTimes(1)
+    act(() => useUiStore.getState().pushScope('formular'))
     taste({ key: 'b' })
     taste({ key: 'j' })
-    expect(seite).toHaveBeenCalledTimes(1)
-    expect(peek).toHaveBeenCalledTimes(2)
-    expect(liste).toHaveBeenCalledTimes(1) // Listen-Tasten (J/K im Peek) bleiben
-    act(() => useUiStore.setState({ peekLeadId: null }))
+    taste({ key: 'z' })
+    expect(karte).toHaveBeenCalledTimes(1)
+    expect(liste).toHaveBeenCalledTimes(1)
+    expect(global).toHaveBeenCalledTimes(1)
+    act(() => useUiStore.getState().popScope('formular'))
   })
 })

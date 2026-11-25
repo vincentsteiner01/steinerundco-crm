@@ -1,13 +1,8 @@
-// Kleine Helfer aus § 3.1.9: telefon, csv, typografie, ids, zwischenablage.
+// Kleine Helfer aus § 3.1.9: telefon, csv, zwischenablage.
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { csvExport, csvText, csvZelle } from './csv'
-import { kurzId } from './ids'
 import { istGueltig, nachE164, telHref, telefonTyp } from './telefon'
-import { echtesMinus, gedankenstrich, nbspEinheit, tq, typografisch } from './typografie'
 import { kopieren } from './zwischenablage'
-
-const SCHMAL = ' '
-const NBSP = ' '
 
 describe('telefon (DE)', () => {
   it('nachE164 akzeptiert beliebige Schreibweisen', () => {
@@ -71,38 +66,6 @@ describe('csv (LE-14)', () => {
     expect(csvZelle(new Date('2026-10-14T14:12:00Z'))).toBe('14.10.2026, 16:12')
     expect(csvZelle({ a: 1 })).toBe('{"a":1}')
     expect(csvZelle('kein Datum 2026-10')).toBe('kein Datum 2026-10')
-  })
-})
-
-describe('typografie (E26)', () => {
-  it('tq: gerade → typografische Anführungszeichen', () => {
-    expect(tq('Sie sagte "Hallo" und \'Tschüss\'')).toBe('Sie sagte „Hallo“ und ‚Tschüss‘')
-    expect(tq('"Am Anfang" – (\'mittig\')')).toBe('„Am Anfang“ – (‚mittig‘)')
-    expect(tq("Müller's Laden")).toBe('Müller’s Laden')
-  })
-  it('gedankenstrich und Bereiche', () => {
-    expect(gedankenstrich('Erledigt - Kurzfristig 3')).toBe('Erledigt – Kurzfristig 3')
-    expect(gedankenstrich('a -- b')).toBe('a – b')
-    expect(gedankenstrich('2-3 Tage')).toBe('2–3 Tage')
-    expect(gedankenstrich('Später...')).toBe('Später…')
-    expect(gedankenstrich('Follow-up')).toBe('Follow-up')
-  })
-  it('nbspEinheit und echtes Minus', () => {
-    expect(nbspEinheit('30 %')).toBe(`30${SCHMAL}%`)
-    expect(nbspEinheit('30%')).toBe(`30${SCHMAL}%`)
-    expect(nbspEinheit('15 Min. und 2 h, 3 T')).toBe(`15${NBSP}Min. und 2${NBSP}h, 3${NBSP}T`)
-    expect(nbspEinheit('+3 pp')).toBe(`+3${NBSP}pp`)
-    expect(nbspEinheit('3 Tage')).toBe('3 Tage')
-    expect(echtesMinus('-2 vs. 3-4')).toBe('−2 vs. 3-4')
-    expect(typografisch('"Test" - -2 T, 30 %')).toBe(`„Test“ – −2${NBSP}T, 30${SCHMAL}%`)
-  })
-})
-
-describe('ids', () => {
-  it('kurzId = 8 Hex-Zeichen', () => {
-    expect(kurzId('10000000-0000-4000-8000-000000000001')).toBe('10000000')
-    expect(kurzId('abcdef12-3456-7890-abcd-ef1234567890')).toBe('abcdef12')
-    expect(kurzId(null)).toBe('')
   })
 })
 

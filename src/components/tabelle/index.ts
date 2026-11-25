@@ -1,5 +1,4 @@
 export { DataTable, type DataTableProps, type ZeitBalken } from './DataTable'
-export { InlineEdit, type InlineEditProps, type InlineEditArt } from './InlineEdit'
 export {
   dataTableFeatures,
   naechsteEditierbareSpalte,

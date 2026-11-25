@@ -33,12 +33,12 @@ export function RouteFehler() {
               Zur Anmeldung
             </Button>
           ) : (
-            <Button variante="primary" kbd="R" onClick={() => window.location.reload()}>
+            <Button variante="primary" onClick={() => window.location.reload()}>
               Erneut versuchen
             </Button>
           )}
-          <Button variante="quiet" onClick={() => navigate(PFADE.heute)}>
-            Zu Heute
+          <Button variante="quiet" onClick={() => navigate(PFADE.leads)}>
+            Zu den Leads
           </Button>
         </div>
       </div>

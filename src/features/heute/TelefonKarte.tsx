@@ -1,6 +1,6 @@
 // Telefon-Karte (BAUPLAN § 3.2 TelefonKarte.tsx, DESIGN-SYSTEM § 5.8): Kopf „RÜCKRUF · 10:30 · …“ / „VERSUCH 3 VON 5 · SLOT C“,
-// Nummer (Mono, tel:), Anrufgrund-Chip, Skript als Stichpunkte (Einstieg V1/V2), Anrufen ↵ (→ /telefon/anruf/:id?zurueck=/heute),
-// Später S, Notiz N, Schnell-Ergebnis 1 2 3 7 → ?ergebnis= (M3 speichert). Keine Telefon-Ergebnisse hier (Tabu).
+// Nummer (Mono, tel:), Anrufgrund-Chip, Skript als Stichpunkte (Einstieg V1/V2), Anrufen ↵, Später S, Notiz N, Schnell-Ergebnis
+// 1 2 3 7. Keine Telefon-Ergebnisse hier (Tabu). Neustart 25.11.2026: ohne Anruf-Screen öffnen „Anrufen“ und 1 2 3 7 das Lead-Blatt.
 import { Phone } from 'lucide-react'
 import { useRef } from 'react'
 import { NotizFeld, Spaeter } from '@/components/aktionen'

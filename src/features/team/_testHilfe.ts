@@ -121,11 +121,7 @@ export function tabellen(ueberschreiben: Partial<Tabellen> = {}): Tabellen {
 export function rendern(start = '/team') {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
   const router = createMemoryRouter(
-    [
-      { path: '/team', lazy: () => import('./TeamSeite'), HydrateFallback: () => null },
-      { path: '/heute', element: createElement('p', { 'data-testid': 'heute' }, 'Heute') },
-      { path: '/kpis', element: createElement('p', { 'data-testid': 'kpis' }, 'KPIs') },
-    ],
+    [{ path: '/team', lazy: () => import('./TeamSeite'), HydrateFallback: () => null }],
     { initialEntries: [start] },
   )
   const r = render(

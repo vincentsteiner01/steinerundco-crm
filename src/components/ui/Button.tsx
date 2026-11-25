@@ -5,7 +5,7 @@ import { cn } from './cn'
 import { Tooltip } from './Tooltip'
 
 export type ButtonProps = {
-  variante?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'icon'
+  variante?: 'primary' | 'secondary' | 'quiet' | 'danger' | 'icon' | 'positiv' | 'negativ'
   groesse?: 'S' | 'M' | 'L'
   icon?: LucideIcon
   kbd?: string
@@ -30,6 +30,10 @@ const VARIANTE = {
   quiet: 'border-transparent text-ink-2 hover:text-ink hover:bg-surface-hover',
   danger: 'border-transparent text-danger hover:bg-danger-tint',
   icon: 'border-transparent h-8 w-8 p-0 text-ink-2 hover:text-ink hover:bg-surface-hover',
+  // Gefüllt grün/rot (25.11.2026, Board: „Hat Interesse“ / „Kein Interesse“, rote Bestätigung im Dialog). Farbe nie per className
+  // überschreiben: Tailwind gibt .bg-danger und .bg-done vor .bg-signal aus, ein umgefärbter primary-Knopf bliebe blau.
+  positiv: 'border-transparent bg-done text-signal-ink font-semibold hover:bg-done-hover disabled:hover:bg-done',
+  negativ: 'border-transparent bg-danger text-signal-ink font-semibold hover:bg-danger-hover disabled:hover:bg-danger',
 } as const
 
 /**

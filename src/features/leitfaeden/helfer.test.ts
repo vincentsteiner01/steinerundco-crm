@@ -1,18 +1,10 @@
-// Reine Helfer: Schlüssel, Suche, Baum-Gruppen (LF-09/LF-10), Statistik aus Aktivitäten (LF-06), Editor-/Vorschau-Helfer, Entwurf.
+// Reine Helfer: Schlüssel, Suche, Baum-Gruppen (LF-09/LF-10), Statistik aus Aktivitäten (LF-06).
+// 25.11.2026 (Neustart): Editor-/Vorschau-Helfer und Entwurf sind mit dem alten Editor entfallen.
 import { describe, expect, it } from 'vitest'
 import type { ActivityZeitraum } from '@/data/activities'
 import { VORLAGE } from '@/lib/vorlagenKeys'
 import { vorlage } from '@/test/fixtures/vorlagen'
 import { ALLE, BEDARF, EMAIL, JA_V1_ID, SEQUENZEN_MIT_STANDARD, TELEFON } from './_testHilfe'
-import {
-  istManuell,
-  kopierGrund,
-  platzhalterEinfuegen,
-  platzhalterTreffer,
-  quelleLabel,
-  segmente,
-} from './editorHelfer'
-import { entwurfLeer, entwurfVon, istGleich, kopieVon, zeileAusEntwurf } from './entwurf'
 import {
   baumGruppen,
   baumReihenfolge,
@@ -42,6 +34,9 @@ describe('Schlüssel', () => {
     expect(neuerKey('linkedin', 'Pitch C', ['li_pitch_c'])).toBe('li_pitch_c_2')
     expect(neuerKey('linkedin', 'Pitch C', ['li_pitch_c', 'li_pitch_c_2'])).toBe('li_pitch_c_3')
     expect(neuerKey('linkedin', '', [])).toBe('li_leitfaden')
+    // Neustart: neue Leitfäden liegen im Kanal sonstiges; belegt sind auch archivierte Schlüssel
+    expect(neuerKey('sonstiges', 'Ablauf Erstgespräch', [])).toBe('sales_ablauf_erstgespraech')
+    expect(neuerKey('sonstiges', 'Ablauf', ['sales_ablauf'])).toBe('sales_ablauf_2')
   })
   it('kopieKey: _kopie, eindeutig', () => {
     expect(kopieKey(VORLAGE.li_pitch_a, [])).toBe(`${VORLAGE.li_pitch_a}_kopie`)
@@ -203,71 +198,5 @@ describe('statistikAusAktivitaeten (LF-06)', () => {
   it('fmtTage mit Komma', () => {
     expect(fmtTage(1.84)).toBe('1,8 T')
     expect(fmtTage(0)).toBe('0,0 T')
-  })
-})
-
-describe('Editor-Helfer', () => {
-  it('platzhalterTreffer: Präfix zuerst, dann enthält', () => {
-    expect(platzhalterTreffer('')).toHaveLength(24)
-    expect(platzhalterTreffer('nach')).toEqual(['Nachname', 'Absender Nachname'])
-    expect(platzhalterTreffer('name')).toEqual(['Vorname', 'Nachname', 'Absender Vorname', 'Absender Nachname'])
-    expect(platzhalterTreffer('xyz')).toEqual([])
-  })
-  it('platzhalterEinfuegen ersetzt „[“ + Filter durch [Name]', () => {
-    expect(platzhalterEinfuegen('Hallo [Na', 6, 9, 'Nachname')).toEqual({ text: 'Hallo [Nachname]', caret: 16 })
-    expect(platzhalterEinfuegen('[ rest', 0, 1, 'Vorname')).toEqual({ text: '[Vorname] rest', caret: 9 })
-  })
-  it('quelleLabel, istManuell', () => {
-    expect(quelleLabel('Vorname')).toBe('aus dem Lead')
-    expect(quelleLabel('Reaktion')).toBe('manuell')
-    expect(quelleLabel('Unbekannt')).toBe('')
-    expect(istManuell('Reaktion')).toBe(true)
-    expect(istManuell('Tag/Uhrzeit 1')).toBe(true)
-    expect(istManuell('Vorname')).toBe(false)
-  })
-  it('segmente: gefüllt/offen, Literal „Frau [Nachname]“', () => {
-    const s = segmente('Hallo Frau [Nachname], [Reaktion]!', { last_name: 'Beispiel', salutation: 'frau' }, {})
-    expect(s.map((x) => x.art)).toEqual(['text', 'gefuellt', 'text', 'gefuellt', 'text', 'offen', 'text'])
-    expect(s[1]).toMatchObject({ wert: 'Frau', name: 'Anrede' })
-    expect(s[3]).toMatchObject({ wert: 'Beispiel', name: 'Nachname' })
-    expect(s[5]).toMatchObject({ wert: '[Reaktion]', name: 'Reaktion' })
-    expect(segmente('Hallo [Reaktion]', {}, { werte: { Reaktion: 'ja' } })[1]).toMatchObject({
-      art: 'gefuellt',
-      wert: 'ja',
-    })
-  })
-  it('kopierGrund nennt den ersten offenen Platzhalter', () => {
-    expect(kopierGrund([])).toBeNull()
-    expect(kopierGrund(['Reaktion', 'Grund'])).toBe('Erst [Reaktion] eintragen')
-  })
-})
-
-describe('Entwurf', () => {
-  const t = vorlage('k', { name: 'N', when_to_use: 'W', notes: null, subject: null, form_of_address: 'du', body: 'B' })
-  it('entwurfVon ↔ istGleich ↔ zeileAusEntwurf', () => {
-    const e = entwurfVon(t)
-    expect(e).toEqual({
-      name: 'N',
-      phase: 'eroeffnung',
-      when_to_use: 'W',
-      form_of_address: 'du',
-      notes: '',
-      subject: '',
-      body: 'B',
-    })
-    expect(istGleich(e, entwurfVon(t))).toBe(true)
-    expect(istGleich(e, { ...e, body: 'C' })).toBe(false)
-    const z = zeileAusEntwurf(t, { ...e, notes: '  ', when_to_use: '', form_of_address: '' }, 'linkedin', 'egal')
-    expect(z).toMatchObject({ id: t.id, key: 'k', notes: null, when_to_use: null, form_of_address: null, body: 'B' })
-    const neu = zeileAusEntwurf(null, { ...e, name: ' Neu ' }, 'telefon', 'tel_neu')
-    expect(neu).toMatchObject({ key: 'tel_neu', channel: 'telefon', active: true, name: 'Neu' })
-    expect('id' in neu).toBe(false)
-  })
-  it('entwurfLeer nimmt die erste Phase des Kanals; kopieVon setzt variant_of und (Kopie)', () => {
-    expect(entwurfLeer('telefon').phase).toBe('gatekeeper')
-    expect(entwurfLeer('linkedin').phase).toBe('vernetzung')
-    const k = kopieVon({ ...t, active: false }, 'k_kopie')
-    expect(k).toMatchObject({ key: 'k_kopie', name: 'N (Kopie)', variant_of: t.id, active: true, body: 'B' })
-    expect('id' in k).toBe(false)
   })
 })

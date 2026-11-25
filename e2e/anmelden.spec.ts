@@ -16,11 +16,11 @@ test('Karte → falscher Passcode → Meldung', async ({ page }) => {
   await expect(page).toHaveURL(/\/anmelden/)
 })
 
-test('Karte → Passcode → /heute', async ({ page }) => {
+test('Karte → Passcode → /leads', async ({ page }) => {
   test.skip(!process.env.E2E_PASSCODE, 'E2E_PASSCODE fehlt')
   await page.goto('/anmelden')
   await page.getByRole('button', { name: /Vincent/ }).click()
   await page.getByLabel('Passcode', { exact: true }).fill(process.env.E2E_PASSCODE ?? '')
   await page.getByRole('button', { name: /Anmelden/ }).click()
-  await expect(page).toHaveURL(/\/heute$/)
+  await expect(page).toHaveURL(/\/leads$/)
 })

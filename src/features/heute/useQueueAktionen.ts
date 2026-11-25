@@ -25,7 +25,7 @@ import { rollToWeekday } from '@/lib/werktage'
 import { tagPlus } from '@/lib/zeit'
 import { kopieren } from '@/lib/zwischenablage'
 import { GRUND_LABEL, TOAST } from '@/texte/de'
-import type { CallOutcome, EndedReason, LeadMitBezug, NoteVariant, QueueItem, UiSektion } from '@/types/domain'
+import type { EndedReason, LeadMitBezug, NoteVariant, QueueItem, UiSektion } from '@/types/domain'
 import { useLogRequest, useMarkAccepted } from '@/data/connections'
 import { queueOptimistischEntfernen } from '@/data/queue'
 import { SCHRITT_TYPEN } from './daten/nachlese'
@@ -74,13 +74,6 @@ export type AktionenKontext = {
 /** Satzende genau einmal: „… am Mo 19.10.“ endet schon mit Punkt (Datum), „… gesendet“ bekommt einen. */
 const satz = (t: string) => (t.endsWith('.') ? t : `${t}.`)
 
-const SCHNELL_ERGEBNIS: Record<'1' | '2' | '3' | '7', CallOutcome> = {
-  '1': 'no_answer',
-  '2': 'busy',
-  '3': 'voicemail',
-  '7': 'callback_scheduled',
-}
-
 export function useQueueAktionen() {
   const ctx = useHeuteKontext()
   const qc = useQueryClient()
@@ -102,7 +95,6 @@ export function useQueueAktionen() {
   const leadUpdate = useLeadUpdate()
 
   const feiertage = settings?.feiertage
-  const zurueck = encodeURIComponent(PFADE.heute)
 
   const melde = useCallback(
     (activityId: number | null, text: string, leadId: string | null, still = false) => {
@@ -455,25 +447,22 @@ export function useQueueAktionen() {
     [ladeLeadDetail, leadUpdate],
   )
 
+  // Neustart 25.11.2026: Den Anruf-Screen gibt es nicht mehr. Die Karten leben nur noch in E-Mail › Fällig (dort erscheinen
+  // keine Telefon-Karten); „Anrufen“ und die Schnell-Ergebnisse öffnen deshalb das Lead-Blatt statt einer entfernten Seite.
   const anrufen = useCallback(
     (item: QueueItem) => {
       if (!item.lead_id || gesperrt(item)) return
-      navigate(`${PFADE.anruf(item.lead_id)}?zurueck=${zurueck}`)
+      navigate(PFADE.lead(item.lead_id))
     },
-    [gesperrt, navigate, zurueck],
+    [gesperrt, navigate],
   )
-  const schnellErgebnis = useCallback(
-    (item: QueueItem, taste: keyof typeof SCHNELL_ERGEBNIS) => {
-      // Gate wie „Anrufen“ (§ 8.2 Nr. 2): ohne Nummer, mit Sperrliste/Widerspruch/Firmensperre kein Weg in den Anruf-Screen (Review)
-      if (!item.lead_id || gesperrt(item)) return
-      navigate(`${PFADE.anruf(item.lead_id)}?ergebnis=${SCHNELL_ERGEBNIS[taste]}&zurueck=${zurueck}`)
-    },
-    [gesperrt, navigate, zurueck],
-  )
+  // Gate wie „Anrufen“ (§ 8.2 Nr. 2); ein Ergebnis lässt sich ohne Anruf-Screen nicht mehr vorwählen
+  const schnellErgebnis = useCallback((item: QueueItem, _taste: '1' | '2' | '3' | '7') => anrufen(item), [anrufen])
   const emailOeffnen = useCallback(
     (item: QueueItem) => {
       if (!item.lead_id || gesperrt(item)) return
-      const p = new URLSearchParams({ lead: item.lead_id, zurueck: PFADE.heute })
+      // Rücksprung zu den Einzelmails – dort (Tab „Fällig“) stehen die Karten seit dem Neustart
+      const p = new URLSearchParams({ lead: item.lead_id, zurueck: PFADE.email })
       if (item.step_id) p.set('schritt', item.step_id)
       if (item.enrollment_id) p.set('enrollment', item.enrollment_id)
       navigate(`${PFADE.emailVerfassen}?${p.toString()}`)

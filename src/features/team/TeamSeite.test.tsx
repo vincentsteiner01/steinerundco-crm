@@ -1,6 +1,6 @@
-// TeamSeite: Kopf (Dateline, Zeitraum-Segment, Tasten 1 2 3), Vergleich Vincent | Mike (Fotos-Avatare, zuletzt aktiv, Heute-Status,
+// TeamSeite: Kopf (Dateline, Zeitraum-Segment), Vergleich Vincent | Mike (Fotos-Avatare, zuletzt aktiv, Heute-Status,
 // Kennzahlen wie die KPI-Seite inkl. Sheet-Regel), Team-Protokoll (Tagesgruppen, Timeline-Wortlaut, Filter, Peek, leer, Fehler).
-import { act, configure, fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { configure, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 let TABELLEN: () => ReturnType<typeof import('./_testHilfe').tabellen>
@@ -12,7 +12,7 @@ import { useUiStore } from '@/app/uiStore'
 import { useAuth } from '@/features/auth/authStore'
 import { FEHLER } from '@/features/kpis/_testHilfe'
 import { _akkordZuruecksetzen } from '@/lib/keyboard'
-import { AKTIVITAETEN, JETZT, LEAD_1, MEMBER_V, rendern, tabellen, taste } from './_testHilfe'
+import { AKTIVITAETEN, JETZT, LEAD_1, MEMBER_V, rendern, tabellen } from './_testHilfe'
 
 configure({ asyncUtilTimeout: 8000 })
 
@@ -25,7 +25,7 @@ describe('TeamSeite', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'], now: JETZT })
     TABELLEN = () => tabellen()
-    useUiStore.setState({ hotkeyScope: 'global', scopeStack: [], peekLeadId: null, peekListe: [], paletteOffen: false })
+    useUiStore.setState({ hotkeyScope: 'global', scopeStack: [] })
     useAuth.setState({
       status: 'mitglied',
       member: { user_id: MEMBER_V, email: 'vincent@steinerundco.de', display_name: 'Vincent' },
@@ -54,11 +54,8 @@ describe('TeamSeite', () => {
       expect(within(vincent).getByLabelText('Heute: 5 fällig, 3 überfällig, 1 erledigt')).toBeInTheDocument(),
     )
     expect(within(mike).getByLabelText('Heute: 5 fällig, 4 überfällig, 1 erledigt')).toBeInTheDocument()
-    expect(within(mike).getByRole('link', { name: 'Mikes Heute-Liste →' })).toHaveAttribute(
-      'href',
-      '/heute?person=mike',
-    )
-    expect(within(vincent).getByRole('link', { name: 'Deine Heute-Liste →' })).toHaveAttribute('href', '/heute')
+    // Heute-Liste und KPI-Seite gibt es nicht mehr – keine Links dorthin (Neustart 25.11.2026)
+    expect(screen.queryByRole('link', { name: /Heute-Liste|KPIs/ })).toBeNull()
     expect(vincent.querySelector('img')).toHaveAttribute('src', '/avatars/vincent.webp')
 
     // Kennzahlen: Vincents Sheet-Monatswerte zählen in der Woche nicht, Tageszähler schon; Mike aus Ereignissen
@@ -74,18 +71,13 @@ describe('TeamSeite', () => {
     expect(document.querySelector('[data-hinweis="sheet"]')).toHaveTextContent(
       'Für Vincent gelten in diesem Monat die Werte aus dem KPI-Sheet',
     )
-    expect(screen.getByRole('link', { name: 'In den KPIs ansehen →' })).toHaveAttribute(
-      'href',
-      '/kpis?zeitraum=kw42&person=team',
-    )
   })
 
-  it('Tasten 3 · 1 wechseln Monat und Heute (URL), Monat zeigt Sheet-Werte mit Badge', async () => {
+  it('Zeitraum-Segment wechselt Monat und Heute (URL), Monat zeigt Sheet-Werte mit Badge', async () => {
     const { router } = rendern()
     await screen.findByRole('list', { name: /Kennzahlen KW 42/ })
-    act(() => {
-      taste('3')
-    })
+    const zeitraum = screen.getByRole('group', { name: 'Zeitraum' })
+    fireEvent.click(within(zeitraum).getByRole('button', { name: 'Monat' }))
     await screen.findByRole('list', { name: /Kennzahlen Oktober 2026/ })
     expect(router.state.location.search).toBe('?zeitraum=monat')
     expect(werte('anfragen')).toEqual(['305', '0'])
@@ -94,9 +86,7 @@ describe('TeamSeite', () => {
     expect(werte('followups')).toEqual(['0', '2'])
     expect(document.querySelector('[data-hinweis="sheet"]')).toBeNull()
 
-    act(() => {
-      taste('1')
-    })
+    fireEvent.click(within(zeitraum).getByRole('button', { name: 'Heute' }))
     await screen.findByRole('list', { name: /Kennzahlen Heute/ })
     expect(router.state.location.search).toBe('?zeitraum=heute')
   })
@@ -115,16 +105,6 @@ describe('TeamSeite', () => {
     fireEvent.click(within(leer).getByRole('button', { name: /Woche ansehen/ }))
     await screen.findByRole('list', { name: /Kennzahlen KW 42/ })
     expect(router.state.location.search).toBe('?zeitraum=woche')
-  })
-
-  it('Ziffern-Tasten schweigen bei offenem Peek', async () => {
-    const { router } = rendern()
-    await screen.findByRole('list', { name: /Kennzahlen KW 42/ })
-    useUiStore.setState({ peekLeadId: LEAD_1 })
-    act(() => {
-      taste('3')
-    })
-    expect(router.state.location.search).toBe('')
   })
 
   it('Team-Protokoll: Tagesgruppen, Timeline-Wortlaut, nur Mitglieder, Lead-Name öffnet den Peek', async () => {
@@ -150,7 +130,6 @@ describe('TeamSeite', () => {
     expect(within(eintrag).getByText(/Windparkentwicklung Norddeutschland/)).toBeInTheDocument()
     fireEvent.click(within(eintrag).getByRole('button', { name: 'Test Person 91' }))
     expect(new URLSearchParams(router.state.location.search).get('lead')).toBe(LEAD_1)
-    expect(useUiStore.getState().peekListe[0]).toBe('10000000-0000-4000-8000-000000000092')
   })
 
   it('Filter Person und Kanal in der URL; leerer Filter mit „Filter zurücksetzen“', async () => {

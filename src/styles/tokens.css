@@ -62,8 +62,10 @@
   --color-overdue: #a24d09; /* überfällig · Rückruf verpasst · offener Platzhalter */
   --color-overdue-tint: #fbecdd;
   --color-done: #357050; /* Erledigt, Rückgängig-Toast, Zellen-Blink */
+  --color-done-hover: #2d5e43; /* gefüllter grüner Knopf (Button positiv), 25.11.2026 */
   --color-done-tint: #edf3ec;
   --color-danger: #b23631; /* destruktive Bestätigung, Fehler, Sperrliste */
+  --color-danger-hover: #962d29; /* gefüllter roter Knopf (Button negativ), 25.11.2026 */
   --color-danger-tint: #fdebec;
   --color-presence: #12a594; /* Präsenzpunkt der anderen Person      */
 
@@ -164,7 +166,6 @@
   --spacing-gutter: clamp(16px, 2.5vw, 40px); /* Seitenrand                       */
   --spacing-sidebar: 232px; /* Sidebar ≥ 1024                   */
   --spacing-rail: 64px; /* Icon-Rail 768–1023               */
-  --spacing-peek: 440px; /* Peek-Panel                       */
   --spacing-content: 1280px; /* max. Inhaltsbreite (links ausgerichtet) */
   --spacing-row: 40px; /* Tabellenzeile Desktop            */
   --spacing-row-touch: 56px; /* Tabellenzeile/Listenzeile Touch  */
@@ -235,7 +236,6 @@
 
   /* 1.13 Breakpoints (Tailwind-Standard bleibt: sm 640 · md 768 · lg 1024 · xl 1280 · 2xl 1536) */
   --breakpoint-wide: 73.75rem; /* 1180: Heute wird einspaltig darunter        */
-  --breakpoint-split: 100rem; /* 1600: Peek wird dritte Spalte statt Overlay  */
 }
 
 /* ── 2 · Nicht-Tailwind-Variablen ────────────────────────────────────────── */

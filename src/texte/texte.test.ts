@@ -166,13 +166,3 @@ describe('texte/de.ts', () => {
     expect(de.STUFEN_LABEL.langfristig.label).toBe('Wiedervorlage')
   })
 })
-
-const { telefonGrundLabel } = de
-
-// Satz und Knopf für „Noch nicht anrufbar“ liegen seit Runde 3 in features/telefon/nichtAnrufbar.ts (eigene Tests dort).
-describe('Telefon: Noch nicht anrufbar nach Grund (Runde 2, echte Daten)', () => {
-  it('Firma gesperrt heißt am Telefon „nicht anrufen“', () => {
-    expect(telefonGrundLabel('firma_gesperrt')).toBe('Firma gesperrt – nicht anrufen')
-    expect(telefonGrundLabel('keine_nummer')).toBe('Keine Nummer')
-  })
-})

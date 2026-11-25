@@ -46,7 +46,7 @@ export function Component() {
         ) : (
           <EmptyState
             titel="Kein Lead gewählt."
-            satz="Öffne den Composer aus einer Karte, dem Peek oder der Palette (⌥M)."
+            satz="Öffne den Composer in der Lead-Karte über „E-Mail schreiben“."
             primaer={{ label: 'Zu den Leads', onClick: () => navigate(PFADE.leads) }}
           />
         )}

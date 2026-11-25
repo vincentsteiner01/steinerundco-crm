@@ -1,4 +1,3 @@
-import './lib/konsole' // zuerst: Konsolen-Puffer für Feedback-Meldungen (letzte 30 Fehler/Warnungen, ohne Tokens)
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from 'react-router/dom'

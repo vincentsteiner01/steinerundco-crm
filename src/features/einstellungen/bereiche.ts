@@ -4,20 +4,19 @@ import type { PFADE } from '@/app/pfade'
 /** Bereiche = Union von `PFADE.einstellungen` (seit Runde 3 inkl. 'verbindungen'); Pfade baut `PFADE.einstellungen(b)`. */
 export type Bereich = Parameters<typeof PFADE.einstellungen>[0] & string
 
-export type BereichEintrag = { key: Bereich; label: string; beschreibung: string; taste: string }
+export type BereichEintrag = { key: Bereich; label: string; beschreibung: string }
 
 export const BEREICHE: readonly BereichEintrag[] = [
-  { key: 'profil', label: 'Profil', beschreibung: 'Kürzel, LinkedIn-Plan, Rufnummer, Signatur, Kanäle', taste: '1' },
-  { key: 'passcode', label: 'Passcode', beschreibung: 'Eigenen Passcode ändern, überall abmelden', taste: '2' },
-  { key: 'ziele', label: 'Ziele', beschreibung: 'Tagesziel, Budget, KPI-Ziele, Feiertage', taste: '3' },
-  { key: 'sequenzen', label: 'Sequenzen', beschreibung: 'Kadenzen aktivieren und bearbeiten', taste: '4' },
-  { key: 'sperrliste', label: 'Sperrliste', beschreibung: 'Wer nie wieder kontaktiert wird', taste: '5' },
-  { key: 'export', label: 'Export & Backup', beschreibung: 'CSV je Tabelle, Voll-Backup JSON', taste: '6' },
+  { key: 'profil', label: 'Profil', beschreibung: 'Kürzel, LinkedIn-Plan, Rufnummer, Signatur, Kanäle' },
+  { key: 'passcode', label: 'Passcode', beschreibung: 'Eigenen Passcode ändern, überall abmelden' },
+  { key: 'ziele', label: 'Ziele', beschreibung: 'Tagesziel, Budget, KPI-Ziele, Feiertage' },
+  { key: 'sequenzen', label: 'Sequenzen', beschreibung: 'Kadenzen aktivieren und bearbeiten' },
+  { key: 'sperrliste', label: 'Sperrliste', beschreibung: 'Wer nie wieder kontaktiert wird' },
+  { key: 'export', label: 'Export & Backup', beschreibung: 'CSV je Tabelle, Voll-Backup JSON' },
   {
     key: 'verbindungen',
     label: 'Verbindungen',
     beschreibung: 'LinkedIn-Mails aus Gmail, Chrome-Erweiterung, Eingang',
-    taste: '7',
   },
 ]
 

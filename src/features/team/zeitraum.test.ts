@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { kpiLink, monatsanfang, parseTeamZeitraum, teamSpanne, teamZeitraum } from './zeitraum'
+import { monatsanfang, parseTeamZeitraum, teamSpanne, teamZeitraum } from './zeitraum'
 
 const HEUTE = '2026-10-15' // Donnerstag, KW 42
 
@@ -8,21 +8,18 @@ describe('Team-Zeitraum', () => {
     const z = teamZeitraum('heute', HEUTE)
     expect(z).toMatchObject({ von: HEUTE, bis: HEUTE, label: 'Heute', monatszaehler: false })
     expect(teamSpanne(z, HEUTE)).toBe('15.10.2026')
-    expect(kpiLink(z)).toBe('/kpis?zeitraum=custom&person=team&von=2026-10-15&bis=2026-10-15')
   })
 
   it('Woche = ISO-KW Mo–So wie auf der KPI-Seite; Dateline bis heute', () => {
     const z = teamZeitraum('woche', HEUTE)
     expect(z).toMatchObject({ von: '2026-10-12', bis: '2026-10-18', label: 'KW 42', monatszaehler: false })
     expect(teamSpanne(z, HEUTE)).toBe('12.–15.10.2026')
-    expect(kpiLink(z)).toBe('/kpis?zeitraum=kw42&person=team')
   })
 
   it('Monat = Kalendermonat mit Sheet-Monatszählern', () => {
     const z = teamZeitraum('monat', HEUTE)
     expect(z).toMatchObject({ von: '2026-10-01', bis: '2026-10-31', label: 'Oktober 2026', monatszaehler: true })
     expect(teamSpanne(z, HEUTE)).toBe('01.–15.10.2026')
-    expect(kpiLink(z)).toBe('/kpis?zeitraum=2026-10&person=team')
   })
 
   it('URL-Parameter: unbekannt → Woche', () => {

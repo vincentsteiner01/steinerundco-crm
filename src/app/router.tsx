@@ -1,8 +1,11 @@
 // oxlint-disable react/only-export-components -- Router-Datei: exportiert router + PFADE (BAUPLAN § 3.1.4), kein Fast-Refresh-Ziel
-// BAUPLAN § 3.1.4 – Router und Routen (eingefroren). Jede Route lädt lazy eine Datei, die `Component` exportiert.
-import { createBrowserRouter, Navigate } from 'react-router'
+// BAUPLAN § 3.1.4 – Router und Routen. Jede Route lädt lazy eine Datei, die `Component` exportiert.
+// Neustart 25.11.2026: nur noch Leads (Board), Leitfäden, E-Mail, Team, Einstellungen, Hilfe. Alte Adressen (Lesezeichen,
+// installierte App, Chrome-Erweiterung) leiten auf das Board um, statt auf „Seite nicht gefunden“ zu landen.
+import { createBrowserRouter, Navigate, useParams, type RouteObject } from 'react-router'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { RouteFehler } from './fehler/RouteFehler'
+import { PFADE } from './pfade'
 import { AppShell } from './shell/AppShell'
 
 export { PFADE } from './pfade'
@@ -12,7 +15,31 @@ function ErstesLaden() {
   return <div className="bg-canvas min-h-dvh" aria-busy="true" />
 }
 
-export const router = createBrowserRouter([
+/** Alte Detailadresse `/leads/:id` → Board mit offenem Lead-Blatt (`/leads?lead=<id>`). */
+function LeadUmleitung() {
+  const { id } = useParams()
+  return <Navigate to={id ? PFADE.lead(id) : PFADE.leads} replace />
+}
+
+const zumBoard = <Navigate to={PFADE.leads} replace />
+
+/** Seiten des alten CRM (Stand `archiv-crm-v1`) – alle führen aufs Board. */
+const ALTE_PFADE = [
+  'heute',
+  'auftrag/*',
+  'pipeline',
+  'leads/neu',
+  'leads/papierkorb',
+  'leads/pipeline',
+  'telefon/*',
+  'kpis',
+  'umsatz',
+  'import/*',
+  'feedback',
+]
+
+/** Routentabelle – getrennt vom Router exportiert, damit der Test die Weiterleitungen ohne Browser prüfen kann. */
+export const ROUTEN: RouteObject[] = [
   {
     path: '/anmelden',
     lazy: () => import('@/features/auth/Anmelden'),
@@ -29,45 +56,29 @@ export const router = createBrowserRouter([
       {
         Component: AppShell,
         children: [
-          { index: true, element: <Navigate to="/heute" replace /> },
-          { path: 'heute', lazy: () => import('@/features/heute/HeuteSeite') },
-          { path: 'auftrag', lazy: () => import('@/features/auftrag/AuftragSeite') },
-          { path: 'auftrag/recherche/:id', lazy: () => import('@/features/recherche/RechercheSeite') },
-          { path: 'leads', lazy: () => import('@/features/leads/LeadsSeite') },
-          { path: 'leads/neu', lazy: () => import('@/features/leads/LeadNeuSeite') },
-          { path: 'leads/papierkorb', lazy: () => import('@/features/leads/PapierkorbSeite') },
-          { path: 'leads/pipeline', lazy: () => import('@/features/telefon/DealPipelineSeite') },
-          { path: 'leads/:id', lazy: () => import('@/features/leads/LeadSeite') },
-          { path: 'pipeline', lazy: () => import('@/features/pipeline/PipelineSeite') },
-          { path: 'telefon', lazy: () => import('@/features/telefon/TelefonSeite') },
-          { path: 'telefon/anruf/:leadId', lazy: () => import('@/features/telefon/AnrufScreen') },
-          { path: 'telefon/kontakte', lazy: () => import('@/features/telefon/KontakteSeite') },
-          { path: 'telefon/pipeline', element: <Navigate to="/leads/pipeline" replace /> },
-          { path: 'telefon/follow-ups', lazy: () => import('@/features/telefon/FollowUpsSeite') },
-          { path: 'telefon/kpis', lazy: () => import('@/features/telefon/SalesKpisSeite') },
-          { path: 'umsatz', lazy: () => import('@/features/umsatz/UmsatzSeite') },
+          { index: true, element: zumBoard },
+          { path: 'leads', lazy: () => import('@/features/board/BoardSeite') },
+          { path: 'leads/:id', Component: LeadUmleitung },
+          { path: 'leitfaeden', lazy: () => import('@/features/leitfaeden/Leitfaeden') },
+          { path: 'leitfaeden/:id', element: <Navigate to={PFADE.leitfaeden} replace /> },
           { path: 'email', lazy: () => import('@/features/email/EmailSeite') },
           { path: 'email/verfassen', lazy: () => import('@/features/email/VerfassenSeite') },
           { path: 'email/kampagnen', lazy: () => import('@/features/mailing/KampagnenSeite') },
           { path: 'email/kampagnen/:id', lazy: () => import('@/features/mailing/KampagneSeite') },
           { path: 'email/antworten', lazy: () => import('@/features/mailing/AntwortenSeite') },
           { path: 'email/postfaecher', lazy: () => import('@/features/mailing/PostfaecherSeite') },
-          { path: 'kpis', lazy: () => import('@/features/kpis/KpisSeite') },
-          { path: 'leitfaeden', lazy: () => import('@/features/leitfaeden/LeitfaedenSeite') },
-          { path: 'leitfaeden/:id', lazy: () => import('@/features/leitfaeden/LeitfadenSeite') },
-          { path: 'import', lazy: () => import('@/features/import/ImportSeite') },
-          { path: 'import/schnell', lazy: () => import('@/features/import/SchnellimportSeite') },
-          { path: 'import/:batchId', lazy: () => import('@/features/import/ImportErgebnisSeite') },
           { path: 'team', lazy: () => import('@/features/team/TeamSeite') },
           { path: 'hilfe', lazy: () => import('@/features/hilfe/HilfeSeite') },
           { path: 'hilfe/:thema', lazy: () => import('@/features/hilfe/HilfeSeite') },
-          { path: 'feedback', lazy: () => import('@/features/feedback/FeedbackSeite') },
           { path: 'einstellungen', element: <Navigate to="/einstellungen/profil" replace /> },
           { path: 'einstellungen/:bereich', lazy: () => import('@/features/einstellungen/EinstellungenSeite') },
+          ...ALTE_PFADE.map((path) => ({ path, element: zumBoard })),
           // 404 nachgeladen: hält Seitenkopf/EmptyState aus dem Start-Bundle (E22)
           { path: '*', lazy: () => import('./fehler/NichtGefunden').then((m) => ({ Component: m.NichtGefunden })) },
         ],
       },
     ],
   },
-])
+]
+
+export const router = createBrowserRouter(ROUTEN)

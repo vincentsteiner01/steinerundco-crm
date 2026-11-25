@@ -1,21 +1,22 @@
-// BAUPLAN § 3.1.6: Invalidierungs-Tabelle (Publikation, seit Migration 13 mit Umsatz) + Kanal crm:sync + Status → uiStore + Realtime-Toast-Regeln.
+// BAUPLAN § 3.1.6: Invalidierungs-Tabelle (Publikation, seit Migration 13 mit Umsatz) + Kanal crm:sync + Status → uiStore.
+// Neustart 25.11.2026: die Realtime-Toasts (Übergabe, Termin) sind entfallen – geprüft wird, dass keiner mehr erscheint.
 import { QueryClient } from '@tanstack/react-query'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/data/supabase', async () => (await import('@/test/supabaseMock')).supabaseMock())
 vi.mock('@/components/toast', () => ({
-  toastRealtime: vi.fn(),
+  toast: vi.fn(),
+  toastUndo: vi.fn(),
+  toastFehler: vi.fn(),
   UNDO_MS: 6000,
 }))
 
-import { toastRealtime } from '@/components/toast'
+import * as toasts from '@/components/toast'
 import { qk } from './queryKeys'
 import {
-  _toastBegrenzerZuruecksetzen,
   invalidiere,
   invalidierungsBuendler,
   invalidierungsKeys,
-  realtimeToast,
   REALTIME_TABELLEN,
   type RealtimeTabelle,
 } from './realtime'
@@ -179,115 +180,41 @@ describe('useRealtimeSync – Kanal', () => {
   })
 })
 
-describe('Realtime-Toasts', () => {
-  let qc: QueryClient
-  beforeEach(() => {
-    qc = new QueryClient()
-    qc.setQueryData(qk.members, [
-      { id: ME, display_name: 'Vincent', short_name: 'Vincent', preferences: {} },
-      { id: ANDERE, display_name: 'Mike', short_name: 'Mike', preferences: {} },
-    ])
-    vi.mocked(toastRealtime).mockClear()
-    _toastBegrenzerZuruecksetzen()
-  })
-  afterEach(() => vi.useRealTimers())
-
-  it('leads.owner_id → ich: „Mike hat dir … übergeben.“', async () => {
-    await realtimeToast(
-      qc,
-      {
-        tabelle: 'leads',
+describe('Neustart 25.11.2026: keine Realtime-Toasts mehr', () => {
+  it('Übergabe an mich und Termin der anderen Person invalidieren nur noch', async () => {
+    const { renderHook } = await import('@testing-library/react')
+    const { QueryClientProvider } = await import('@tanstack/react-query')
+    const { createElement } = await import('react')
+    const { useAuth } = await import('@/features/auth/authStore')
+    const { supabase } = await import('@/data/supabase')
+    const { useRealtimeSync } = await import('./realtime')
+    useAuth.setState({ status: 'mitglied', member: { user_id: ME, email: 'v@x', display_name: 'Vincent' } })
+    const qc = new QueryClient()
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      createElement(QueryClientProvider, { client: qc }, children)
+    const spy = vi.spyOn(qc, 'invalidateQueries')
+    const { unmount } = renderHook(() => useRealtimeSync(), { wrapper })
+    const k = (
+      supabase as unknown as {
+        __kanaele: { handler: { filter: { table: string }; cb: (p: unknown) => void }[] }[]
+      }
+    ).__kanaele.at(-1)!
+    k.handler
+      .find((h) => h.filter.table === 'leads')!
+      .cb({
         eventType: 'UPDATE',
-        neu: { id: L, owner_id: ME, full_name: 'Test Person 01' },
-        alt: { owner_id: ANDERE },
-      },
-      ME,
-    )
-    expect(toastRealtime).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(toastRealtime).mock.calls[0]?.[0]).toBe('Mike hat dir Test Person 01 übergeben.')
-    expect(vi.mocked(toastRealtime).mock.calls[0]?.[2]).toBe(L)
-  })
-
-  it('kein Toast, wenn der Lead schon mir gehörte oder an die andere Person geht', async () => {
-    await realtimeToast(
-      qc,
-      { tabelle: 'leads', eventType: 'UPDATE', neu: { id: L, owner_id: ME }, alt: { owner_id: ME } },
-      ME,
-    )
-    await realtimeToast(
-      qc,
-      { tabelle: 'leads', eventType: 'UPDATE', neu: { id: L, owner_id: ANDERE }, alt: { owner_id: ME } },
-      ME,
-    )
-    expect(toastRealtime).not.toHaveBeenCalled()
-  })
-
-  it('meetings-Insert der anderen Person → „Mike: Termin mit … am Fr 16.10.“; eigener Insert nicht', async () => {
-    await realtimeToast(
-      qc,
-      {
-        tabelle: 'meetings',
+        new: { id: L, owner_id: ME, full_name: 'Petra Probelauf' },
+        old: { owner_id: ANDERE },
+      })
+    k.handler
+      .find((h) => h.filter.table === 'meetings')!
+      .cb({
         eventType: 'INSERT',
-        neu: { id: 'm', member_id: ANDERE, lead_id: L, scheduled_at: '2026-10-16T08:00:00Z' },
-        alt: {},
-      },
-      ME,
-    )
-    expect(toastRealtime).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(toastRealtime).mock.calls[0]?.[0]).toMatch(/^Mike: Termin mit .* am Fr 16\.10\.$/)
-    await realtimeToast(
-      qc,
-      {
-        tabelle: 'meetings',
-        eventType: 'INSERT',
-        neu: { id: 'm2', member_id: ME, lead_id: L, scheduled_at: '2026-10-16T08:00:00Z' },
-        alt: {},
-      },
-      ME,
-    )
-    expect(toastRealtime).toHaveBeenCalledTimes(1)
-  })
-
-  it('abschaltbar über preferences.realtime_toasts = false', async () => {
-    qc.setQueryData(qk.members, [{ id: ME, display_name: 'Vincent', preferences: { realtime_toasts: false } }])
-    await realtimeToast(
-      qc,
-      {
-        tabelle: 'leads',
-        eventType: 'UPDATE',
-        neu: { id: L, owner_id: ME, full_name: 'X' },
-        alt: { owner_id: ANDERE },
-      },
-      ME,
-    )
-    expect(toastRealtime).not.toHaveBeenCalled()
-  })
-
-  it('maximal 2 Realtime-Toasts innerhalb von 6 s', async () => {
-    vi.useFakeTimers({ now: new Date('2026-10-14T10:00:00Z') })
-    for (let i = 0; i < 4; i++)
-      await realtimeToast(
-        qc,
-        {
-          tabelle: 'leads',
-          eventType: 'UPDATE',
-          neu: { id: `${L}${i}`, owner_id: ME, full_name: 'X' },
-          alt: { owner_id: ANDERE },
-        },
-        ME,
-      )
-    expect(toastRealtime).toHaveBeenCalledTimes(2)
-    vi.setSystemTime(new Date('2026-10-14T10:00:07Z'))
-    await realtimeToast(
-      qc,
-      {
-        tabelle: 'leads',
-        eventType: 'UPDATE',
-        neu: { id: L, owner_id: ME, full_name: 'X' },
-        alt: { owner_id: ANDERE },
-      },
-      ME,
-    )
-    expect(toastRealtime).toHaveBeenCalledTimes(3)
+        new: { id: 'm', member_id: ANDERE, lead_id: L, scheduled_at: '2026-11-26T08:00:00Z' },
+        old: {},
+      })
+    await vi.waitFor(() => expect(spy.mock.calls.map((c) => c[0]?.queryKey)).toContainEqual(qk.leads.all))
+    for (const t of [toasts.toast, toasts.toastUndo, toasts.toastFehler]) expect(t).not.toHaveBeenCalled()
+    unmount()
   })
 })

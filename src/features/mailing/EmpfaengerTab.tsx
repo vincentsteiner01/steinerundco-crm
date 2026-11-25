@@ -142,8 +142,9 @@ export function EmpfaengerTab({
       )}
       <Warum label="Woher kommt die Erlaubnis?">
         Am Telefon („Darf ich Ihnen das per Mail schicken?“), als schriftliches „Ja“ auf LinkedIn, nach einem Gespräch
-        oder bei Bestandskunden. Im Lead unter E-Mail → „Erlaubnis erfassen“ eintragen, möglichst mit Datum und Wortlaut
-        – das ist euer Beleg. Eine LinkedIn-Vernetzung allein ist keine Erlaubnis (AG Düsseldorf, 20.11.2025).
+        oder bei Bestandskunden. In der Lead-Karte unter E-Mail → „Erlaubnis erfassen“ eintragen, möglichst mit Datum
+        und Wortlaut – das ist euer Beleg. Eine LinkedIn-Vernetzung allein ist keine Erlaubnis (AG Düsseldorf,
+        20.11.2025).
       </Warum>
       {waehlen ? (
         <LeadsWaehlen
@@ -265,7 +266,7 @@ function LeadsWaehlen({
           ) : (
             <p className="text-small text-ink-3">
               {nurErlaubt
-                ? 'Keine Leads mit E-Mail-Adresse und Erlaubnis gefunden. Erst im Lead die Adresse eintragen und „Erlaubnis erfassen“.'
+                ? 'Keine Leads mit E-Mail-Adresse und Erlaubnis gefunden. Erst in der Lead-Karte die Adresse eintragen und „Erlaubnis erfassen“.'
                 : 'Keine Leads mit E-Mail-Adresse gefunden.'}
             </p>
           )}

@@ -1,10 +1,9 @@
 // Team-Protokoll: Aktivitäten beider Personen im Zeitraum, neueste oben, nach Tagen gruppiert (Heute · Gestern · Mo 12.10.).
 // Zeile: Avatar 22 · Uhrzeit Mono · Kanal-Glyph · Satz aus dem gemeinsamen Timeline-Wortlaut (TIMELINE_TEXT, Phasen wie die Pipeline: protokollText.ts)
-// · Lead-Name (öffnet den Peek über `?lead=`) und Unternehmen. Filter Person (Beide · Vincent · Mike) und Kanal in der URL
+// · Lead-Name (öffnet das Lead-Blatt über `?lead=`) und Unternehmen. Filter Person (Beide · Vincent · Mike) und Kanal in der URL
 // (`?person=`, `?kanal=`). Keyset-Seiten à 50 („Ältere laden“); live über die Realtime-Invalidierung von ['activities', 'zeitraum'].
 import { useMemo } from 'react'
 import { useSearchParams } from 'react-router'
-import { useUiStore } from '@/app/uiStore'
 import { Avatar } from '@/components/ui/Avatar'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/components/ui/cn'
@@ -64,11 +63,7 @@ export function Protokoll({
     }
     setParams(p, { replace: true })
   }
-  const oeffne = (leadId: string) => {
-    // ←/→ im Peek blättern durch die Leads des Protokolls (Reihenfolge wie angezeigt, ohne Dubletten)
-    useUiStore.getState().setPeekListe([...new Set(zeilen.map((r) => r.lead_id))])
-    setze({ lead: leadId })
-  }
+  const oeffne = (leadId: string) => setze({ lead: leadId })
   const personVon = (memberId: string | null) => personen.find((p) => p.id === memberId)
   const gefiltert = !!person || kanal !== 'alle'
   const wer = person ? person.name : personen.map((p) => p.name).join(' und ')
@@ -216,7 +211,7 @@ function ProtokollEintrag({
           <button
             type="button"
             onClick={() => onOeffnen(r.lead_id)}
-            title={geloescht ? `${name} – im Papierkorb` : `${name} im Peek öffnen`}
+            title={geloescht ? `${name} – gelöscht` : `${name} öffnen`}
             className={cn(
               'max-w-full shrink-0 truncate text-left font-medium underline-offset-2 hover:underline',
               geloescht ? 'text-ink-3 line-through' : 'text-ink',

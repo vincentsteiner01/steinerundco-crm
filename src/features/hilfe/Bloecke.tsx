@@ -1,8 +1,8 @@
 // Handbuch-Blöcke (themen.ts) als Lesetext: Body 15/1,55 auf 64 ch, Zwischentitel H3, Listen mit Gedankenstrich, Schritte mit
-// Mono-Ziffer, Tastenzeilen als Haarlinien-Liste, „geplant“-Hinweis mit Chip, Tastenregister aus src/app/tasten.ts.
+// Mono-Ziffer, Tastenzeilen als Haarlinien-Liste, „geplant“-Hinweis mit Chip. Das Tastenregister ist mit der Tastenliste entfallen
+// (Neustart 25.11.2026).
 import { Chip } from '@/components/ui/Chip'
 import { Inline, TastenFolge } from './Inline'
-import { tastenRegister } from './register'
 import type { Block } from './themen'
 
 function TastenZeilen({ zeilen }: { zeilen: readonly { tasten: readonly string[]; text: string }[] }) {
@@ -20,30 +20,6 @@ function TastenZeilen({ zeilen }: { zeilen: readonly { tasten: readonly string[]
         </div>
       ))}
     </dl>
-  )
-}
-
-function TastenRegister() {
-  const gruppen = tastenRegister()
-  return (
-    <div className="grid max-w-[880px] gap-x-10 gap-y-6 lg:grid-cols-2" data-tastenregister>
-      {gruppen.map((g) => (
-        <section key={g.gruppe} aria-label={g.gruppe} className="min-w-0">
-          <h3 className="label mb-1.5">{g.gruppe}</h3>
-          <ul className="border-line border-t">
-            {g.eintraege.map((e) => (
-              <li
-                key={`${g.gruppe}:${e.beschreibung}`}
-                className="border-line flex min-h-8 items-baseline justify-between gap-3 border-b py-1.5"
-              >
-                <span className="text-ui text-ink-2 min-w-0 font-normal">{e.beschreibung}</span>
-                <TastenFolge tasten={e.tasten} className="max-w-[60%] flex-none justify-end" />
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
   )
 }
 
@@ -112,8 +88,6 @@ export function Bloecke({ bloecke }: { bloecke: readonly Block[] }) {
                 <Inline text={b.text} />
               </p>
             )
-          case 'tastenregister':
-            return <TastenRegister key={key} />
         }
       })}
     </div>

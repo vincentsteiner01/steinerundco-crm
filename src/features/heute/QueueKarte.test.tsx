@@ -1,7 +1,7 @@
 // QueueKarte.test.tsx (BAUPLAN § 3.2 Unit-Tests): kollabiert, gefüllter Text + Kopieren (H-03), gated bei offenem Platzhalter (H-04),
 // copied-Zustand, `E` → complete_step + Erledigt-Rückmeldung (H-05), Telefon-Variante (H-19), E-Mail-Variante mit Gate (H-20),
-// Wiedervorlage-Variante, Erledigt-Zeile mit „Rückgängig Z“.
-import { act, fireEvent, screen, waitFor } from '@testing-library/react'
+// Wiedervorlage-Variante.
+import { fireEvent, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -34,7 +34,6 @@ import {
   zeile,
   zuruecksetzen,
 } from './_testHilfe'
-import { ErledigtZeile } from './ErledigtZeile'
 import { kartenZustand, useKartenStore } from './kartenStore'
 import { NachrichtBlock } from './NachrichtBlock'
 import { HeuteKontext } from './kontext'
@@ -183,7 +182,7 @@ describe('QueueKarte', () => {
     expect(toastUndo).toHaveBeenCalledWith(TOAST.erledigt('Kurzfristig 3', 'Mo 26.10.', 4), 901)
   })
 
-  it('H-19: Telefon-Karte – Skript als Stichpunkte, Anrufen öffnet den Anruf-Screen, Schnell-Ergebnis 1 → ?ergebnis=no_answer', async () => {
+  it('H-19: Telefon-Karte – Skript als Stichpunkte; ohne Anruf-Screen (Neustart 25.11.2026) öffnet „Anrufen“ das Lead-Blatt', async () => {
     leadsSetzen(leadMitBezug(4, { phone_e164: '+4940123456', call_basis: 'linkedin_vernetzt' }))
     const item = zeile('heute', 4, {
       channel: 'telefon',
@@ -199,11 +198,7 @@ describe('QueueKarte', () => {
     expect(screen.getByText(/\+49/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /\+49/ })).toBeNull()
     fireEvent.click(await screen.findByRole('button', { name: /Anrufen/ }))
-    expect(screen.getByTestId('ort')).toHaveTextContent(`/telefon/anruf/${item.lead_id}?zurueck=%2Fheute`)
-    taste('1')
-    expect(screen.getByTestId('ort')).toHaveTextContent(
-      `/telefon/anruf/${item.lead_id}?ergebnis=no_answer&zurueck=%2Fheute`,
-    )
+    expect(screen.getByTestId('ort')).toHaveTextContent(`/leads?lead=${item.lead_id}`)
   })
 
   it('Telefon-Karte ohne Anrufgrund: anrufbar (Cold Calling, 16.10.2026) – nur ruhiger Hinweis-Chip', async () => {
@@ -310,7 +305,7 @@ describe('QueueKarte', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /In Gmail öffnen/ })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: /In Gmail öffnen/ }))
     expect(screen.getByTestId('ort')).toHaveTextContent(
-      `/email/verfassen?lead=${item.lead_id}&zurueck=%2Fheute&schritt=st-1&enrollment=enr-7`,
+      `/email/verfassen?lead=${item.lead_id}&zurueck=%2Femail&schritt=st-1&enrollment=enr-7`,
     )
   })
 
@@ -436,30 +431,5 @@ describe('QueueKarte – M0-Aktionen auf der Karte', () => {
     } finally {
       window.matchMedia = vorher
     }
-  })
-})
-
-describe('ErledigtZeile', () => {
-  it('„Erledigt · Name · Kurzfristig 3 am Sa 24.10.“ mit Rückgängig Z, solange das Undo-Fenster offen ist', () => {
-    useUiStore.setState({ letzterUndo: { activityId: 5, label: 'x' } })
-    rendern(<ErledigtZeile art="erledigt" name="Max Muster" text="Kurzfristig 3 am Sa 24.10." activityId={5} />)
-    const z = screen.getByText('Erledigt').closest('[data-erledigt]')
-    expect(z).toHaveTextContent('ErledigtMax Muster · Kurzfristig 3 am Sa 24.10.')
-    expect(screen.getByRole('button', { name: /Rückgängig/ })).toBeInTheDocument()
-    act(() => useUiStore.setState({ letzterUndo: null }))
-    expect(screen.queryByRole('button', { name: /Rückgängig/ })).not.toBeInTheDocument()
-  })
-
-  it('Später- und Fremd-Varianten', () => {
-    rendern(
-      <>
-        <ErledigtZeile art="spaeter" text="morgen, Do 15.10." />
-        <ErledigtZeile art="fremd" name="Max" text="von Mike um 10:41" />
-      </>,
-    )
-    const z = [...document.querySelectorAll('[data-erledigt]')]
-    expect(z[0]).toHaveTextContent('Später')
-    expect(z[0]).toHaveAttribute('data-erledigt', 'spaeter')
-    expect(z[1]).toHaveTextContent('Schon erledigtMax · von Mike um 10:41')
   })
 })

@@ -11,7 +11,6 @@ import type {
   EndedReason,
   LeadStage,
   ReplyLabel,
-  UiSektion,
 } from '@/types/domain'
 
 export const STUFEN_LABEL: Record<LeadStage, { label: string; short: string }> = {
@@ -123,18 +122,6 @@ export const ERGEBNIS_LABEL: Record<CallOutcome, string> = {
   do_not_call: 'Werbewiderspruch – nicht mehr kontaktieren',
 }
 
-export const QUEUE_SEKTION_LABEL: Record<UiSektion, string> = {
-  rueckrufe: 'Rückrufe',
-  antworten: 'Antworten',
-  ueberfaellig: 'Überfällig',
-  heute: 'Heute fällig',
-  annahme_pruefen: 'Annahme prüfen',
-  opener: 'Opener senden',
-  neue_anfragen: 'Neue Anfragen',
-  zurueckziehen: 'Zurückziehen',
-  spaeter: 'Später',
-}
-
 export const GATE_GRUND_LABEL = {
   keine_nummer: 'Keine Nummer',
   kein_anrufgrund: 'Nummer ohne Anrufgrund',
@@ -147,11 +134,6 @@ export const GATE_GRUND_LABEL = {
   nur_nach_gespraech: 'Nur nach geführtem Gespräch oder für Bestandskunden',
   aelter_12_monate: 'Erlaubnis älter als 12 Monate',
 } as const
-
-/** Telefon-Kontext (Anrufliste, Anruf-Knopf): „nicht anrufen“ statt „nicht anschreiben“ (Runde 2). */
-export function telefonGrundLabel(grund: keyof typeof GATE_GRUND_LABEL): string {
-  return grund === 'firma_gesperrt' ? 'Firma gesperrt – nicht anrufen' : GATE_GRUND_LABEL[grund]
-}
 
 // ux § 4.1 – Leere Zustände (eine Überschrift, ein Satz, max. eine Primäraktion)
 /**
@@ -184,39 +166,12 @@ export const EMAIL_WARNUNG_12_MONATE =
   'Erlaubnis älter als 12 Monate ohne Kontakt seitdem – öffnen nur mit „Trotzdem öffnen“ oder neuen Anlass schaffen.'
 
 export const LEER = {
-  heuteErledigt: { titel: 'Nichts mehr fällig.', aktion: 'Leads ansehen' },
-  heuteKeineDaten: {
-    titel: 'Noch keine Leads.',
-    satz: 'Füge eine Liste aus ChatGPT ein oder importiere die Sheets.',
-    aktion: 'Schnellimport',
-    sekundaer: 'Sheets importieren',
-  },
-  heuteAnderePerson: (name: string) => ({
-    titel: `${name} hat heute nichts Fälliges.`,
-    aktion: 'Zurück zu deinem Heute',
-  }),
-  leadsFilter: { titel: 'Kein Lead passt zu diesem Filter.', aktion: 'Filter zurücksetzen ⌫' },
-  leadsSuche: (q: string) => ({ titel: `Nichts gefunden für ‚${q}‘.`, aktion: 'Lead anlegen' }),
-  leadsSucheVorschlag: (name: string) => `Meintest du ${name}?`,
-  pipelineSpalte: { titel: 'Keine Leads' },
-  telefonListe: { titel: 'Niemand anzurufen.', aktion: 'Anrufgrund setzen' },
   emailFaellig: { titel: 'Keine E-Mail fällig.', satz: 'E-Mails gehen nur an Personen, die darum gebeten haben.' },
-  kpisPeriode: (monat: string) => ({
-    titel: `Keine Daten für ${monat}.`,
-    satz: 'Importiere das KPI-Sheet oder wähle einen anderen Zeitraum.',
-    aktion: 'KPI-Sheet importieren',
-  }),
-  leitfaedenKanal: (kanal: string) => ({ titel: `Noch kein Leitfaden für ${kanal}.`, aktion: 'Leitfaden anlegen' }),
-  dubletten: { titel: 'Keine Dubletten.', satz: 'Geprüft: LinkedIn-URL, Telefon, Name + Unternehmen.' },
-  papierkorb: { titel: 'Papierkorb ist leer.', satz: 'Gelöschte Leads bleiben 30 Tage hier.' },
-  timeline: { satz: 'Noch nichts passiert.' },
-  importVorschau: {
-    titel: 'Nichts erkannt.',
-    satz: 'Erwartet: Markdown-Tabelle, Liste oder CSV mit Name und LinkedIn-URL.',
-    aktion: 'Prompt-Vorlage kopieren',
+  seiteNichtGefunden: {
+    titel: 'Seite nicht gefunden.',
+    satz: 'Die Adresse kennt das CRM nicht.',
+    aktion: 'Zu den Leads',
   },
-  seiteNichtGefunden: { titel: 'Seite nicht gefunden.', satz: 'Die Adresse kennt das CRM nicht.', aktion: 'Zu Heute' },
-  kommtMit: (modul: string) => ({ titel: `Kommt mit ${modul}.`, satz: 'Dieser Bereich wird gerade gebaut.' }),
 } as const
 
 // ux § 6.2 – Toasts: ein Satz, Punkt am Ende, Fakt vor Gefühl
@@ -239,10 +194,6 @@ export const TOAST = {
   neueVersionLaden: 'Jetzt laden',
   rueckgaengig: 'Rückgängig',
   rueckgaengigGemacht: 'Rückgängig gemacht.',
-  schonErledigt: (name: string, zeit: string) => `Schon erledigt von ${name} um ${zeit}`,
-  uebergeben: (von: string, lead: string) => `${von} hat dir ${lead} übergeben.`,
-  uebernommen: (wer: string, lead: string) => `${wer} hat ${lead} übernommen.`,
-  terminAnderePerson: (wer: string, lead: string, wann: string) => `${wer}: Termin mit ${lead} am ${wann}`,
   erstReaktion: 'Erst Reaktion eintragen.',
   // Integration M1–M8: gemeinsame Wortlaute aus M4 (E-Mail)
   entwurfGespeichert: 'Entwurf gespeichert.',
@@ -270,21 +221,6 @@ export const DIALOG = {
     text: `${name}s Passcode zurücksetzen? ${name} muss sich beim nächsten Mal mit dem Einmal-Passcode anmelden.`,
     primaer: 'Zurücksetzen',
   }),
-  // BAUPLAN § 6.4 (v1) vor ux § 4.8: aktualisierte Leads werden nicht zurückgesetzt (Integration, FOUNDATION-WUNSCH M7)
-  importRueckgaengig: (datum: string, zeilen: string, geloescht: string) => ({
-    text: `Import vom ${datum} (${zeilen} Zeilen) rückgängig machen? ${geloescht} Leads werden gelöscht; aktualisierte Leads bleiben auf dem neuen Stand. Ereignisse, die danach entstanden sind, bleiben erhalten.`,
-    primaer: 'Rückgängig machen',
-  }),
-  sequenzVersion: (n: number, version: number) => ({
-    text: `${n} laufende Leads auf Version ${version} umstellen? Fällige Daten werden neu berechnet.`,
-    primaer: 'Umstellen',
-  }),
-  anrufVerwerfen: {
-    text: 'Anruf ohne Ergebnis verwerfen?',
-    primaer: 'Verwerfen',
-    hinweis: 'Verwerfen löscht den lokalen Anruf-Entwurf. Behalten lässt dich das Ergebnis eintragen.',
-    behalten: 'Behalten',
-  },
   anonymisieren: (n: number) => ({
     text: `${n} Leads anonymisieren? Name, URL, Telefon, E-Mail werden entfernt; Zählwerte bleiben.`,
     primaer: 'Anonymisieren',
@@ -300,8 +236,6 @@ export const ALLGEMEIN = {
   anmelden: 'Anmelden',
   abmelden: 'Abmelden',
   ueberallAbmelden: 'Überall abmelden',
-  tastenkuerzel: 'Tastenkürzel',
-  suchenOderBefehl: 'Suchen oder Befehl …',
   passcode: 'Passcode',
   angemeldetBleiben: 'Angemeldet bleiben',
   werBistDu: 'Wer bist du?',
@@ -312,10 +246,7 @@ export const ALLGEMEIN = {
   nochmalIn: (s: number) => `Nochmal in ${s} s`,
   zuVieleVersuche: 'Zu viele Versuche – bitte in ein paar Minuten noch einmal.',
   keineVerbindung: 'Keine Verbindung – bitte später noch einmal.',
-  angemeldet: 'angemeldet',
   offlineBanner: 'Offline – du kannst lesen, Änderungen werden nicht gespeichert.',
-  live: 'live',
-  getrennt: 'getrennt',
   schliessen: 'Schließen',
   laden: 'Lade …',
   mehr: 'Mehr',

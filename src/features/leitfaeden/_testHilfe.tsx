@@ -1,5 +1,6 @@
 // Test-Hilfen M6: synthetische Vorlagen je Kanal (Keys nur aus lib/vorlagenKeys – § 3.0 Nr. 12), Render-Hülle mit
-// QueryClient + Router + TooltipProvider, supabase-Antworten je Tabelle, matchMedia-Schalter für Desktop/Mobil.
+// QueryClient + Router + TooltipProvider, supabase-Antworten je Tabelle.
+// 25.11.2026 (Neustart): Lead-, Mitglieder- und Einstellungs-Antworten sowie der Desktop/Mobil-Schalter sind mit den alten Seiten entfallen.
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
 import type { ReactElement } from 'react'
@@ -7,9 +8,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router'
 import { vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { VORLAGE } from '@/lib/vorlagenKeys'
-import { MEMBER_M, MEMBER_V, vollerLead } from '@/test/fixtures/leads'
 import { SEQUENZEN } from '@/test/fixtures/sequenzen'
-import { SETTINGS } from '@/test/fixtures/settings'
 import { vorlage } from '@/test/fixtures/vorlagen'
 import { supabaseMock, type Antwort } from '@/test/supabaseMock'
 import type { Template, TemplatePerformance } from '@/types/domain'
@@ -114,8 +113,7 @@ export const EMAIL: Template[] = [
 
 export const ALLE: Template[] = [...LINKEDIN, ...TELEFON, ...EMAIL]
 
-export const ERSTE_ID = LINKEDIN[0]?.id ?? ''
-export const PITCH_A_ID = LINKEDIN.find((x) => x.key === VORLAGE.li_pitch_a)?.id ?? ''
+const PITCH_A_ID = LINKEDIN.find((x) => x.key === VORLAGE.li_pitch_a)?.id ?? ''
 export const JA_V1_ID = BEDARF[0]?.id ?? ''
 
 /** Nutzung: Ja (V1) = 12 gesendet · 25 %; Pitch A = 4 · 50 % */
@@ -155,14 +153,6 @@ export const SEQUENZEN_MIT_STANDARD = SEQUENZEN.map((s, i) =>
   i === 0 ? { ...s, steps: s.steps.map((st) => (st.position === 2 ? { ...st, template_id: JA_V1_ID } : st)) } : s,
 )
 
-export const LEAD = vollerLead(1, {
-  first_name: 'Nora',
-  last_name: 'Beispiel',
-  company_name: 'Solar 01 GmbH',
-  city: 'Hamburg',
-  salutation: 'frau',
-})
-
 export type Antworten = Partial<Record<string, Antwort>>
 
 /** supabase-Antworten je Tabelle; `extra` überschreibt einzelne Tabellen. */
@@ -179,46 +169,13 @@ export function supabaseAntworten(extra: Antworten = {}) {
           data: SEQUENZEN_MIT_STANDARD.map(({ steps, ...s }) => ({ ...s, sequence_steps: steps })),
           error: null,
         }
-      case 'leads':
-        return {
-          data: [
-            {
-              ...LEAD,
-              companies: null,
-              enrollments: [],
-              tasks: [],
-              meetings: [],
-              linkedin_connections: [],
-              lead_tags: [],
-            },
-          ],
-          error: null,
-        }
-      case 'members':
-        return {
-          data: [
-            {
-              id: MEMBER_V,
-              display_name: 'Vincent Steiner',
-              short_name: 'Vincent',
-              preferences: {},
-              caller_number_e164: '+4940111',
-              calendly_url: 'https://calendly.com/x',
-              signature: 'Viele Grüße',
-            },
-            { id: MEMBER_M, display_name: 'Mike', short_name: 'Mike', preferences: {} },
-          ],
-          error: null,
-        }
-      case 'settings':
-        return { data: Object.entries(SETTINGS).map(([key, value]) => ({ key, value })), error: null }
       default:
         return { data: [], error: null, count: 0 }
     }
   }
   const m = supabaseMock(antwortFuer)
   const basis = m.supabase.from.getMockImplementation() as (t: string) => Record<string, unknown>
-  // `.single()`/`.maybeSingle()` liefern die erste Zeile (useLead), Listenabfragen das Array (useLeadSuche, useTemplates)
+  // `.single()`/`.maybeSingle()` liefern die erste Zeile, Listenabfragen das Array (useTemplates)
   m.supabase.from.mockImplementation(((tabelle: string) => {
     const k = basis(tabelle)
     const a = antwortFuer(tabelle)
@@ -232,30 +189,10 @@ export function supabaseAntworten(extra: Antworten = {}) {
   return m
 }
 
-/** matchMedia so stellen, dass `(min-width: 1024px)` = desktop. */
-export function setzeDesktop(desktop: boolean): void {
-  Object.defineProperty(window, 'matchMedia', {
-    writable: true,
-    configurable: true,
-    value: vi.fn((query: string) => ({
-      matches: query.includes('min-width: 1024px') ? desktop : false,
-      media: query,
-      onchange: null,
-      addListener: () => {},
-      removeListener: () => {},
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      dispatchEvent: () => false,
-    })),
-  })
-}
-
 export function rendern(ui: ReactElement, start = '/leitfaeden') {
   const router = createMemoryRouter(
     [
       { path: '/leitfaeden', element: ui },
-      { path: '/leitfaeden/:id', element: ui },
-      { path: '/einstellungen/:bereich', element: <p>EINSTELLUNGEN</p> },
       { path: '*', element: ui },
     ],
     { initialEntries: [start] },

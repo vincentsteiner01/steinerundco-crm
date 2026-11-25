@@ -243,13 +243,6 @@ describe('queue / nav', () => {
     await waitFor(() => expect(result.current.data).toBeTruthy())
     expect(letzteKette('v_today_queue')['is']).toHaveBeenCalledWith('member_id', null)
   })
-
-  it('useNavZaehler: heute aus der Queue, leads = aktive Leads ohne beendet', async () => {
-    const { useNavZaehler } = await import('./nav')
-    const { result } = renderHook(() => useNavZaehler(), { wrapper })
-    await waitFor(() => expect(result.current.leads).toBe(7))
-    expect(result.current.heute).toBeGreaterThan(0)
-  })
 })
 
 describe('Zeitraum-Hooks (§ 1.5 Nr. 40)', () => {

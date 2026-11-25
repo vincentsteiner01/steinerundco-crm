@@ -21,8 +21,8 @@ export const SPERRE_S = 30
 
 /** Rücksprungziel nur, wenn es mit `/` und nicht mit `//` beginnt (kein Open Redirect, § 1.5 Nr. 31). */
 export function sicheresZiel(von: string | null): string {
-  const ziel = internesZiel(von, PFADE.heute)
-  return ziel.startsWith(PFADE.anmelden) ? PFADE.heute : ziel
+  const ziel = internesZiel(von, PFADE.leads)
+  return ziel.startsWith(PFADE.anmelden) ? PFADE.leads : ziel
 }
 
 function gemerktRoh(): string | null {

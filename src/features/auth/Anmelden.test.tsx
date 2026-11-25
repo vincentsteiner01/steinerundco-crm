@@ -18,7 +18,6 @@ function rendern(start = '/anmelden') {
   const router = createMemoryRouter(
     [
       { path: '/anmelden', Component: Anmelden },
-      { path: '/heute', element: <Ziel name="HEUTE" /> },
       { path: '/leads', element: <Ziel name="LEADS" /> },
     ],
     { initialEntries: [start] },
@@ -112,10 +111,10 @@ describe('Anmelden', () => {
   })
 
   it('lehnt //evil und https://… als Ziel ab', () => {
-    expect(sicheresZiel('//evil.example')).toBe('/heute')
-    expect(sicheresZiel('https://evil.example')).toBe('/heute')
-    expect(sicheresZiel('/anmelden?von=x')).toBe('/heute')
-    expect(sicheresZiel(null)).toBe('/heute')
+    expect(sicheresZiel('//evil.example')).toBe('/leads')
+    expect(sicheresZiel('https://evil.example')).toBe('/leads')
+    expect(sicheresZiel('/anmelden?von=x')).toBe('/leads')
+    expect(sicheresZiel(null)).toBe('/leads')
     expect(sicheresZiel('/leads?lead=42')).toBe('/leads?lead=42')
   })
 })

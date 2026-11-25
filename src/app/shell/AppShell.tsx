@@ -1,62 +1,28 @@
-import { lazy, Suspense, useEffect } from 'react'
-import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
-import { peekLeadId } from '@/app/peekParam'
-import { PFADE } from '@/app/pfade'
-import { useUiStore } from '@/app/uiStore'
-import { cn } from '@/components/ui/cn'
-import { useAuth } from '@/features/auth/authStore'
+import { lazy, Suspense } from 'react'
+import { Outlet, useLocation } from 'react-router'
 import { useIstTelefon } from '@/lib/useMediaQuery'
 import { GlobaleTasten } from './GlobaleTasten'
 import { IconRail } from './IconRail'
+import { LeadOutlet } from './LeadOutlet'
 import { OfflineBanner } from './OfflineBanner'
-import { PeekOutlet } from './PeekOutlet'
 import { Sidebar } from './Sidebar'
 import { TabLeiste } from './TabLeiste'
 import { useSeitenwechselScroll } from './useSeitenwechselScroll'
 
-// Palette (cmdk) und Tastenliste erst beim ersten Öffnen laden – hält das initiale Bundle unter E22.
-const CommandPalette = lazy(() => import('./CommandPalette').then((m) => ({ default: m.CommandPalette })))
-const ShortcutHilfe = lazy(() => import('./ShortcutHilfe').then((m) => ({ default: m.ShortcutHilfe })))
 // Phone-Topbar (Radix-Dropdown ≈ 10 kB gzip) nur unter 768 px laden – auf dem Desktop bleibt sie aus dem initialen Bundle.
 const PhoneTopbar = lazy(() => import('./PhoneTopbar').then((m) => ({ default: m.PhoneTopbar })))
-// Feedback-Steuerung (⌥F, Dialog, Antwort-Toasts – kein sichtbarer Knopf) und Onboarding-Tour: nachgeladen, nicht im Start-Bundle (E22)
-const FeedbackKnopf = lazy(() => import('@/features/feedback/public').then((m) => ({ default: m.FeedbackKnopf })))
-const OnboardingTour = lazy(() => import('@/features/hilfe/public').then((m) => ({ default: m.OnboardingTour })))
 
 /**
- * BAUPLAN § 3.1.5: Grid 232px 1fr (≥ 1024), 64px 1fr (768–1023), 1fr (< 768); ≥ 1600 mit offenem Peek 232px 1fr 440px.
- * Enthält Outlet, PeekOutlet, OfflineBanner, ShortcutHilfe, CommandPalette und die globalen Tasten. Toaster: providers.tsx.
+ * Rahmen der App (Neustart 25.11.2026): Grid 232px 1fr (≥ 1024), 64px 1fr (768–1023), 1fr (< 768). Enthält nur noch Navigation,
+ * Outlet, OfflineBanner, das Lead-Blatt (LeadOutlet, `?lead=`) und die drei globalen Tasten. Toaster: providers.tsx.
  */
 export function AppShell() {
-  const [params] = useSearchParams()
   const location = useLocation()
-  const peekOffen = !!peekLeadId(location.pathname, params)
-  const navigate = useNavigate()
-  const abmelden = useAuth((s) => s.abmelden)
-  const setPaletteOffen = useUiStore((s) => s.setPaletteOffen)
-  const paletteOffen = useUiStore((s) => s.paletteOffen)
-  const hilfeOffen = useUiStore((s) => s.hilfeOffen)
   const telefon = useIstTelefon()
   useSeitenwechselScroll()
 
-  useEffect(() => {
-    const h = () => void abmelden(false).then(() => navigate(PFADE.anmelden, { replace: true }))
-    window.addEventListener('crm:abmelden', h)
-    return () => window.removeEventListener('crm:abmelden', h)
-  }, [abmelden, navigate])
-
-  // Palette und Hilfe schließen beim Seitenwechsel
-  useEffect(() => {
-    setPaletteOffen(false)
-  }, [location.pathname, setPaletteOffen])
-
   return (
-    <div
-      className={cn(
-        'relative z-[1] grid min-h-dvh grid-cols-[var(--spacing-sidebar)_1fr] max-lg:grid-cols-[var(--spacing-rail)_1fr] max-md:grid-cols-1',
-        peekOffen && 'split:grid-cols-[var(--spacing-sidebar)_1fr_var(--spacing-peek)]',
-      )}
-    >
+    <div className="relative z-[1] grid min-h-dvh grid-cols-[var(--spacing-sidebar)_1fr] max-lg:grid-cols-[var(--spacing-rail)_1fr] max-md:grid-cols-1">
       {/* Skip-Link (BAUPLAN § 10.3 A-03): erstes fokussierbares Element, springt an der Navigation vorbei */}
       <a
         href="#main"
@@ -80,8 +46,7 @@ export function AppShell() {
         <main
           id="main"
           tabIndex={-1}
-          // Unten Luft für die Tab-Leiste – das Seitenende liegt nie darunter. Einen schwebenden Feedback-Knopf gibt es nicht mehr
-          // (er lag über Inhalten); Feedback steht in Sidebar, Icon-Rail und Phone-Topbar, dazu ⌥F.
+          // Unten Luft für die Tab-Leiste – das Seitenende liegt nie darunter
           className="px-gutter min-w-0 pb-12 outline-none max-md:pb-[calc(var(--spacing-tabbar)+24px+env(safe-area-inset-bottom))]"
         >
           <div key={location.pathname} className="max-w-content animate-screen-in">
@@ -89,16 +54,10 @@ export function AppShell() {
           </div>
         </main>
       </div>
-      <PeekOutlet />
+      <LeadOutlet />
       <div className="md:hidden">
         <TabLeiste />
       </div>
-      <Suspense fallback={null}>
-        {paletteOffen ? <CommandPalette /> : null}
-        {hilfeOffen ? <ShortcutHilfe /> : null}
-        <FeedbackKnopf />
-        <OnboardingTour />
-      </Suspense>
       <GlobaleTasten />
     </div>
   )

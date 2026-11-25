@@ -1,13 +1,12 @@
 // Hilfe (`/hilfe`, `/hilfe/:thema`): redaktionelles Handbuch. Links Suche + Themenliste (sticky), rechts der Lesetext auf 64 ch
-// (Titel Newsreader, ein Satz Voice, Blöcke aus themen.ts) mit „Zeig’s mir“ → Mini-Tour auf dem echten Screen.
+// (Titel Newsreader, ein Satz Voice, Blöcke aus themen.ts).
 // `/hilfe` ohne Thema: häufige Fragen. Mobil: `/hilfe` = Suche + Liste + Fragen, `/hilfe/:thema` = nur Text mit „← Alle Themen“.
-import { ArrowLeft, ArrowRight, Play } from 'lucide-react'
+// 25.11.2026: Touren („Zeig’s mir“, „Tour erneut starten“) und Feedback-Verweise sind mit dem Neustart entfallen.
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, Navigate, NavLink, useNavigate, useParams } from 'react-router'
 import { PFADE } from '@/app/pfade'
-import { useUiStore } from '@/app/uiStore'
 import { personVon } from '@/components/ui/Avatar'
-import { Button } from '@/components/ui/Button'
 import { cn } from '@/components/ui/cn'
 import { Input } from '@/components/ui/Input'
 import { SeitenKopf } from '@/components/ui/SeitenKopf'
@@ -15,7 +14,6 @@ import { useAuth } from '@/features/auth/authStore'
 import { useIstTelefon } from '@/lib/useMediaQuery'
 import type { PersonId } from '@/features/auth/personen'
 import { Bloecke } from './Bloecke'
-import { tourStarten } from './ereignis'
 import { Inline } from './Inline'
 import { bloeckeVon, HAEUFIGE_FRAGEN, sucheThemen, THEMEN, themaVon, type Thema } from './themen'
 
@@ -35,18 +33,7 @@ export function Component() {
 
   return (
     <>
-      <SeitenKopf
-        titel="Hilfe"
-        kontext={telefon ? undefined : (thema?.titel ?? 'Handbuch')}
-        rechts={
-          // Telefon: im Thema reicht „Zeig’s mir“ – der Kopf bleibt kurz
-          telefon && thema ? undefined : (
-            <Button icon={Play} onClick={() => tourStarten('onboarding')}>
-              Tour erneut starten
-            </Button>
-          )
-        }
-      />
+      <SeitenKopf titel="Hilfe" kontext={telefon ? undefined : (thema?.titel ?? 'Handbuch')} />
       <div className="grid gap-x-12 gap-y-8 md:grid-cols-[232px_minmax(0,1fr)]">
         <aside
           aria-label="Themen"
@@ -59,7 +46,6 @@ export function Component() {
         >
           <Input
             type="search"
-            data-suche
             aria-label="Hilfe durchsuchen"
             placeholder="Hilfe durchsuchen …"
             value={q}
@@ -67,7 +53,6 @@ export function Component() {
             onKeyDown={(e) => {
               if (e.key === 'Enter' && treffer[0]) navigate(PFADE.hilfe(treffer[0].key))
             }}
-            rechts={<kbd className="kbd">/</kbd>}
           />
           <nav aria-label="Hilfe-Themen">
             <ol className="grid grid-cols-[minmax(0,1fr)] gap-0.5">
@@ -91,13 +76,7 @@ export function Component() {
               ))}
             </ol>
             {treffer.length === 0 ? (
-              <p className="text-small text-ink-3 px-2.5 py-3">
-                Nichts gefunden. Fehlt etwas?{' '}
-                <Link to={PFADE.feedback} className="text-ink-2 underline underline-offset-2">
-                  Sag es uns
-                </Link>
-                .
-              </p>
+              <p className="text-small text-ink-3 px-2.5 py-3">Nichts gefunden.</p>
             ) : q ? (
               <p className="text-small text-ink-3 tnum px-2.5 pt-2">
                 {treffer.length === 1 ? '1 Thema' : `${treffer.length} Themen`} · ↵ öffnet das erste
@@ -124,7 +103,7 @@ function Uebersicht() {
       >
         Was das CRM kann – und was nicht.
       </h2>
-      <p className="voice mt-3">Kurz erklärt, zum Nachschlagen, mit „Zeig’s mir“ direkt auf dem echten Screen.</p>
+      <p className="voice mt-3">Kurz erklärt, zum Nachschlagen.</p>
 
       <h3 className="label mt-10 mb-1">Häufige Fragen</h3>
       <dl className="border-line border-t">
@@ -143,23 +122,14 @@ function Uebersicht() {
           </div>
         ))}
       </dl>
-      <p className="text-small text-ink-3 mt-6">
-        Etwas fehlt oder ist falsch beschrieben? Drück <kbd className="kbd">⌥F</kbd> oder schreib es unter{' '}
-        <Link to={PFADE.feedback} className="text-ink-2 underline underline-offset-2">
-          Feedback
-        </Link>
-        .
-      </p>
     </div>
   )
 }
 
 function ThemaText({ thema, person }: { thema: Thema; person: PersonId | null }) {
-  const setHilfeOffen = useUiStore((s) => s.setHilfeOffen)
   const i = THEMEN.indexOf(thema)
   const vor = THEMEN[i - 1]
   const nach = THEMEN[i + 1]
-  const tour = person === 'mike' ? (thema.tourMike ?? thema.tour) : thema.tour
   return (
     <div>
       <Link
@@ -182,15 +152,6 @@ function ThemaText({ thema, person }: { thema: Thema; person: PersonId | null })
         <p className="voice mt-3">
           <Inline text={thema.kurz} />
         </p>
-        {tour ? (
-          <Button variante="primary" icon={Play} className="mt-5" onClick={() => tourStarten(tour)}>
-            Zeig’s mir
-          </Button>
-        ) : thema.key === 'tastenkuerzel' ? (
-          <Button className="mt-5" kbd="?" onClick={() => setHilfeOffen(true)}>
-            Tastenliste öffnen
-          </Button>
-        ) : null}
       </div>
 
       <div className="mt-8">

@@ -1,4 +1,4 @@
-// Beenden-Gründe `1–9` (BAUPLAN § 3.1.10b) → ended_reason + ended_note; Freigabe-Gründe (ux § 2.6).
+// Beenden-Gründe `1–9` (BAUPLAN § 3.1.10b) → ended_reason + ended_note.
 import { GRUND_LABEL } from '@/texte/de'
 import type { EndedReason, Settings } from '@/types/domain'
 
@@ -38,21 +38,4 @@ export function beendenGruende(labels?: Settings['ended_reason_labels'] | null):
     },
     { kbd: '9', key: 'sonstiges', label: l('sonstiges'), reason: 'sonstiges', notizPflicht: true },
   ]
-}
-
-export type FreigabeGrundKey = 'kontakt_entfernt' | 'blockiert' | 'keine_nachrichten' | 'sonstiges'
-
-/** Wortlaut landet in `leads.released_reason` (Text); „Übernehmen“ prüft auf `keine_nachrichten`. */
-export const FREIGABE_GRUND: Record<FreigabeGrundKey, string> = {
-  kontakt_entfernt: 'Kontakt entfernt',
-  blockiert: 'Blockiert',
-  keine_nachrichten: 'Will keine Nachrichten von mir',
-  sonstiges: 'Sonstiges',
-}
-
-export const FREIGABE_PER_TABELLE = 'per Tabelle'
-
-/** Freigabegrund „will keine Nachrichten“ → Hinweis vor erneuter Kontaktaufnahme (ux § 2.6 Schritt 2). */
-export function willKeineNachrichten(releasedReason: string | null | undefined): boolean {
-  return !!releasedReason && releasedReason.toLowerCase().includes('keine nachrichten')
 }

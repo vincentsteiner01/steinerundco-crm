@@ -1,7 +1,7 @@
 // BAUPLAN § 3.1.8 – useHotkeys, Scopes, Akkorde, VERBOTEN (§ 1.5 Nr. 23).
 // Bindungs-Syntax: 'mod+k' · 'alt+n' · 'mod+shift+o' · 'g h' (Akkord, 800 ms) · 'j' · '?' · '/' · 'escape' · 'enter'
 // · 'mod+enter' · 'arrowdown' · 'shift+arrowdown' · '+' · 'shift++' · 'ü'. `mod` = ⌘ auf dem Mac, Ctrl sonst.
-import { createContext, useContext, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import { useUiStore, type Scope } from '@/app/uiStore'
 
 export type { Scope }
@@ -190,16 +190,6 @@ function scopeAktiv(bindingScope: Scope, aktuell: Scope): boolean {
 
 let akkordWartend: { taste: string; bis: number } | null = null
 
-/**
- * Wo eine Bindung lebt: im Lead-Peek (`PeekPanel` setzt `peek`) oder auf der Seite. Karten-Tasten (Scope `karte`) der Seite schweigen,
- * solange ein Peek offen ist – sonst feuerten B/S/N/A/T/W doppelt (Heute-Karte hinter dem Peek + Karte im Peek; Review-Korrektur).
- */
-/**
- * `stumm`: Karten-/Listen-Tasten (Scope `karte`/`liste`) im Teilbaum schweigen ganz – die offene Karte auf der Lead-Vollseite
- * (Runde 3) zeigt Text und Knöpfe, ihre Tasten B/S/N/A/W/C/E würden sonst doppelt zu den Seiten-Tasten feuern.
- */
-export const TastenBereich = createContext<'seite' | 'peek' | 'stumm'>('seite')
-
 /** „g h“ ist ein Akkord, die Leertaste (`' '`, aus `space`) nicht (FOUNDATION-WUNSCH M1: Space feuerte nie). */
 const istAkkord = (k: string): boolean => /\S\s+\S/.test(k)
 
@@ -210,7 +200,6 @@ const istAkkord = (k: string): boolean => /\S\s+\S/.test(k)
 export function useHotkeys(scope: Scope, bindings: Bindings, deps: readonly unknown[] = []): void {
   const ref = useRef(bindings)
   ref.current = bindings
-  const bereich = useContext(TastenBereich)
 
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -227,8 +216,6 @@ export function useHotkeys(scope: Scope, bindings: Bindings, deps: readonly unkn
       const normiert = Object.entries(ref.current).map(([k, fn]) => [normalisiere(k), fn] as const)
       const aktuell = useUiStore.getState().hotkeyScope
       if (!scopeAktiv(scope, aktuell)) return
-      if (scope === 'karte' && bereich === 'seite' && useUiStore.getState().peekLeadId) return
-      if (bereich === 'stumm' && (scope === 'karte' || scope === 'liste')) return
       const inEingabe = istEingabe(document.activeElement)
       const ev = eventNachBinding(e)
       const jetzt = Date.now()
@@ -275,7 +262,7 @@ export function useHotkeys(scope: Scope, bindings: Bindings, deps: readonly unkn
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, bereich, ...deps])
+  }, [scope, ...deps])
 }
 
 /** Setzt den aktiven Scope für die Lebensdauer der Komponente (Anruf-Screen: 'anruf', Formulare: 'formular'). */

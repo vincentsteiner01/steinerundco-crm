@@ -20,7 +20,7 @@ export default async function globalSetup(config: FullConfig) {
   await page.getByRole('button', { name: email.startsWith('mike') ? /Mike/ : /Vincent/ }).click()
   await page.getByLabel('Passcode', { exact: true }).fill(passcode)
   await page.getByRole('button', { name: /Anmelden/ }).click()
-  await page.waitForURL('**/heute')
+  await page.waitForURL('**/leads')
   await page.context().storageState({ path: 'e2e/.auth/state.json' })
   await browser.close()
 }

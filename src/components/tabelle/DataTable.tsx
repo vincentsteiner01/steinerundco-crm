@@ -12,7 +12,6 @@ import {
   type ReactNode,
   type Ref,
 } from 'react'
-import { useUiStore } from '@/app/uiStore'
 import { cn } from '@/components/ui/cn'
 import { useHotkeys } from '@/lib/keyboard'
 import { useIstTelefon } from '@/lib/useMediaQuery'
@@ -360,9 +359,8 @@ export function DataTable<T extends RowData>({
     setAktiveSpalte(ids[Math.min(Math.max(i + richtung, 0), ids.length - 1)] ?? null)
   }
 
-  // Bei offenem Peek gehören Tab/⇧Tab (Fokusfalle im Dialog), `E` (Karte „Gesendet“) und Space dem Peek – Review-Korrektur;
-  // ←/→ und Esc prüfen das schon (Integration), J/K bleiben bewusst bei der Tabelle (Lead wechseln im Peek)
-  const peekOffen = () => !!useUiStore.getState().peekLeadId
+  // Neustart 25.11.2026: Die Sonderfälle „offener Peek“ sind entfallen – über einem offenen Lead-Blatt oder Dialog gilt der
+  // Scope `formular`, die Listen-Tasten dieser Tabelle ruhen dann ohnehin.
   useHotkeys('liste', {
     j: () => zustand.current.setzeCursor(zustand.current.cursorIndex + 1),
     arrowdown: (e) => {
@@ -385,8 +383,6 @@ export function DataTable<T extends RowData>({
       if (z.onAuswahl) z.setzeAuswahl(z.zeilenIds)
     },
     escape: (e) => {
-      // Eine Ebene je Druck: ein offener Peek hat Vorrang (PeekPanel schließt), danach die Auswahl
-      if (useUiStore.getState().peekLeadId) return
       const z = zustand.current
       if (z.auswahl && z.auswahl.size > 0 && z.onAuswahl) {
         e.preventDefault()
@@ -394,26 +390,15 @@ export function DataTable<T extends RowData>({
       }
     },
     e: () => {
-      if (peekOffen()) return
       const z = zustand.current
       if (z.cursorRow) z.bearbeite(z.cursorRow, z.aktiveSpalte)
     },
-    tab: (e) => {
-      if (!peekOffen()) spalteWechseln(1, true, e)
-    },
-    'shift+tab': (e) => {
-      if (!peekOffen()) spalteWechseln(-1, true, e)
-    },
-    // Bei offenem Peek gehören ←/→ dem Peek (Lead wechseln) – Integration, FOUNDATION-WUNSCH M2
-    arrowright: (e) => {
-      if (!peekOffen()) spalteWechseln(1, false, e)
-    },
-    arrowleft: (e) => {
-      if (!peekOffen()) spalteWechseln(-1, false, e)
-    },
+    tab: (e) => spalteWechseln(1, true, e),
+    'shift+tab': (e) => spalteWechseln(-1, true, e),
+    arrowright: (e) => spalteWechseln(1, false, e),
+    arrowleft: (e) => spalteWechseln(-1, false, e),
     // `Space` wählt aus (ux § 5.3) – nicht auf Knöpfen/Links (dort löst Space den Knopf aus)
     space: (e) => {
-      if (peekOffen()) return
       const ziel = e.target instanceof Element ? e.target : null
       if (ziel?.closest?.('button, a, [role="button"]')) return
       const z = zustand.current

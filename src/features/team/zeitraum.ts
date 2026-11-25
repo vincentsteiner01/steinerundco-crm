@@ -14,14 +14,12 @@ export type TeamZeitraum = {
   label: string
   /** Sheet-Monatszähler (`period = 'monat'`) zählen nur in der Monatsansicht – Regel der KPI-Seite (§ 3.6) */
   monatszaehler: boolean
-  /** Passender Zeitraum-Parameter der KPI-Seite (Link „In den KPIs ansehen“) */
-  kpiZeitraum: string
 }
 
-export const TEAM_ZEITRAEUME: { key: TeamZeitraumArt; label: string; taste: string }[] = [
-  { key: 'heute', label: 'Heute', taste: '1' },
-  { key: 'woche', label: 'Woche', taste: '2' },
-  { key: 'monat', label: 'Monat', taste: '3' },
+export const TEAM_ZEITRAEUME: { key: TeamZeitraumArt; label: string }[] = [
+  { key: 'heute', label: 'Heute' },
+  { key: 'woche', label: 'Woche' },
+  { key: 'monat', label: 'Monat' },
 ]
 
 /** Standard ohne Parameter: die laufende Woche (genug Bewegung für einen Vergleich, anders als „Heute“ am Morgen). */
@@ -33,15 +31,15 @@ export function parseTeamZeitraum(s: string | null): TeamZeitraumArt {
 
 export function teamZeitraum(art: TeamZeitraumArt, heute: Tag): TeamZeitraum {
   if (art === 'heute') {
-    return { art, von: heute, bis: heute, label: 'Heute', monatszaehler: false, kpiZeitraum: 'custom' }
+    return { art, von: heute, bis: heute, label: 'Heute', monatszaehler: false }
   }
   if (art === 'woche') {
     const k = kwVon(heute)
     const s = kwSpanne(k.jahr, k.nr)
-    return { art, ...s, label: `KW ${k.nr}`, monatszaehler: false, kpiZeitraum: `kw${k.nr}` }
+    return { art, ...s, label: `KW ${k.nr}`, monatszaehler: false }
   }
   const key = monatVon(heute)
-  return { art, ...monatsSpanne(key), label: monatLabel(key), monatszaehler: true, kpiZeitraum: key }
+  return { art, ...monatsSpanne(key), label: monatLabel(key), monatszaehler: true }
 }
 
 /** Dateline-Spanne bis höchstens heute: „15.10.2026“ · „12.–15.10.2026“ · „01.–15.10.2026“. */
@@ -52,16 +50,6 @@ export function teamSpanne(z: TeamZeitraum, heute: Tag): string {
     return `${t}.${m}.${j}`
   }
   return spanneText(z.von, bis)
-}
-
-/** Link auf die KPI-Seite mit derselben Spanne (Heute = eigener Zeitraum von heute bis heute). */
-export function kpiLink(z: TeamZeitraum): string {
-  const p = new URLSearchParams({ zeitraum: z.kpiZeitraum, person: 'team' })
-  if (z.kpiZeitraum === 'custom') {
-    p.set('von', z.von)
-    p.set('bis', z.bis)
-  }
-  return `/kpis?${p.toString()}`
 }
 
 /** Erster Tag des Monats von `tag` – Ladebeginn der Kennzahlen (Sheet-Monatszeilen liegen auf dem 1.). */

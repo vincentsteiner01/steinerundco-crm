@@ -4,7 +4,6 @@
 // Auszeichnung: {Taste} · {G H} · **betont** · [Link](/pfad) · {{geplant}} (markup.ts, Inline.tsx).
 import { PFADE } from '@/app/pfade'
 import type { PersonId } from '@/features/auth/personen'
-import type { TourKey } from './ereignis'
 import { klartext } from './markup'
 
 export type Block =
@@ -14,8 +13,6 @@ export type Block =
   | { art: 'schritte'; punkte: readonly string[] }
   | { art: 'tasten'; zeilen: readonly { tasten: readonly string[]; text: string }[] }
   | { art: 'hinweis'; text: string; geplant?: boolean }
-  /** Alle Tastenkürzel aus der Registry (src/app/tasten.ts) */
-  | { art: 'tastenregister' }
 
 export type Thema = {
   key: string
@@ -24,9 +21,6 @@ export type Thema = {
   kurz: string
   /** Zusätzliche Suchwörter, die im Text nicht vorkommen */
   stichworte?: string
-  tour?: TourKey
-  /** Abweichende Mini-Tour für Mike (Dein Tag → Telefon statt LinkedIn) */
-  tourMike?: TourKey
   bloecke: readonly Block[] | ((person: PersonId | null) => readonly Block[])
 }
 
@@ -101,7 +95,6 @@ export const THEMEN: readonly Thema[] = [
     titel: 'Erste Schritte',
     kurz: 'Was das CRM ist, wie du dich bewegst und wo du anfängst.',
     stichworte: 'start anfang einführung tour navigation palette',
-    tour: 'onboarding',
     bloecke: [
       {
         art: 'absatz',
@@ -142,8 +135,6 @@ export const THEMEN: readonly Thema[] = [
     titel: 'Dein Tag',
     kurz: 'Die Tagesroutinen – LinkedIn für Vincent, Telefon für Mike.',
     stichworte: 'routine morgens mittags abends ablauf tagesablauf call-block',
-    tour: 'linkedin',
-    tourMike: 'telefon',
     bloecke: (person) => [
       {
         art: 'absatz',
@@ -158,7 +149,6 @@ export const THEMEN: readonly Thema[] = [
     titel: 'Heute',
     kurz: 'Deine Queue: Sektionen, Karten, Tasten.',
     stichworte: 'queue karte sektion batch zähler später erledigt vertretung',
-    tour: 'heute',
     bloecke: [
       {
         art: 'absatz',
@@ -214,7 +204,6 @@ export const THEMEN: readonly Thema[] = [
     titel: 'Leads & Pipeline',
     kurz: 'Alle Kontakte als Tabelle und als Kanban – suchen, filtern, bearbeiten.',
     stichworte: 'tabelle kanban filter ansicht peek bulk papierkorb phase übergeben freigeben übernehmen',
-    tour: 'leads',
     bloecke: [
       { art: 'zwischentitel', text: 'Leads' },
       {
@@ -252,7 +241,6 @@ export const THEMEN: readonly Thema[] = [
     kurz: 'Annahmen und neue Nachrichten erkennt das CRM aus deinen LinkedIn-Mails, die Chrome-Erweiterung bucht mit einem Klick – senden tust du weiter selbst in LinkedIn.',
     stichworte:
       'synchronisieren sync automatisch nachrichten api posteingang doppelt pflegen annahme antwort mail benachrichtigung erweiterung seitenleiste chrome',
-    tour: 'linkedin',
     bloecke: [
       {
         art: 'absatz',
@@ -395,7 +383,6 @@ export const THEMEN: readonly Thema[] = [
     kurz: 'Der blaue Knopf unter der Suche: ChatGPT findet passende Energie- und Solarbetriebe und vernetzt dich nach deiner Freigabe – alles landet im CRM.',
     stichworte:
       'play recherche starten agent chatgpt codex claude wählen umschalten toggle limit nutzungslimit ersatz vernetzen leads finden icp dienst einrichten freigabe automatisch terminal mac windows powershell computer use unternehmen firma grenze zwei ausgangspunkte',
-    tour: 'recherche',
     bloecke: [
       {
         art: 'absatz',
@@ -436,7 +423,6 @@ export const THEMEN: readonly Thema[] = [
     titel: 'Telefon',
     kurz: 'Anrufliste, Call-Block, Anruf-Screen – und wofür der Anrufgrund gut ist.',
     stichworte: 'anrufen call-block rückruf ergebnis skript anrufgrund uwg mailbox',
-    tour: 'telefon',
     bloecke: [
       {
         art: 'absatz',
@@ -484,7 +470,6 @@ export const THEMEN: readonly Thema[] = [
     titel: 'E-Mail',
     kurz: 'E-Mail ist ein Warm-Kanal: nur mit Erlaubnis-Grundlage, gesendet über Gmail.',
     stichworte: 'gmail verbinden postfach composer erlaubnis einwilligung widerspruch uwg mailto',
-    tour: 'email',
     bloecke: [
       {
         art: 'absatz',
@@ -603,7 +588,6 @@ export const THEMEN: readonly Thema[] = [
     titel: 'Leitfäden & Sequenzen',
     kurz: 'Leitfäden sind deine Textvorlagen, Sequenzen planen, wann welcher Text dran ist.',
     stichworte: 'vorlage template text platzhalter kadenz follow-up schritt',
-    tour: 'leitfaeden',
     bloecke: [
       { art: 'zwischentitel', text: 'Leitfäden' },
       {
@@ -646,7 +630,6 @@ export const THEMEN: readonly Thema[] = [
     titel: 'KPIs & Team',
     kurz: 'Zahlen, die sich selbst rechnen – und wie du siehst, was die andere Person macht.',
     stichworte: 'kennzahlen funnel performance vergleich mike vincent protokoll was macht statistik',
-    tour: 'kpis',
     bloecke: [
       { art: 'zwischentitel', text: 'KPIs' },
       {
@@ -675,7 +658,6 @@ export const THEMEN: readonly Thema[] = [
     titel: 'Import & Schnellimport',
     kurz: 'ChatGPT-Listen in Sekunden übernehmen, Dateien importieren – und 30 Tage rückgängig.',
     stichworte: 'chatgpt liste einfügen csv excel xlsx sheet dublette rückgängig',
-    tour: 'import',
     bloecke: [
       { art: 'zwischentitel', text: 'Schnellimport' },
       {
@@ -710,24 +692,10 @@ export const THEMEN: readonly Thema[] = [
     ],
   },
   {
-    key: 'tastenkuerzel',
-    titel: 'Tastenkürzel',
-    kurz: 'Alle Tasten auf einen Blick – dieselbe Liste wie hinter dem Fragezeichen.',
-    stichworte: 'taste kürzel shortcut keyboard tastatur',
-    bloecke: [
-      {
-        art: 'absatz',
-        text: 'Einzelbuchstaben wirken nur, wenn kein Eingabefeld aktiv ist. {Esc} verlässt erst das Feld, dann den Dialog. {?} öffnet diese Liste überall.',
-      },
-      { art: 'tastenregister' },
-    ],
-  },
-  {
     key: 'feedback',
     titel: 'Feedback geben',
     kurz: 'Etwas klemmt, fehlt oder sieht falsch aus – melde es direkt im CRM, samt Screenshot.',
     stichworte: 'fehler bug melden problem wunsch idee frage claude bugreport',
-    tour: 'feedback',
     bloecke: [
       {
         art: 'absatz',
@@ -845,8 +813,7 @@ export function themaText(t: Thema, person: PersonId | null = null): string {
   for (const b of bloeckeVon(t, person)) {
     if (b.art === 'absatz' || b.art === 'zwischentitel' || b.art === 'hinweis') teile.push(b.text)
     else if (b.art === 'liste' || b.art === 'schritte') teile.push(...b.punkte)
-    else if (b.art === 'tasten') for (const z of b.zeilen) teile.push(z.tasten.join(' '), z.text)
-    else teile.push('Tastenkürzel Tasten')
+    else for (const z of b.zeilen) teile.push(z.tasten.join(' '), z.text)
   }
   return klartext(teile.join(' ')).toLowerCase()
 }

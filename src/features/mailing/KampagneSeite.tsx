@@ -30,7 +30,7 @@ import {
   usePostfaecher,
   useVariantenZahlen,
 } from '@/data/mailing'
-import { Kachel, Kacheln } from '@/features/telefon/ansichten/Teile'
+import { Kachel, Kacheln } from '@/components/ui/Kachel'
 import { AblaufEditor } from './AblaufEditor'
 import { EmpfaengerTab } from './EmpfaengerTab'
 import {

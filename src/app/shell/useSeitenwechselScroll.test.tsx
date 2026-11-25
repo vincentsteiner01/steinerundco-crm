@@ -16,7 +16,7 @@ describe('useSeitenwechselScroll (Runde 2)', () => {
     expect(scrollTo).not.toHaveBeenCalled()
     await act(() => router.navigate('/leads?lead=abc'))
     expect(scrollTo).not.toHaveBeenCalled()
-    await act(() => router.navigate('/pipeline'))
+    await act(() => router.navigate('/leitfaeden'))
     expect(scrollTo).toHaveBeenCalledWith(0, 0)
     scrollTo.mockRestore()
   })

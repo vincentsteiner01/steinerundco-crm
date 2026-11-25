@@ -1,6 +1,6 @@
-// Shell-Korrekturen aus dem Review: Esc in einem Feld schließt den Peek nicht (eine Ebene je Druck, ux § 5.1), „Mehr“ in der
-// Tab-Leiste öffnet Pipeline · E-Mail · Leitfäden · Schnellimport · Einstellungen (ux § 7.1), Skip-Link (BAUPLAN § 10.3 A-03).
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+// Hülle nach dem Neustart (25.11.2026): Sidebar = Marke, sechs Punkte, Person mit „Abmelden“ – sonst nichts. Tab-Leiste mit vier
+// Spalten (Leads · Leitfäden · E-Mail · Mehr), globale Tasten nur noch Z, R, Esc. Dazu die Korrekturen aus dem Review: Esc in
+// einem Feld schließt das Lead-Blatt nicht (eine Ebene je Druck, ux § 5.1), Skip-Link (BAUPLAN § 10.3 A-03).
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router'
@@ -21,13 +21,14 @@ vi.mock('@/features/auth/authStore', () => ({
   ) =>
     sel({
       status: 'mitglied',
-      member: { user_id: 'u1', email: 'test@example.com', display_name: 'Test' },
+      member: { user_id: 'u1', email: 'test@example.com', display_name: 'Petra Probelauf' },
       abmelden: async () => {},
     }),
 }))
 
 import { AppShell } from './AppShell'
 import { GlobaleTasten } from './GlobaleTasten'
+import { Sidebar } from './Sidebar'
 import { TabLeiste } from './TabLeiste'
 
 function Ort() {
@@ -37,24 +38,22 @@ function Ort() {
 
 function mitRouter(element: ReactNode, start: string) {
   const router = createMemoryRouter([{ path: '*', element }], { initialEntries: [start] })
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   render(
-    <QueryClientProvider client={qc}>
-      <TooltipProvider>
-        <RouterProvider router={router} />
-      </TooltipProvider>
-    </QueryClientProvider>,
+    <TooltipProvider>
+      <RouterProvider router={router} />
+    </TooltipProvider>,
   )
   return router
 }
 
 describe('Shell', () => {
   beforeEach(() => {
-    useUiStore.setState({ paletteOffen: false, hilfeOffen: false, hotkeyScope: 'global', scopeStack: [] })
+    useUiStore.setState({ hotkeyScope: 'global', scopeStack: [] })
     _akkordZuruecksetzen()
+    localStorage.clear()
   })
 
-  it('Esc in einem Eingabefeld verlässt nur das Feld – der Peek (?lead=) bleibt; das nächste Esc schließt ihn', () => {
+  it('Esc in einem Eingabefeld verlässt nur das Feld – das Lead-Blatt (?lead=) bleibt; das nächste Esc schließt es', () => {
     mitRouter(
       <>
         <GlobaleTasten />
@@ -72,14 +71,86 @@ describe('Shell', () => {
     expect(screen.getByTestId('ort')).toHaveTextContent(/^\/leads$/)
   })
 
-  it('Tab-Leiste: „Mehr“ öffnet ein Menü mit Umsatz · Auftrag · Pipeline · E-Mail · Leitfäden · Schnellimport · Team · Einstellungen · Hilfe · Feedback', () => {
+  it('Esc lässt ?lead= im Composer stehen; Gehe-zu-Akkorde und ⌘K gibt es nicht mehr', () => {
+    const router = mitRouter(
+      <>
+        <GlobaleTasten />
+        <Ort />
+      </>,
+      '/email/verfassen?lead=l1',
+    )
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    expect(screen.getByTestId('ort')).toHaveTextContent('/email/verfassen?lead=l1')
+    act(() => void router.navigate('/leitfaeden'))
+    fireEvent.keyDown(document.body, { key: 'g' })
+    fireEvent.keyDown(document.body, { key: 'l' })
+    fireEvent.keyDown(document.body, { key: 'k', metaKey: true })
+    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/leitfaeden$/)
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('Sidebar: Marke, sechs Punkte (E-Mail aufgeklappt mit vier Unterpunkten), unten Person mit „Abmelden“ – sonst nichts', () => {
+    mitRouter(<Sidebar />, '/leads')
+    const nav = screen.getByRole('navigation', { name: 'Hauptnavigation' })
+    expect(
+      within(nav)
+        .getAllByRole('link')
+        .map((a) => [a.textContent, a.getAttribute('href')]),
+    ).toEqual([
+      ['Leads', '/leads'],
+      ['Leitfäden', '/leitfaeden'],
+      ['Kampagnen', '/email/kampagnen'],
+      ['Antworten', '/email/antworten'],
+      ['Postfächer', '/email/postfaecher'],
+      ['Einzelmails', '/email'],
+      ['Team', '/team'],
+      ['Einstellungen', '/einstellungen'],
+      ['Hilfe', '/hilfe'],
+    ])
+    expect(within(nav).getByRole('button', { name: 'E-Mail' })).toHaveAttribute('aria-expanded', 'true')
+    expect(within(nav).getByRole('link', { name: 'Leads' })).toHaveAttribute('aria-current', 'page')
+    // außerhalb der Navigation: nur die Marke (führt zum Board) und „Abmelden“
+    const leiste = screen.getByRole('complementary', { name: 'Seitenleiste' })
+    expect(within(leiste).getAllByRole('button')).toHaveLength(2)
+    expect(within(leiste).getByRole('button', { name: 'Abmelden' })).toBeInTheDocument()
+    expect(within(leiste).getByText('Petra Probelauf')).toBeInTheDocument()
+    expect(within(leiste).getAllByRole('link')[0]).toHaveAttribute('href', '/leads')
+    expect(leiste.querySelector('kbd')).toBeNull()
+    expect(within(leiste).queryByText(/Suchen|Feedback|Tastenkürzel|live/)).toBeNull()
+  })
+
+  it('Sidebar: E-Mail lässt sich zuklappen (gemerkt) – auf einer E-Mail-Seite bleibt die Gruppe offen', () => {
+    const router = mitRouter(<Sidebar />, '/leads')
+    const gruppe = () => screen.getByRole('button', { name: 'E-Mail' })
+    fireEvent.click(gruppe())
+    expect(gruppe()).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('link', { name: 'Kampagnen' })).toBeNull()
+    expect(JSON.parse(localStorage.getItem('crm.nav.gruppen') ?? '{}')).toEqual({ email: false })
+    act(() => void router.navigate('/email/kampagnen/42'))
+    expect(gruppe()).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('link', { name: 'Kampagnen' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Einzelmails' })).not.toHaveAttribute('aria-current')
+    // die Gruppe der offenen Seite lässt sich nicht zuklappen – sonst verschwände der markierte Punkt
+    fireEvent.click(gruppe())
+    expect(gruppe()).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('Tab-Leiste: Leads · Leitfäden · E-Mail · Mehr; „Mehr“ öffnet Team · Einstellungen · Hilfe', () => {
     const router = mitRouter(
       <>
         <TabLeiste />
         <Ort />
       </>,
-      '/heute',
+      '/leads',
     )
+    const leiste = screen.getByRole('navigation', { name: 'Navigation' })
+    expect(leiste.className.split(/\s+/)).toContain('grid-cols-4')
+    expect(
+      within(leiste)
+        .getAllByRole('link')
+        .map((a) => a.textContent),
+    ).toEqual(['Leads', 'Leitfäden', 'E-Mail'])
+    expect(screen.getByRole('link', { name: 'Leads' })).toHaveAttribute('aria-current', 'page')
     const mehr = screen.getByRole('button', { name: 'Mehr' })
     expect(mehr).toHaveAttribute('aria-expanded', 'false')
     fireEvent.click(mehr)
@@ -88,24 +159,13 @@ describe('Shell', () => {
       within(menu)
         .getAllByRole('menuitem')
         .map((m) => m.textContent),
-    ).toEqual([
-      'Umsatz',
-      'Auftrag',
-      'Pipeline',
-      'E-Mail',
-      'Leitfäden',
-      'Schnellimport',
-      'Team',
-      'Einstellungen',
-      'Hilfe',
-      'Feedback',
-    ])
-    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Leitfäden' }))
-    expect(screen.getByTestId('ort')).toHaveTextContent('/leitfaeden')
+    ).toEqual(['Team', 'Einstellungen', 'Hilfe'])
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Team' }))
+    expect(screen.getByTestId('ort')).toHaveTextContent('/team')
     expect(screen.queryByRole('menu')).toBeNull()
     // aktiv auf einer Mehr-Route
     expect(screen.getByRole('button', { name: 'Mehr' })).toHaveAttribute('aria-current', 'page')
-    act(() => void router.navigate('/heute'))
+    act(() => void router.navigate('/leads'))
     expect(screen.getByRole('button', { name: 'Mehr' })).not.toHaveAttribute('aria-current')
     // Esc schließt das Menü und gibt den Fokus zurück
     fireEvent.click(screen.getByRole('button', { name: 'Mehr' }))
@@ -114,8 +174,21 @@ describe('Shell', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Mehr' }))
   })
 
+  it('Tab-Leiste: der E-Mail-Tab ist auf allen /email-Seiten aktiv', () => {
+    const router = mitRouter(<TabLeiste />, '/email/antworten')
+    const email = () => screen.getByRole('link', { name: 'E-Mail' })
+    expect(email()).toHaveAttribute('href', '/email/kampagnen')
+    for (const pfad of ['/email/antworten', '/email', '/email/verfassen?lead=l1', '/email/kampagnen/42']) {
+      act(() => void router.navigate(pfad))
+      expect(email(), pfad).toHaveAttribute('aria-current', 'page')
+      expect(screen.getByRole('link', { name: 'Leads' })).not.toHaveAttribute('aria-current')
+    }
+    act(() => void router.navigate('/leitfaeden'))
+    expect(email()).not.toHaveAttribute('aria-current')
+  })
+
   it('Skip-Link „Zum Inhalt“ ist das erste fokussierbare Element und zeigt auf #main', () => {
-    mitRouter(<AppShell />, '/heute')
+    mitRouter(<AppShell />, '/leads')
     const link = screen.getByRole('link', { name: 'Zum Inhalt' })
     expect(link).toHaveAttribute('href', '#main')
     const fokussierbar = document.querySelectorAll('a[href], button, input, select, textarea')

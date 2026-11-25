@@ -47,14 +47,12 @@ export function Dialog({
             <RD.Close asChild>
               <Button variante="quiet">{abbrechen}</Button>
             </RD.Close>
+            {/* danger über die Variante: per className umgefärbt blieb der Knopf blau (.bg-danger steht vor .bg-signal, 25.11.2026) */}
             <Button
-              variante={primaer.danger ? 'primary' : 'primary'}
+              variante={primaer.danger ? 'negativ' : 'primary'}
               onClick={primaer.onClick}
               disabled={primaer.disabled}
               busy={primaer.busy}
-              className={
-                primaer.danger ? 'bg-danger text-ink-bright hover:bg-danger disabled:hover:bg-danger' : undefined
-              }
             >
               {primaer.label}
             </Button>
