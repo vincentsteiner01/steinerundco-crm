@@ -1130,6 +1130,8 @@ export type Database = {
       }
       leads: {
         Row: {
+          board_liste: string | null
+          board_seit: string | null
           call_basis: Database['crm']['Enums']['call_basis'] | null
           call_basis_note: string | null
           call_basis_url: string | null
@@ -1204,6 +1206,8 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          board_liste?: string | null
+          board_seit?: string | null
           call_basis?: Database['crm']['Enums']['call_basis'] | null
           call_basis_note?: string | null
           call_basis_url?: string | null
@@ -1278,6 +1282,8 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          board_liste?: string | null
+          board_seit?: string | null
           call_basis?: Database['crm']['Enums']['call_basis'] | null
           call_basis_note?: string | null
           call_basis_url?: string | null
@@ -2861,6 +2867,7 @@ export type Database = {
       templates: {
         Row: {
           active: boolean
+          archiviert_at: string | null
           body: string
           channel: Database['crm']['Enums']['channel']
           created_at: string
@@ -2884,6 +2891,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          archiviert_at?: string | null
           body?: string
           channel: Database['crm']['Enums']['channel']
           created_at?: string
@@ -2907,6 +2915,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          archiviert_at?: string | null
           body?: string
           channel?: Database['crm']['Enums']['channel']
           created_at?: string
@@ -3493,6 +3502,16 @@ export type Database = {
       }
       any_date: { Args: { p: string }; Returns: string }
       berlin_date: { Args: { p: string }; Returns: string }
+      board_karte_anlegen: {
+        Args: {
+          p_anrede?: Database['crm']['Enums']['salutation']
+          p_linkedin_url?: string | null
+          p_nachname: string | null
+          p_owner?: string | null
+          p_vorname: string | null
+        }
+        Returns: Json
+      }
       company_blocked: { Args: { p_lead_id: string }; Returns: boolean }
       company_norm: { Args: { p: string }; Returns: string }
       complete_step: {
@@ -4339,6 +4358,8 @@ export type Database = {
       release_lead: {
         Args: { p_lead_id: string; p_reason: string }
         Returns: {
+          board_liste: string | null
+          board_seit: string | null
           call_basis: Database['crm']['Enums']['call_basis'] | null
           call_basis_note: string | null
           call_basis_url: string | null
@@ -4580,6 +4601,8 @@ export type Database = {
       transfer_lead: {
         Args: { p_lead_id: string; p_note: string; p_to_member: string }
         Returns: {
+          board_liste: string | null
+          board_seit: string | null
           call_basis: Database['crm']['Enums']['call_basis'] | null
           call_basis_note: string | null
           call_basis_url: string | null
