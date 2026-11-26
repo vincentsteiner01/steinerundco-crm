@@ -1,0 +1,1 @@
+import{s as e}from"./index-CBa9089Y.js";import{n as t,t as n}from"./mitglied-Cc6kzYWg.js";function r(n){let r=t(n.member),i=e.findIndex(e=>e.id===r);return i<0?e.length:i}function i(e){return e.filter(e=>!!e.id).map(e=>({id:e.id,name:n(e,e.id),member:e})).sort((e,t)=>r(e)-r(t)||e.name.localeCompare(t.name,`de`))}export{i as t};
