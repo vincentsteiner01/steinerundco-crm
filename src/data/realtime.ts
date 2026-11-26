@@ -1,6 +1,8 @@
 // Realtime (E17, BAUPLAN § 3.1.6): ein Kanal `crm:sync`, postgres_changes auf 13 Tabellen, Invalidierung nach Tabelle.
 // Nicht architektur § 4.3 (dort stehen falsche Tabellennamen). Status → uiStore.realtime.
 // Neustart 25.11.2026: nur noch Invalidierung – die Toasts „übergeben“/„Termin der anderen Person“ gehörten zum alten CRM.
+// 26.11.2026: `leads` und `emails` laden auch die KPIs neu – die Zahlen des KPI-Reiters zählen aus den Board-Zügen und aus
+// dem E-Mail-Versand (Sicht v_kpi_tage).
 import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { useEffect } from 'react'
@@ -45,7 +47,8 @@ export function invalidierungsKeys(tabelle: RealtimeTabelle, zeile: Zeile): Quer
   const leadId = str(zeile, 'lead_id')
   switch (tabelle) {
     case 'leads':
-      return [qk.leads.all, ...(id ? [qk.leads.detail(id)] : []), qk.queue.all, qk.nav]
+      // qk.kpis.all: Karte anlegen, verschieben, zurücklegen ändert Angeschrieben · Gespräch · Im Geschäft · Verloren
+      return [qk.leads.all, ...(id ? [qk.leads.detail(id)] : []), qk.queue.all, qk.nav, qk.kpis.all]
     case 'activities':
       return [
         ...(leadId ? [qk.activities(leadId)] : [['activities']]),
@@ -85,7 +88,8 @@ export function invalidierungsKeys(tabelle: RealtimeTabelle, zeile: Zeile): Quer
         [...qk.leads.telefon, 'notizen'],
       ]
     case 'emails':
-      return [...(leadId ? [qk.emails.lead(leadId)] : [['emails']]), ['emails', 'zeitraum'], qk.queue.all]
+      // qk.kpis.all: „E-Mails gesendet“ und „Antworten“ des KPI-Reiters zählen aus crm.emails (Sicht v_kpi_tage)
+      return [...(leadId ? [qk.emails.lead(leadId)] : [['emails']]), ['emails', 'zeitraum'], qk.queue.all, qk.kpis.all]
     case 'daily_counters':
       return [['counters'], qk.kpis.all]
     case 'templates':

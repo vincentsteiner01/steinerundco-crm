@@ -282,6 +282,48 @@ describe('useKarteSpeichern', () => {
   })
 })
 
+// 26.11.2026: Der KPI-Reiter zählt aus den Board-Zügen. Jeder Schreibvorgang des Boards macht seine Abfragen veraltet – auch
+// wenn das Realtime-Ereignis ausbleibt (Kanal getrennt).
+describe('Board schreibt: die KPI-Abfragen gelten als veraltet', () => {
+  const KPI = [...qk.kpis.all, 'tage', 'team', '2026-11-01', '2026-11-30']
+  const veraltet = (qc: QueryClient) => qc.getQueryState(KPI)?.isInvalidated
+
+  it('Karte verschieben', async () => {
+    antworten({ data: karte('a', 'gespraech', T_ZUG), error: null })
+    const { qc, wrapper } = umgebung([karte('a', 'angeschrieben', T0)])
+    qc.setQueryData(KPI, [])
+    const { result } = renderHook(() => useKarteVerschieben(), { wrapper })
+    await act(async () => {
+      await result.current.mutateAsync({ id: 'a', liste: 'gespraech' })
+    })
+    expect(veraltet(qc)).toBe(true)
+  })
+
+  it('Karte anlegen', async () => {
+    const antwort = { status: 'neu', lead_id: 'neu-1', liste: 'angeschrieben', owner_id: V }
+    vi.mocked(supabase.rpc).mockResolvedValue({ data: antwort, error: null } as never)
+    antworten({ data: [], error: null })
+    const { qc, wrapper } = umgebung([])
+    qc.setQueryData(KPI, [])
+    const { result } = renderHook(() => useKarteAnlegen(), { wrapper })
+    await act(async () => {
+      await result.current.mutateAsync({ vorname: 'Petra', nachname: 'Probelauf' })
+    })
+    expect(veraltet(qc)).toBe(true)
+  })
+
+  it('Lead-Blatt speichern', async () => {
+    antworten({ data: { ...karte('a', 'verloren', T_ZUG), notes: null }, error: null })
+    const { qc, wrapper } = umgebung([karte('a', 'gespraech', T1)])
+    qc.setQueryData(KPI, [])
+    const { result } = renderHook(() => useKarteSpeichern(), { wrapper })
+    await act(async () => {
+      await result.current.mutateAsync({ id: 'a', patch: { board_liste: 'verloren' } })
+    })
+    expect(veraltet(qc)).toBe(true)
+  })
+})
+
 // 26.11.2026: Zwei Züge kurz hintereinander – nach der ersten Antwort lud das Board neu und bekam den Stand der Datenbank
 // OHNE den Zug, der noch unterwegs war; dessen Karte sprang kurz in die alte Liste zurück.
 describe('Schreibvorgänge kurz hintereinander', () => {

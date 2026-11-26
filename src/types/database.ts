@@ -155,6 +155,57 @@ export type Database = {
           },
         ]
       }
+      board_laeufe: {
+        Row: {
+          angeschrieben_am: string
+          beendet_am: string | null
+          created_at: string
+          gespraech_am: string | null
+          id: string
+          im_geschaeft_am: string | null
+          lead_id: string
+          verloren_am: string | null
+          vorher: Json | null
+        }
+        Insert: {
+          angeschrieben_am: string
+          beendet_am?: string | null
+          created_at?: string
+          gespraech_am?: string | null
+          id?: string
+          im_geschaeft_am?: string | null
+          lead_id: string
+          verloren_am?: string | null
+          vorher?: Json | null
+        }
+        Update: {
+          angeschrieben_am?: string
+          beendet_am?: string | null
+          created_at?: string
+          gespraech_am?: string | null
+          id?: string
+          im_geschaeft_am?: string | null
+          lead_id?: string
+          verloren_am?: string | null
+          vorher?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'board_laeufe_lead_id_fkey'
+            columns: ['lead_id']
+            isOneToOne: false
+            referencedRelation: 'leads'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'board_laeufe_lead_id_fkey'
+            columns: ['lead_id']
+            isOneToOne: false
+            referencedRelation: 'v_leads_ohne_bewegung'
+            referencedColumns: ['lead_id']
+          },
+        ]
+      }
       call_outcome_defs: {
         Row: {
           counts_attempt: boolean
@@ -3015,6 +3066,15 @@ export type Database = {
           },
         ]
       }
+      v_board_zaehlung: {
+        Row: {
+          kennzahl: string | null
+          lead_id: string | null
+          member_id: string | null
+          tag: string | null
+        }
+        Relationships: []
+      }
       v_daily_activity: {
         Row: {
           anrufe: number | null
@@ -3067,6 +3127,22 @@ export type Database = {
           strategiegespraeche: number | null
           termine_pro_100_anrufe: number | null
           termine_telefon: number | null
+          vernetzungen_angenommen: number | null
+          vernetzungen_versendet: number | null
+        }
+        Relationships: []
+      }
+      v_kpi_tage: {
+        Row: {
+          angeschrieben: number | null
+          email_antworten: number | null
+          emails_gesendet: number | null
+          gespraech: number | null
+          im_geschaeft: number | null
+          member_id: string | null
+          period: Database['crm']['Enums']['counter_period'] | null
+          tag: string | null
+          verloren: number | null
           vernetzungen_angenommen: number | null
           vernetzungen_versendet: number | null
         }

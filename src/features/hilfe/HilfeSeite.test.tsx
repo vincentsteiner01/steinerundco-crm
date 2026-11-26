@@ -1,5 +1,6 @@
-// Hilfe-Seite nach dem Neustart (25.11.2026): Übersicht mit höchstens drei Fragen, sieben kurze Themen aus themen.ts, Suche
-// (Enter öffnet den ersten Treffer), unbekanntes oder entferntes Thema → /hilfe. Keine Touren, kein Feedback, keine Tastenhinweise.
+// Hilfe-Seite nach dem Neustart (25.11.2026): Übersicht mit höchstens drei Fragen, acht kurze Themen aus themen.ts (seit
+// 26.11.2026 mit KPIs), Suche (Enter öffnet den ersten Treffer), unbekanntes oder entferntes Thema → /hilfe. Keine Touren, kein
+// Feedback, keine Tastenhinweise.
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryRouter, RouterProvider } from 'react-router'
@@ -44,7 +45,7 @@ beforeEach(() => {
 })
 
 describe('Hilfe', () => {
-  it('Übersicht: Titel, drei häufige Fragen mit Link zum Thema, Themenliste mit den sieben Themen', () => {
+  it('Übersicht: Titel, drei häufige Fragen mit Link zum Thema, Themenliste mit den acht Themen', () => {
     rendern('/hilfe')
     expect(screen.getByRole('heading', { level: 1, name: 'Hilfe' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'So funktioniert das CRM.' })).toBeInTheDocument()
@@ -64,9 +65,11 @@ describe('Hilfe', () => {
       'Leitfäden',
       'E-Mail',
       'E-Mail-Kampagnen',
+      'KPIs',
       'Team & Einstellungen',
       'Wo ist das alte CRM?',
     ])
+    expect(THEMEN).toHaveLength(8)
     const liste = screen.getByRole('navigation', { name: 'Hilfe-Themen' })
     expect(within(liste).getByRole('link', { name: /Wo ist das alte CRM/ })).toHaveAttribute('href', '/hilfe/archiv')
   })
@@ -128,6 +131,22 @@ describe('Hilfe', () => {
     expect(text().getByRole('link', { name: 'Leitfäden' })).toHaveAttribute('href', '/leitfaeden')
   })
 
+  it('Thema KPIs: Link auf den Reiter, zwei Abschnitte, zwischen Kampagnen und Team & Einstellungen', () => {
+    rendern('/hilfe/kpis')
+    expect(screen.getByRole('heading', { level: 2, name: 'KPIs' })).toBeInTheDocument()
+    expect(text().getByRole('link', { name: 'KPIs' })).toHaveAttribute('href', '/kpis')
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+      'Vernetzungen eintragen',
+      'Alles andere zählt von selbst',
+    ])
+    expect(screen.getByText(/Oben steht „Meine Vernetzungen“/)).toBeInTheDocument()
+    expect(screen.getByText(/Die kleine Prozentzahl daneben ist der Anteil an der Stufe davor/)).toBeInTheDocument()
+    expect(screen.getByText('Zahlen bis 24.11.2026 stammen aus dem alten CRM.')).toBeInTheDocument()
+    const weiter = screen.getByRole('navigation', { name: 'Weitere Themen' })
+    expect(weiter).toHaveTextContent('E-Mail-Kampagnen')
+    expect(weiter).toHaveTextContent('Team & Einstellungen')
+  })
+
   it('Thema Team & Einstellungen verlinkt die fünf Bereiche', () => {
     rendern('/hilfe/team-einstellungen')
     expect(screen.getByRole('link', { name: 'Team' })).toHaveAttribute('href', '/team')
@@ -146,6 +165,8 @@ describe('Hilfe', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Wo ist das alte CRM?' })).toBeInTheDocument()
     expect(screen.getByText('nichts gelöscht', { selector: 'strong' })).toBeInTheDocument()
     expect(screen.getByText(/Am 25\.11\.2026 wurde das CRM neu und einfach aufgebaut/)).toBeInTheDocument()
+    // 26.11.2026: die KPIs sind zurück – der Absatz „Die alten Seiten“ verweist darauf
+    expect(text().getByRole('link', { name: 'KPIs' })).toHaveAttribute('href', '/kpis')
     // letztes Thema: nur „Zurück“
     const weiter = screen.getByRole('navigation', { name: 'Weitere Themen' })
     expect(weiter).toHaveTextContent('Team & Einstellungen')
@@ -178,7 +199,7 @@ describe('Hilfe', () => {
   })
 
   it('unbekanntes oder entferntes Thema → Übersicht', () => {
-    for (const alt of ['gibt-es-nicht', 'dein-tag', 'feedback', 'noch-nicht', 'verbindungen']) {
+    for (const alt of ['gibt-es-nicht', 'dein-tag', 'feedback', 'noch-nicht', 'verbindungen', 'kpis-team']) {
       const { router, unmount } = rendern(`/hilfe/${alt}`)
       expect(router.state.location.pathname, alt).toBe('/hilfe')
       unmount()

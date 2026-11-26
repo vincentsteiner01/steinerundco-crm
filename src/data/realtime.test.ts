@@ -1,5 +1,6 @@
 // BAUPLAN § 3.1.6: Invalidierungs-Tabelle (Publikation, seit Migration 13 mit Umsatz) + Kanal crm:sync + Status → uiStore.
 // Neustart 25.11.2026: die Realtime-Toasts (Übergabe, Termin) sind entfallen – geprüft wird, dass keiner mehr erscheint.
+// 26.11.2026: Änderungen an `leads` laden auch die KPIs neu (Board-Züge ändern die Zahlen des KPI-Reiters).
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -28,7 +29,7 @@ const ANDERE = '00000000-0000-4000-8000-000000000002'
 
 describe('invalidierungsKeys – Tabelle § 3.1.6 wörtlich', () => {
   const faelle: Record<RealtimeTabelle, unknown[][]> = {
-    leads: [qk.leads.all, qk.leads.detail(L), qk.queue.all, qk.nav],
+    leads: [qk.leads.all, qk.leads.detail(L), qk.queue.all, qk.nav, qk.kpis.all],
     activities: [
       qk.activities(L),
       ['activities', 'zeitraum'],
@@ -55,7 +56,7 @@ describe('invalidierungsKeys – Tabelle § 3.1.6 wörtlich', () => {
       qk.kpis.all,
       [...qk.leads.telefon, 'notizen'],
     ],
-    emails: [qk.emails.lead(L), ['emails', 'zeitraum'], qk.queue.all],
+    emails: [qk.emails.lead(L), ['emails', 'zeitraum'], qk.queue.all, qk.kpis.all],
     daily_counters: [['counters'], qk.kpis.all],
     templates: [qk.templates.all],
     settings: [qk.settings],
@@ -75,7 +76,7 @@ describe('invalidierungsKeys – Tabelle § 3.1.6 wörtlich', () => {
 
   it('ohne lead_id (DELETE mit leerem old) fällt auf Präfixe zurück', () => {
     expect(invalidierungsKeys('tasks', {})).toEqual([['tasks'], qk.queue.all, qk.nav, qk.leads.telefon])
-    expect(invalidierungsKeys('leads', {})).toEqual([qk.leads.all, qk.queue.all, qk.nav])
+    expect(invalidierungsKeys('leads', {})).toEqual([qk.leads.all, qk.queue.all, qk.nav, qk.kpis.all])
   })
 
   it('invalidiere() ruft invalidateQueries je Key (new ∪ old)', () => {
@@ -143,6 +144,45 @@ describe('invalidierungsBuendler', () => {
     b.add({ tabelle: 'leads', eventType: 'UPDATE', neu: { id: L }, alt: {} })
     vi.advanceTimersByTime(400)
     expect(veraltet(BOARD_KEY)).toBe(true)
+    b.stop()
+  })
+
+  // 26.11.2026: Der KPI-Reiter zählt aus dem Board. Verschiebt die andere Person eine Karte, müssen die Zahlen bei mir nachziehen.
+  it('ein Board-Zug (leads) lädt jede KPI-Abfrage neu – das Board selbst bleibt beim eigenen Schreiben außen vor', () => {
+    vi.useFakeTimers()
+    const qc = new QueryClient()
+    const kpiZeilen = [...qk.kpis.all, 'tage', 'team', '2026-11-01', '2026-11-30']
+    const tageszaehler = [...qk.kpis.all, 'tageszaehler', ME, '2026-11-26']
+    qc.setQueryData(kpiZeilen, [])
+    qc.setQueryData(tageszaehler, { versendet: null, angenommen: null })
+    qc.setQueryData(BOARD_KEY, [])
+    const zug = qc.getMutationCache().build(qc, {
+      mutationKey: BOARD_SCHREIBEN,
+      networkMode: 'always',
+      mutationFn: () => new Promise<void>(() => {}),
+    })
+    void zug.execute(undefined)
+    const b = invalidierungsBuendler(qc, 400, 2000)
+    b.add({ tabelle: 'leads', eventType: 'UPDATE', neu: { id: L, board_liste: 'gespraech' }, alt: {} })
+    vi.advanceTimersByTime(400)
+    expect(qc.getQueryState(kpiZeilen)?.isInvalidated).toBe(true)
+    expect(qc.getQueryState(tageszaehler)?.isInvalidated).toBe(true)
+    expect(qc.getQueryState(BOARD_KEY)?.isInvalidated).toBe(false)
+    qc.getMutationCache().clear()
+    b.stop()
+  })
+
+  // „E-Mails gesendet“ und „Antworten“ des KPI-Reiters zählen aus crm.emails – auch ohne Lead an der Mail
+  it('eine gesendete oder eingegangene E-Mail lädt die KPI-Abfragen neu', () => {
+    vi.useFakeTimers()
+    const qc = new QueryClient()
+    const kpiZeilen = [...qk.kpis.all, 'tage', ME, '2026-11-01', '2026-11-30']
+    qc.setQueryData(kpiZeilen, [])
+    const b = invalidierungsBuendler(qc, 400, 2000)
+    b.add({ tabelle: 'emails', eventType: 'INSERT', neu: { id: 'm1', direction: 'in' }, alt: {} })
+    vi.advanceTimersByTime(400)
+    expect(qc.getQueryState(kpiZeilen)?.isInvalidated).toBe(true)
+    expect(invalidierungsKeys('emails', {})).toContainEqual(qk.kpis.all)
     b.stop()
   })
 

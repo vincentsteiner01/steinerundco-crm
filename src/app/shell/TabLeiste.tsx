@@ -16,6 +16,7 @@ const tabKlasse = (aktiv: boolean) =>
 /**
  * < 768 px: Tab-Leiste unten 56 px + safe-area (§ 1.5 Nr. 22). Neustart 25.11.2026: Leads · Leitfäden · E-Mail · Mehr; „Mehr“
  * öffnet Team · Einstellungen · Hilfe. Der E-Mail-Tab ist auf allen /email-Seiten aktiv (`bereich`).
+ * 26.11.2026: KPIs ist vierter Reiter – fünf Spalten.
  * Bewusst ohne Radix-Dropdown: die Leiste liegt im initialen Bundle (E22, PhoneTopbar lädt Radix erst unter 768 px).
  */
 export function TabLeiste() {
@@ -53,7 +54,7 @@ export function TabLeiste() {
   return (
     <nav
       aria-label="Navigation"
-      className="border-line bg-canvas/90 fixed inset-x-0 bottom-0 z-50 grid h-[calc(var(--spacing-tabbar)+env(safe-area-inset-bottom))] grid-cols-4 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
+      className="border-line bg-canvas/90 fixed inset-x-0 bottom-0 z-50 grid h-[calc(var(--spacing-tabbar)+env(safe-area-inset-bottom))] grid-cols-5 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md"
     >
       {TAB_LEISTE.map((t) => (
         <Link

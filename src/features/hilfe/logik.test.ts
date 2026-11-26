@@ -1,4 +1,5 @@
 // Reine Logik der Hilfe nach dem Neustart (25.11.2026): Themenliste, Suche, Wortlaut-Regeln, Auszeichnung.
+// 26.11.2026: Thema „KPIs“ ist zurück (neuer Schlüssel `kpis`; das alte `kpis-team` bleibt entfernt).
 // Die Links der Themen prüft links.test.ts gegen die Routentabelle.
 import { describe, expect, it } from 'vitest'
 import { klartext, linkZiele } from './markup'
@@ -14,18 +15,19 @@ import {
 } from './themen'
 
 /** Neu geschriebene Themen – „E-Mail“ und „E-Mail-Kampagnen“ sind übernommen und dürfen länger sein. */
-const NEU = ['erste-schritte', 'leads', 'leitfaeden', 'team-einstellungen', 'archiv']
+const NEU = ['erste-schritte', 'leads', 'leitfaeden', 'kpis', 'team-einstellungen', 'archiv']
 
 const woerter = (t: Thema) => klartext(themaRohtexte(t).join(' ')).split(/\s+/).filter(Boolean).length
 
 describe('Themen', () => {
-  it('genau die sieben Themen des einfachen CRM, in dieser Reihenfolge', () => {
+  it('genau die acht Themen des einfachen CRM, in dieser Reihenfolge', () => {
     expect(THEMEN.map((t) => t.key)).toEqual([
       'erste-schritte',
       'leads',
       'leitfaeden',
       'email',
       'kampagnen',
+      'kpis',
       'team-einstellungen',
       'archiv',
     ])
@@ -94,6 +96,39 @@ describe('Themen', () => {
     expect(text).toMatch(/„löschen“\. er verschwindet aus deiner liste, bleibt aber gespeichert/)
   })
 
+  it('KPIs: acht Zahlen, vier Zeiträume, zwei Zahlen von Hand – alles andere zählt das Board', () => {
+    const thema = themaVon('kpis')!
+    expect(thema.titel).toBe('KPIs')
+    expect(themaRohtexte(thema).flatMap(linkZiele)).toEqual(['/kpis'])
+    const text = themaText(thema)
+    for (const zahl of [
+      'vernetzungen versendet und angenommen',
+      'angeschrieben',
+      'gespräch vereinbart',
+      'im geschäft',
+      'verloren',
+      'e-mails gesendet und antworten',
+    ])
+      expect(text, zahl).toContain(zahl)
+    expect(text).toContain('monat, woche, 7 oder 30 tage')
+    expect(text).toContain('vergleich zum zeitraum davor')
+    expect(text).toContain('die kleine prozentzahl daneben ist der anteil an der stufe davor')
+    expect(text).toContain('deine zahlen oder die des teams')
+    // von Hand: einmal am Tag, die Zahl des ganzen Tages, neu eintragen ersetzt, „Gestern“ zum Nachtragen
+    expect(text).toMatch(/„meine vernetzungen“\. dort trägst du einmal am tag ein/)
+    expect(text).toContain('die zahl des ganzen tages')
+    expect(text).toContain('neu eintragen ersetzt die alte zahl')
+    expect(text).toContain('mit „gestern“ trägst du nach')
+    // von selbst: der Klick zählt, zurück nimmt die Zahl heraus, vom Board nehmen ändert nichts
+    expect(text).toMatch(
+      /karte anlegen zählt als angeschrieben, „hat interesse“ als gespräch vereinbart, „im geschäft“ als im geschäft, „kein interesse“ als verloren – am tag des klicks/,
+    )
+    expect(text).toMatch(/karte zurück oder klickst auf „rückgängig“, ist die zahl wieder weg/)
+    expect(text).toContain('eine karte vom board zu nehmen ändert keine zahlen – außer direkt nach dem anlegen')
+    expect(text).toContain('die zahl gehört der person, der die karte gehört')
+    expect(text).toContain('zahlen bis 24.11.2026 stammen aus dem alten crm')
+  })
+
   it('Team & Einstellungen nennt die fünf Bereiche, Archiv den gesicherten Stand', () => {
     const team = themaText(themaVon('team-einstellungen')!)
     for (const b of ['profil', 'passcode', 'sperrliste', 'feiertage', 'export & backup']) expect(team).toContain(b)
@@ -104,6 +139,9 @@ describe('Themen', () => {
     expect(archiv).toContain('vollständig gesichert')
     expect(archiv).toMatch(/mit ihrem linkedin-link neu als karte hinzu, bekommst du denselben lead zurück/)
     expect(archiv).toContain('die alten leitfäden sind archiviert')
+    // 26.11.2026: KPIs stehen nicht mehr unter den entfallenen Seiten
+    expect(archiv).toContain('heute, pipeline, telefon und import gibt es nicht mehr')
+    expect(archiv).toContain('die kpis sind zurück')
   })
 
   it('übernommene Themen ohne Verweise auf Entferntes: Erlaubnis in der Lead-Karte, nichts „unter Heute“', () => {
@@ -122,8 +160,9 @@ describe('Themen', () => {
     expect(erstes('board')).toBe('leads')
     expect(erstes('karte hinzufügen')).toBe('leads')
     // „Kein Interesse“ steht auch in „Erste Schritte“ – das Stichwort holt das Board-Thema nach oben
-    expect(sucheThemen('kein interesse').map((t) => t.key)).toEqual(['leads', 'erste-schritte'])
-    expect(sucheThemen('rückgängig').map((t) => t.key)).toEqual(['leads'])
+    // (das KPI-Thema nennt die Knöpfe auch – es steht dahinter)
+    expect(sucheThemen('kein interesse').map((t) => t.key)).toEqual(['leads', 'erste-schritte', 'kpis'])
+    expect(sucheThemen('rückgängig').map((t) => t.key)).toEqual(['leads', 'kpis'])
     expect(erstes('karte entfernen')).toBe('leads')
     expect(erstes('platzhalter')).toBe('leitfaeden')
     expect(erstes('text kopieren')).toBe('leitfaeden')
@@ -132,6 +171,11 @@ describe('Themen', () => {
     // „Feiertage“ und „Sperrliste“ stehen auch bei den Kampagnen – die Einstellungen stehen oben
     expect(erstes('feiertage')).toBe('team-einstellungen')
     expect(erstes('sperrliste')).toBe('team-einstellungen')
+    expect(erstes('kpis')).toBe('kpis')
+    expect(erstes('vernetzungen')).toBe('kpis')
+    expect(erstes('heute eintragen')).toBe('kpis')
+    expect(erstes('nachtragen')).toBe('kpis')
+    expect(erstes('kennzahlen')).toBe('kpis')
     expect(erstes('altes crm')).toBe('archiv')
     expect(erstes('pipeline')).toBe('archiv')
     expect(erstes('erste schritte')).toBe('erste-schritte')

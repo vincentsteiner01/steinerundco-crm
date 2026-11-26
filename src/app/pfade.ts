@@ -1,6 +1,6 @@
 // BAUPLAN § 3.1.4 – Module verlinken nur über PFADE (auch aus router.tsx re-exportiert).
-// Neustart 25.11.2026: Es gibt nur noch Leads (Board), Leitfäden, E-Mail, Team, Einstellungen, Hilfe. Alte Adressen
-// (/pipeline, /telefon, /kpis …) kennt nur noch der Router – er leitet sie um.
+// Neustart 25.11.2026: Es gibt nur noch Leads (Board), Leitfäden, E-Mail, Team, Einstellungen, Hilfe – seit 26.11.2026 wieder
+// mit KPIs (verkleinert). Alte Adressen (/pipeline, /telefon, /import …) kennt nur noch der Router – er leitet sie um.
 export const PFADE = {
   anmelden: '/anmelden',
   leads: '/leads',
@@ -14,6 +14,7 @@ export const PFADE = {
   emailAntworten: '/email/antworten',
   emailPostfaecher: '/email/postfaecher',
   leitfaeden: '/leitfaeden',
+  kpis: '/kpis',
   hilfe: (thema?: string) => (thema ? `/hilfe/${thema}` : '/hilfe'),
   // 25.11.2026: fünf Bereiche. Ziele, Sequenzen und Verbindungen sind entfallen – die Seite leitet die alten Adressen aufs Profil
   einstellungen: (bereich: 'profil' | 'passcode' | 'sperrliste' | 'feiertage' | 'export' = 'profil') =>

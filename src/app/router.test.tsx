@@ -1,7 +1,8 @@
 // Routen nach dem Neustart (25.11.2026): Start und alte Adressen (Lesezeichen, installierte App, Chrome-Erweiterung) führen aufs
-// Board; `/leads/:id` öffnet das Lead-Blatt über `?lead=`; `/leitfaeden/:id` gibt es nicht mehr.
+// Board; `/leads/:id` öffnet das Lead-Blatt über `?lead=`; `/leitfaeden/:id` gibt es nicht mehr. 26.11.2026: `/kpis` ist wieder
+// eine echte Seite.
 import { render, screen, waitFor } from '@testing-library/react'
-import { createMemoryRouter, Outlet, RouterProvider } from 'react-router'
+import { createMemoryRouter, matchRoutes, Outlet, RouterProvider } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/data/supabase', async () => (await import('@/test/supabaseMock')).supabaseMock())
@@ -10,6 +11,7 @@ vi.mock('./shell/AppShell', () => ({ AppShell: () => <Outlet /> }))
 // Die Seiten selbst gehören anderen Teilaufgaben – hier zählt nur, wohin eine Adresse führt
 vi.mock('@/features/board/BoardSeite', () => ({ Component: () => <h1>BOARD</h1> }))
 vi.mock('@/features/leitfaeden/Leitfaeden', () => ({ Component: () => <h1>LEITFAEDEN</h1> }))
+vi.mock('@/features/kpis/KpisSeite', () => ({ Component: () => <h1>KPIS</h1> }))
 
 import { PFADE, ROUTEN } from './router'
 
@@ -39,13 +41,24 @@ describe('Routen', () => {
       '/telefon',
       '/telefon/anruf/l1',
       '/telefon/kpis',
-      '/kpis?kanal=linkedin',
       '/umsatz',
       '/import',
       '/import/schnell',
       '/feedback',
     ])
       expect(await ziel(alt), alt).toBe('/leads')
+  })
+
+  it('/kpis ist eine echte Seite – auch mit alten Parametern im Lesezeichen, keine Weiterleitung', async () => {
+    expect(PFADE.kpis).toBe('/kpis')
+    const route = matchRoutes(ROUTEN, PFADE.kpis)?.at(-1)?.route
+    expect(route?.path).toBe('kpis')
+    expect(route?.lazy).toBeTypeOf('function')
+    const router = createMemoryRouter(ROUTEN, { initialEntries: ['/kpis?kanal=linkedin'] })
+    const { unmount } = render(<RouterProvider router={router} />)
+    expect(await screen.findByRole('heading', { name: 'KPIS' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/kpis')
+    unmount()
   })
 
   it('/leads/:id öffnet das Lead-Blatt über ?lead= – wie PFADE.lead', async () => {

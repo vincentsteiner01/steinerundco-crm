@@ -2,6 +2,7 @@
 // BAUPLAN § 3.1.4 – Router und Routen. Jede Route lädt lazy eine Datei, die `Component` exportiert.
 // Neustart 25.11.2026: nur noch Leads (Board), Leitfäden, E-Mail, Team, Einstellungen, Hilfe. Alte Adressen (Lesezeichen,
 // installierte App, Chrome-Erweiterung) leiten auf das Board um, statt auf „Seite nicht gefunden“ zu landen.
+// 26.11.2026: /kpis ist wieder eine echte Seite (KPI-Reiter, verkleinert).
 import { createBrowserRouter, Navigate, useParams, type RouteObject } from 'react-router'
 import { RequireAuth } from '@/features/auth/RequireAuth'
 import { RouteFehler } from './fehler/RouteFehler'
@@ -32,7 +33,6 @@ const ALTE_PFADE = [
   'leads/papierkorb',
   'leads/pipeline',
   'telefon/*',
-  'kpis',
   'umsatz',
   'import/*',
   'feedback',
@@ -67,6 +67,7 @@ export const ROUTEN: RouteObject[] = [
           { path: 'email/kampagnen/:id', lazy: () => import('@/features/mailing/KampagneSeite') },
           { path: 'email/antworten', lazy: () => import('@/features/mailing/AntwortenSeite') },
           { path: 'email/postfaecher', lazy: () => import('@/features/mailing/PostfaecherSeite') },
+          { path: 'kpis', lazy: () => import('@/features/kpis/KpisSeite') },
           { path: 'team', lazy: () => import('@/features/team/TeamSeite') },
           { path: 'hilfe', lazy: () => import('@/features/hilfe/HilfeSeite') },
           { path: 'hilfe/:thema', lazy: () => import('@/features/hilfe/HilfeSeite') },

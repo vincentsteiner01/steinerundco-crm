@@ -1,5 +1,5 @@
-// Hülle nach dem Neustart (25.11.2026): Sidebar = Marke, sechs Punkte, Person mit „Abmelden“ – sonst nichts. Tab-Leiste mit vier
-// Spalten (Leads · Leitfäden · E-Mail · Mehr), globale Tasten nur noch Z, R, Esc. Dazu die Korrekturen aus dem Review: Esc in
+// Hülle nach dem Neustart (25.11.2026): Sidebar = Marke, sieben Punkte (seit 26.11.2026 mit KPIs), Person mit „Abmelden“ – sonst
+// nichts. Tab-Leiste mit fünf Spalten (Leads · Leitfäden · E-Mail · KPIs · Mehr), globale Tasten nur noch Z, R, Esc. Dazu die Korrekturen aus dem Review: Esc in
 // einem Feld schließt das Lead-Blatt nicht (eine Ebene je Druck, ux § 5.1), Skip-Link (BAUPLAN § 10.3 A-03).
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
@@ -96,7 +96,7 @@ describe('Shell', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
   })
 
-  it('Sidebar: Marke, sechs Punkte (E-Mail aufgeklappt mit vier Unterpunkten), unten Person mit „Abmelden“ – sonst nichts', () => {
+  it('Sidebar: Marke, sieben Punkte (E-Mail aufgeklappt mit vier Unterpunkten, danach KPIs), unten Person mit „Abmelden“ – sonst nichts', () => {
     mitRouter(<Sidebar />, '/leads')
     const nav = screen.getByRole('navigation', { name: 'Hauptnavigation' })
     expect(
@@ -110,6 +110,7 @@ describe('Shell', () => {
       ['Antworten', '/email/antworten'],
       ['Postfächer', '/email/postfaecher'],
       ['Einzelmails', '/email'],
+      ['KPIs', '/kpis'],
       ['Team', '/team'],
       ['Einstellungen', '/einstellungen'],
       ['Hilfe', '/hilfe'],
@@ -142,7 +143,7 @@ describe('Shell', () => {
     expect(gruppe()).toHaveAttribute('aria-expanded', 'true')
   })
 
-  it('Tab-Leiste: Leads · Leitfäden · E-Mail · Mehr; „Mehr“ öffnet Team · Einstellungen · Hilfe', () => {
+  it('Tab-Leiste: Leads · Leitfäden · E-Mail · KPIs · Mehr (fünf Spalten); „Mehr“ öffnet Team · Einstellungen · Hilfe', () => {
     const router = mitRouter(
       <>
         <TabLeiste />
@@ -151,13 +152,14 @@ describe('Shell', () => {
       '/leads',
     )
     const leiste = screen.getByRole('navigation', { name: 'Navigation' })
-    expect(leiste.className.split(/\s+/)).toContain('grid-cols-4')
+    expect(leiste.className.split(/\s+/)).toContain('grid-cols-5')
     expect(
       within(leiste)
         .getAllByRole('link')
         .map((a) => a.textContent),
-    ).toEqual(['Leads', 'Leitfäden', 'E-Mail'])
+    ).toEqual(['Leads', 'Leitfäden', 'E-Mail', 'KPIs'])
     expect(screen.getByRole('link', { name: 'Leads' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'KPIs' })).toHaveAttribute('href', '/kpis')
     const mehr = screen.getByRole('button', { name: 'Mehr' })
     expect(mehr).toHaveAttribute('aria-expanded', 'false')
     fireEvent.click(mehr)
@@ -173,6 +175,11 @@ describe('Shell', () => {
     // aktiv auf einer Mehr-Route
     expect(screen.getByRole('button', { name: 'Mehr' })).toHaveAttribute('aria-current', 'page')
     act(() => void router.navigate('/leads'))
+    expect(screen.getByRole('button', { name: 'Mehr' })).not.toHaveAttribute('aria-current')
+    // KPIs ist ein eigener Reiter, nicht unter „Mehr“
+    act(() => void router.navigate('/kpis'))
+    expect(screen.getByRole('link', { name: 'KPIs' })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'Leads' })).not.toHaveAttribute('aria-current')
     expect(screen.getByRole('button', { name: 'Mehr' })).not.toHaveAttribute('aria-current')
     // Esc schließt das Menü und gibt den Fokus zurück
     fireEvent.click(screen.getByRole('button', { name: 'Mehr' }))

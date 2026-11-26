@@ -1,9 +1,19 @@
 // Navigation des einfachen CRM (Neustart 25.11.2026, Vincent und Mike: „viel zu kompliziert“): Leads · Leitfäden · E-Mail ·
-// Trenner · Team · Einstellungen · Hilfe. Eine Quelle für alle drei Darstellungen – Sidebar (≥ 1024), Icon-Rail (768–1023),
-// Tab-Leiste (< 768). Keine Zähler, keine Tastenkürzel.
+// KPIs · Trenner · Team · Einstellungen · Hilfe. Eine Quelle für alle drei Darstellungen – Sidebar (≥ 1024), Icon-Rail
+// (768–1023), Tab-Leiste (< 768). Keine Zähler, keine Tastenkürzel.
+// 26.11.2026: KPIs ist zurück (verkleinert) – direkt nach E-Mail, am Telefon als vierter Reiter vor „Mehr“.
 // Leads trägt die Board-Ikone (Spalten), nicht „zwei Personen“ – die sah neben Team (UsersRound) fast gleich aus, und in der
 // Icon-Rail steht kein Name daneben.
-import { BookOpen, LifeBuoy, Mail, Settings, SquareKanban, UsersRound, type LucideIcon } from 'lucide-react'
+import {
+  BookOpen,
+  ChartColumn,
+  LifeBuoy,
+  Mail,
+  Settings,
+  SquareKanban,
+  UsersRound,
+  type LucideIcon,
+} from 'lucide-react'
 
 export type NavEintrag = {
   pfad: string
@@ -40,6 +50,7 @@ export const NAV_BAUM: NavKnoten[] = [
       { pfad: '/email', label: 'Einzelmails' },
     ],
   },
+  { pfad: '/kpis', label: 'KPIs', icon: ChartColumn },
   'trenner',
   { pfad: '/team', label: 'Team', icon: UsersRound },
   { pfad: '/einstellungen', label: 'Einstellungen', icon: Settings },
@@ -89,11 +100,12 @@ export type TabEintrag = {
   bereich: string
 }
 
-/** Tab-Leiste: Leads · Leitfäden · E-Mail, dahinter der Knopf „Mehr“. */
+/** Tab-Leiste: Leads · Leitfäden · E-Mail · KPIs, dahinter der Knopf „Mehr“ (fünf Spalten). */
 export const TAB_LEISTE: TabEintrag[] = [
   { pfad: '/leads', label: 'Leads', icon: SquareKanban, bereich: '/leads' },
   { pfad: '/leitfaeden', label: 'Leitfäden', icon: BookOpen, bereich: '/leitfaeden' },
   { pfad: '/email/kampagnen', label: 'E-Mail', icon: Mail, bereich: '/email' },
+  { pfad: '/kpis', label: 'KPIs', icon: ChartColumn, bereich: '/kpis' },
 ]
 
 /** „Mehr“ in der Tab-Leiste: Team · Einstellungen · Hilfe. */

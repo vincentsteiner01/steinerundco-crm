@@ -1,6 +1,7 @@
 // Jeder Link `[Text](/pfad)` in den Hilfe-Themen zeigt auf eine echte Seite (25.11.2026). Vorher prüfte das niemand: nach dem
 // Neustart standen Verweise auf /heute, /kpis, /feedback und entfernte Einstellungs-Bereiche im Handbuch. Geprüft wird gegen die
 // Routentabelle (ROUTEN): Weiterleitungen alter Adressen und die Seite „nicht gefunden“ zählen nicht als Ziel.
+// 26.11.2026: /kpis ist wieder eine echte Seite und ein gültiges Ziel.
 import { matchRoutes } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -32,12 +33,21 @@ function mangel(ziel: string): string | null {
 
 describe('Links in den Hilfe-Themen', () => {
   it('die Prüfung erkennt tote Ziele', () => {
-    for (const gut of ['/leads', '/leitfaeden', '/email', '/email/kampagnen', '/team', '/hilfe', '/hilfe/leads'])
+    for (const gut of [
+      '/leads',
+      '/leitfaeden',
+      '/email',
+      '/email/kampagnen',
+      '/kpis',
+      '/team',
+      '/hilfe',
+      '/hilfe/leads',
+      '/hilfe/kpis',
+    ])
       expect(mangel(gut), gut).toBeNull()
     for (const b of BEREICHE) expect(mangel(`/einstellungen/${b}`), b).toBeNull()
     for (const tot of [
       '/heute',
-      '/kpis',
       '/telefon',
       '/feedback',
       '/auftrag',
@@ -51,6 +61,7 @@ describe('Links in den Hilfe-Themen', () => {
       '/einstellungen/verbindungen?tab=eingang',
       '/hilfe/dein-tag',
       '/hilfe/verbindungen',
+      '/hilfe/kpis-team',
       '/gibt-es-nicht',
       'https://example.com',
     ])
@@ -82,6 +93,7 @@ describe('Links in den Hilfe-Themen', () => {
       '/email/kampagnen',
       '/email/antworten',
       '/email/postfaecher',
+      '/kpis',
       '/team',
     ])
       expect(ziele, pfad).toContain(pfad)

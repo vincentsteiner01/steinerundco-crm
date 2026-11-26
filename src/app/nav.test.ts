@@ -1,5 +1,5 @@
 // Navigation des einfachen CRM (Neustart 25.11.2026): eine Quelle, drei Darstellungen (Sidebar, Icon-Rail, Tab-Leiste) und die
-// Aktiv-Logik – jede E-Mail-Seite markiert in Rail und Tab-Leiste denselben einen Punkt.
+// Aktiv-Logik – jede E-Mail-Seite markiert in Rail und Tab-Leiste denselben einen Punkt. 26.11.2026: KPIs ist zurück.
 import { describe, expect, it } from 'vitest'
 import {
   aktiverEintrag,
@@ -17,8 +17,8 @@ import {
 const label = (k: (typeof NAV_BAUM)[number]) => (k === 'trenner' ? '—' : k.label)
 
 describe('drei Darstellungen', () => {
-  it('Sidebar: Leads · Leitfäden · E-Mail (vier Unterpunkte, aufgeklappt) · Trenner · Team · Einstellungen · Hilfe', () => {
-    expect(NAV_BAUM.map(label)).toEqual(['Leads', 'Leitfäden', 'E-Mail', '—', 'Team', 'Einstellungen', 'Hilfe'])
+  it('Sidebar: Leads · Leitfäden · E-Mail (vier Unterpunkte, aufgeklappt) · KPIs · Trenner · Team · Einstellungen · Hilfe', () => {
+    expect(NAV_BAUM.map(label)).toEqual(['Leads', 'Leitfäden', 'E-Mail', 'KPIs', '—', 'Team', 'Einstellungen', 'Hilfe'])
     const email = NAV_BAUM.find((k) => k !== 'trenner' && istGruppe(k))
     if (!email || email === 'trenner' || !istGruppe(email)) throw new Error('Gruppe E-Mail fehlt')
     expect(email.offenStandard).toBe(true)
@@ -35,28 +35,31 @@ describe('drei Darstellungen', () => {
       '/email/antworten',
       '/email/postfaecher',
       '/email',
+      '/kpis',
       '/team',
       '/einstellungen',
       '/hilfe',
     ])
   })
 
-  it('Icon-Rail: sechs Ikonen, E-Mail als eine Ikone zur ersten E-Mail-Seite', () => {
+  it('Icon-Rail: sieben Ikonen, E-Mail als eine Ikone zur ersten E-Mail-Seite, KPIs vor dem Trenner', () => {
     const punkte = NAV.filter((n) => n !== 'trenner')
     expect(punkte.map((n) => [n.label, n.pfad])).toEqual([
       ['Leads', '/leads'],
       ['Leitfäden', '/leitfaeden'],
       ['E-Mail', '/email/kampagnen'],
+      ['KPIs', '/kpis'],
       ['Team', '/team'],
       ['Einstellungen', '/einstellungen'],
       ['Hilfe', '/hilfe'],
     ])
     for (const n of punkte) expect(n.icon, n.label).toBeTruthy()
     expect(NAV.filter((n) => n === 'trenner')).toHaveLength(1)
+    expect(NAV.indexOf('trenner')).toBe(4)
   })
 
-  it('Tab-Leiste: Leads · Leitfäden · E-Mail, unter „Mehr“ Team · Einstellungen · Hilfe – zusammen dieselben sechs Punkte', () => {
-    expect(TAB_LEISTE.map((t) => t.label)).toEqual(['Leads', 'Leitfäden', 'E-Mail'])
+  it('Tab-Leiste: Leads · Leitfäden · E-Mail · KPIs, unter „Mehr“ Team · Einstellungen · Hilfe – zusammen dieselben sieben Punkte', () => {
+    expect(TAB_LEISTE.map((t) => t.label)).toEqual(['Leads', 'Leitfäden', 'E-Mail', 'KPIs'])
     expect(MEHR_LEISTE.map((t) => t.label)).toEqual(['Team', 'Einstellungen', 'Hilfe'])
     expect([...TAB_LEISTE, ...MEHR_LEISTE].map((t) => t.pfad)).toEqual(
       NAV.filter((n) => n !== 'trenner').map((n) => n.pfad),
@@ -73,6 +76,7 @@ describe('Aktiv-Logik', () => {
     expect(aktiverEintrag('/email/antworten')?.label).toBe('Antworten')
     expect(aktiverEintrag('/einstellungen/profil')?.label).toBe('Einstellungen')
     expect(aktiverEintrag('/hilfe/leads')?.label).toBe('Hilfe')
+    expect(aktiverEintrag('/kpis')?.label).toBe('KPIs')
     expect(aktiverEintrag('/leadsx')).toBeNull()
     expect(aktiverEintrag('/anmelden')).toBeNull()
   })
@@ -81,6 +85,7 @@ describe('Aktiv-Logik', () => {
     expect(gruppeVon(aktiverEintrag('/email/postfaecher'))?.gruppe).toBe('email')
     expect(gruppeVon(aktiverEintrag('/email'))?.gruppe).toBe('email')
     expect(gruppeVon(aktiverEintrag('/leads'))).toBeNull()
+    expect(gruppeVon(aktiverEintrag('/kpis'))).toBeNull()
     expect(gruppeVon(null)).toBeNull()
   })
 
@@ -88,6 +93,7 @@ describe('Aktiv-Logik', () => {
     for (const p of ['/email', '/email/verfassen', '/email/kampagnen', '/email/kampagnen/42', '/email/antworten'])
       expect(aktiverRailPfad(p), p).toBe('/email/kampagnen')
     expect(aktiverRailPfad('/leads')).toBe('/leads')
+    expect(aktiverRailPfad('/kpis')).toBe('/kpis')
     expect(aktiverRailPfad('/einstellungen/sperrliste')).toBe('/einstellungen')
     expect(aktiverRailPfad('/anmelden')).toBeNull()
   })
@@ -97,6 +103,8 @@ describe('Aktiv-Logik', () => {
       expect(aktiverTab(p)?.label, p).toBe('E-Mail')
     expect(aktiverTab('/leads')?.label).toBe('Leads')
     expect(aktiverTab('/leitfaeden')?.label).toBe('Leitfäden')
+    expect(aktiverTab('/kpis')?.label).toBe('KPIs')
+    expect(aktiverTab('/kpis', MEHR_LEISTE)).toBeNull()
     expect(aktiverTab('/team')).toBeNull()
     expect(aktiverTab('/team', MEHR_LEISTE)?.label).toBe('Team')
     expect(aktiverTab('/einstellungen/export', MEHR_LEISTE)?.label).toBe('Einstellungen')

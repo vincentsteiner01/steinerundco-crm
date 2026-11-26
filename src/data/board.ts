@@ -35,13 +35,22 @@ export { BOARD_KEY }
  */
 const istLetzterSchreibvorgang = (qc: QueryClient): boolean => qc.isMutating({ mutationKey: BOARD_SCHREIBEN }) <= 1
 
-/** Alles unter ['leads'] neu laden – das Board selbst nur, wenn kein weiterer Schreibvorgang mehr läuft. */
+/**
+ * 26.11.2026: Der KPI-Reiter zählt aus den Board-Zügen (Sicht v_kpi_tage). Nach jedem Schreiben gelten seine Abfragen als
+ * veraltet – nicht erst mit dem Realtime-Ereignis, das bei getrenntem Kanal ausbleibt. Ist der Reiter nicht offen, lädt nichts.
+ */
+function kpisVeraltet(qc: QueryClient): void {
+  void qc.invalidateQueries({ queryKey: qk.kpis.all })
+}
+
+/** Alles unter ['leads'] neu laden – das Board selbst nur, wenn kein weiterer Schreibvorgang mehr läuft. Dazu die KPIs. */
 function ladeLeadsNeu(qc: QueryClient): void {
   const mitBoard = istLetzterSchreibvorgang(qc)
   void qc.invalidateQueries({
     queryKey: qk.leads.all,
     predicate: (q) => mitBoard || !istBoardKey(q.queryKey),
   })
+  kpisVeraltet(qc)
 }
 
 const SPALTEN =
@@ -146,6 +155,7 @@ export function useKarteVerschieben() {
     onSettled: (_d, _e, { id }) => {
       if (istLetzterSchreibvorgang(qc)) void qc.invalidateQueries({ queryKey: BOARD_KEY })
       void qc.invalidateQueries({ queryKey: qk.leads.detail(id) })
+      kpisVeraltet(qc)
     },
   })
 }

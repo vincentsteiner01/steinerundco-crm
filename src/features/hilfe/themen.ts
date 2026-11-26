@@ -2,6 +2,7 @@
 // Neustart 25.11.2026: sieben kurze Themen für das einfache CRM (Board, Leitfäden, E-Mail). Geschrieben für Menschen, die keine
 // Software mögen: kurze Sätze, konkrete Schritte, keine Fachwörter, keine Tasten. Die neuen Themen passen auf eine Bildschirmseite
 // (der Test hält sie kurz); „E-Mail“ und „E-Mail-Kampagnen“ sind aus dem alten Handbuch übernommen, nur die Verweise stimmen wieder.
+// 26.11.2026: achtes Thema „KPIs“ – der Reiter ist zurück (verkleinert).
 // Nichts versprechen, was nicht gebaut ist. Auszeichnung: **betont** · [Link](/pfad) · {{geplant}} (markup.ts, Inline.tsx).
 // Jeder Link wird gegen die Routentabelle geprüft (links.test.ts).
 import type { PersonId } from '@/features/auth/personen'
@@ -31,13 +32,14 @@ export const THEMEN: readonly Thema[] = [
     kurz: 'Was das CRM ist – und die ersten drei Handgriffe.',
     stichworte: 'start anfang anfangen einführung überblick',
     bloecke: [
-      { art: 'absatz', text: 'Das CRM hat drei Teile. Mehr brauchst du im Alltag nicht.' },
+      { art: 'absatz', text: 'Das CRM hat vier Teile. Mehr brauchst du im Alltag nicht.' },
       {
         art: 'liste',
         punkte: [
           '**Leads** – dein Board. Jede Person ist eine Karte.',
           '**Leitfäden** – deine Texte zum Kopieren.',
           '**E-Mail** – Kampagnen, Antworten, Postfächer und einzelne Mails.',
+          '**KPIs** – eure Zahlen.',
         ],
       },
       { art: 'zwischentitel', text: 'Die ersten drei Handgriffe' },
@@ -248,6 +250,38 @@ export const THEMEN: readonly Thema[] = [
     ],
   },
   {
+    // 26.11.2026: der KPI-Reiter ist zurück (verkleinert). Zwei Zahlen von Hand, alles andere zählt das Board.
+    key: 'kpis',
+    titel: 'KPIs',
+    kurz: 'Eure Zahlen – je Person oder fürs Team.',
+    stichworte: 'kennzahlen zahlen auswertung statistik vernetzungen heute eintragen nachtragen zähler vergleich',
+    bloecke: [
+      {
+        art: 'absatz',
+        text: 'Klick auf [KPIs](/kpis). Du siehst deine Zahlen oder die des Teams: Vernetzungen versendet und angenommen, Angeschrieben, Gespräch vereinbart, Im Geschäft und Verloren. Dazu E-Mails gesendet und Antworten. Oben wählst du Monat, Woche, 7 oder 30 Tage. Jede Zahl zeigt den Vergleich zum Zeitraum davor. Die kleine Prozentzahl daneben ist der Anteil an der Stufe davor.',
+      },
+      { art: 'zwischentitel', text: 'Vernetzungen eintragen' },
+      {
+        art: 'liste',
+        punkte: [
+          'Oben steht „Meine Vernetzungen“. Dort trägst du einmal am Tag ein, wie viele du versendet hast und wie viele angenommen wurden.',
+          'Es gilt die Zahl des ganzen Tages. Neu eintragen ersetzt die alte Zahl.',
+          'Mit „Gestern“ trägst du nach.',
+        ],
+      },
+      { art: 'zwischentitel', text: 'Alles andere zählt von selbst' },
+      {
+        art: 'liste',
+        punkte: [
+          'Karte anlegen zählt als Angeschrieben, „Hat Interesse“ als Gespräch vereinbart, „Im Geschäft“ als Im Geschäft, „Kein Interesse“ als Verloren – am Tag des Klicks.',
+          'Schiebst du eine Karte zurück oder klickst auf „Rückgängig“, ist die Zahl wieder weg. Eine Karte vom Board zu nehmen ändert keine Zahlen – außer direkt nach dem Anlegen.',
+          'Die Zahl gehört der Person, der die Karte gehört.',
+          'Zahlen bis 24.11.2026 stammen aus dem alten CRM.',
+        ],
+      },
+    ],
+  },
+  {
     key: 'team-einstellungen',
     titel: 'Team & Einstellungen',
     kurz: 'Wer wie viele Karten hat – und wo Profil, Passcode und Backup stehen.',
@@ -298,7 +332,7 @@ export const THEMEN: readonly Thema[] = [
       { art: 'zwischentitel', text: 'Die alten Seiten' },
       {
         art: 'absatz',
-        text: 'Heute, Pipeline, Telefon, KPIs und Import gibt es nicht mehr. Alte Lesezeichen führen jetzt auf das Board.',
+        text: 'Heute, Pipeline, Telefon und Import gibt es nicht mehr. Alte Lesezeichen führen jetzt auf das Board. Die [KPIs](/kpis) sind zurück – kleiner als früher, mit den alten Zahlen zum Vergleich.',
       },
     ],
   },
