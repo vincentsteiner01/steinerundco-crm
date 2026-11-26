@@ -1,20 +1,26 @@
-// Realtime (E17, BAUPLAN § 3.1.6): ein Kanal `crm:sync`, postgres_changes auf 13 Tabellen, Invalidierung nach Tabelle.
+// Realtime (E17, BAUPLAN § 3.1.6): ein Kanal `crm:sync`, postgres_changes auf 17 Tabellen, Invalidierung nach Tabelle.
 // Nicht architektur § 4.3 (dort stehen falsche Tabellennamen). Status → uiStore.realtime.
 // Neustart 25.11.2026: nur noch Invalidierung – die Toasts „übergeben“/„Termin der anderen Person“ gehörten zum alten CRM.
 // 26.11.2026: `leads` und `emails` laden auch die KPIs neu – die Zahlen des KPI-Reiters zählen aus den Board-Zügen und aus
 // dem E-Mail-Versand (Sicht v_kpi_tage).
+// 26.11.2026: Reiter „Ziele“ (OKR) – die vier okr_-Tabellen laden OKR_KEY neu, außer der Reiter schreibt gerade selbst. Die
+// gezählten Key Results lesen die KPI-Abfragen (qk.kpis.all); die ziehen über leads, daily_counters und emails schon nach.
 import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query'
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { useEffect } from 'react'
 import { useUiStore } from '@/app/uiStore'
 import { useAuth } from '@/features/auth/authStore'
 import { BOARD_SCHREIBEN, istBoardKey } from './boardKeys'
+import { OKR_KEY, OKR_SCHREIBEN } from './okrKeys'
 import { qk } from './queryKeys'
 import { supabase } from './supabase'
 
 export const REALTIME_KANAL = 'crm:sync'
 
-/** Die Tabellen der Publikation `supabase_realtime` (Migration 1 Abschnitt 11; Umsatz seit Migration 13). */
+/**
+ * Die Tabellen der Publikation `supabase_realtime` (Migration 1 Abschnitt 11; Umsatz seit Migration 13; die vier
+ * okr_-Tabellen des Reiters „Ziele“ seit Migration 20261126100032).
+ */
 export const REALTIME_TABELLEN = [
   'leads',
   'activities',
@@ -29,6 +35,10 @@ export const REALTIME_TABELLEN = [
   'settings',
   'contracts',
   'payments',
+  'okr_ziele',
+  'okr_ergebnisse',
+  'okr_eintraege',
+  'okr_todos',
 ] as const
 export type RealtimeTabelle = (typeof REALTIME_TABELLEN)[number]
 
@@ -99,8 +109,17 @@ export function invalidierungsKeys(tabelle: RealtimeTabelle, zeile: Zeile): Quer
     case 'contracts':
     case 'payments':
       return [qk.umsatz]
+    // Reiter „Ziele“: alles liegt unter einem Key (data/okr.ts lädt die vier kleinen Tabellen auf einmal)
+    case 'okr_ziele':
+    case 'okr_ergebnisse':
+    case 'okr_eintraege':
+    case 'okr_todos':
+      return [OKR_KEY]
   }
 }
+
+/** Gehört die Abfrage zum Reiter „Ziele“ (OKR_KEY oder eine Verlängerung)? */
+const istOkrKey = (key: QueryKey): boolean => OKR_KEY.every((teil, i) => key[i] === teil)
 
 export type RealtimeEreignis = {
   tabelle: RealtimeTabelle
@@ -138,8 +157,15 @@ export function invalidierungsBuendler(qc: QueryClient, ruheMs = BUENDEL_RUHE_MS
     // gehört meist zum eigenen, schon beantworteten Zug; ein Neuladen jetzt brächte den Stand der Datenbank OHNE den Zug, der
     // noch unterwegs ist – dessen Karte spränge kurz zurück. Der letzte Schreibvorgang lädt das Board ohnehin neu (board.ts).
     const boardSchreibt = qc.isMutating({ mutationKey: BOARD_SCHREIBEN }) > 0
+    // Dieselbe Regel für den Reiter „Ziele“: Zählt oder hakt die Person gerade (optimistisch im Cache), brächte ein Neuladen
+    // den Stand ohne den Klick, der noch unterwegs ist – der Zähler spränge kurz zurück. Der letzte Schreibvorgang lädt
+    // OKR_KEY selbst neu (okr.ts) und holt damit auch nach, was die andere Person inzwischen geändert hat.
+    const okrSchreibt = qc.isMutating({ mutationKey: OKR_SCHREIBEN }) > 0
+    const wartet = (key: QueryKey): boolean => (boardSchreibt && istBoardKey(key)) || (okrSchreibt && istOkrKey(key))
     for (const queryKey of keys)
-      void qc.invalidateQueries(boardSchreibt ? { queryKey, predicate: (q) => !istBoardKey(q.queryKey) } : { queryKey })
+      void qc.invalidateQueries(
+        boardSchreibt || okrSchreibt ? { queryKey, predicate: (q) => !wartet(q.queryKey) } : { queryKey },
+      )
   }
   return {
     add(e: RealtimeEreignis): void {

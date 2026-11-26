@@ -69,6 +69,8 @@ export const RPC_PARAMS = {
   export_backup: [],
   import_templates: ['p_rows'],
   ping: [],
+  okr_zaehlen: ['p_ergebnis', 'p_member', 'p_delta'],
+  okr_monat_uebernehmen: ['p_von', 'p_nach'],
   log_outbound: ['p_lead_id', 'p_channel', 'p_template_id', 'p_kind', 'p_note', 'p_occurred_at'],
   set_reply_label: ['p_activity_id', 'p_label', 'p_note'],
 } as const
@@ -237,6 +239,14 @@ export const rpc = {
   undoImport: (p: { batchId: string }) => aufruf<UndoImportErgebnis>('undo_import', { p_batch_id: p.batchId }),
 
   importSheetKpis: (doc: Json) => aufruf<Json>('import_sheet_kpis', { p_doc: doc }),
+
+  /** Reiter „Ziele“: +1/−1 an einem von Hand gezählten Key Result; Rückgabe = Summe der Person. */
+  okrZaehlen: (p: { ergebnisId: string; memberId?: string | null; delta: number }) =>
+    aufruf<number>('okr_zaehlen', { p_ergebnis: p.ergebnisId, p_member: p.memberId, p_delta: p.delta }),
+
+  /** Reiter „Ziele“: Monatsziele samt Key Results in einen anderen Monat kopieren; Rückgabe = Zahl der Ziele. */
+  okrMonatUebernehmen: (p: { von: string; nach: string }) =>
+    aufruf<number>('okr_monat_uebernehmen', { p_von: p.von, p_nach: p.nach }),
 
   importSheetLeads: (doc: Json, dryRun?: boolean) =>
     aufruf<Json>('import_sheet_leads', { p_doc: doc, p_dry_run: dryRun }),

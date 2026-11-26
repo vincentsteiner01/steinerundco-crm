@@ -13,6 +13,7 @@ const SEIT = '2026-11-25T09:00:00+00:00'
 
 const m = vi.hoisted(() => ({
   karten: [] as unknown[],
+  vorlagen: [] as unknown[],
   laedt: false,
   fehler: false,
   refetch: vi.fn(),
@@ -32,6 +33,7 @@ vi.mock('@/data/board', () => ({
   useKarteVerschieben: () => ({ mutateAsync: m.verschieben }),
   useKarteAnlegen: () => ({ mutateAsync: m.anlegen, isPending: false }),
 }))
+vi.mock('@/data/templates', () => ({ useTemplates: () => ({ data: m.vorlagen }) }))
 vi.mock('@/data/members', () => ({
   // absichtlich alphabetisch wie aus der Datenbank – die Seite zeigt Vincent · Mike
   useMembers: () => ({
@@ -107,6 +109,8 @@ const kopf = (titel: string) => liste(titel).querySelector('header')
 const karteVon = (id: string) => document.querySelector<HTMLElement>(`[data-karte="${id}"]`)!
 
 beforeEach(() => {
+  m.vorlagen = []
+  window.localStorage.clear()
   m.laedt = false
   m.fehler = false
   m.refetch.mockClear()
@@ -616,6 +620,83 @@ describe('Board: Lead hinzufügen', () => {
     })
     expect(karteVon('neu')).toHaveAttribute('data-hervorgehoben')
     expect(m.toast).not.toHaveBeenCalled()
+  })
+
+  // 26.11.2026 (Vincent: „beim Anlegen einer Karte anklicken können, welchen Leitfaden wir benutzt haben“)
+  describe('Leitfaden', () => {
+    const vorlage = (id: string, name: string, extra: object = {}) => ({
+      id,
+      name,
+      channel: 'linkedin',
+      archiviert_at: null,
+      ...extra,
+    })
+    const ZWEI = [
+      vorlage('lf-b', 'Probe-Eröffnung B'),
+      vorlage('lf-a', 'Probe-Eröffnung A'),
+      vorlage('lf-alt', 'Archivierte Eröffnung', { archiviert_at: '2026-11-25T08:00:00+00:00' }),
+      vorlage('lf-mail', 'E-Mail-Vorlage', { channel: 'email' }),
+    ]
+    const wahl = (d: ReturnType<typeof oeffnen>) => d.getByLabelText('Leitfaden') as HTMLSelectElement
+    const namen = (d: ReturnType<typeof oeffnen>) => Array.from(wahl(d).options).map((o) => o.textContent)
+
+    it('ohne Leitfäden gibt es das Feld nicht', () => {
+      zeigen([])
+      expect(oeffnen().queryByLabelText('Leitfaden')).toBeNull()
+    })
+
+    it('bietet die Leitfäden der Leitfäden-Seite an (nach Namen), keiner ist vorgewählt; die Wahl geht mit', async () => {
+      m.vorlagen = ZWEI
+      m.anlegen.mockResolvedValue({ status: 'neu', lead_id: 'x', liste: 'angeschrieben', owner_id: V })
+      zeigen([])
+      const d = oeffnen()
+      expect(namen(d)).toEqual(['Kein Leitfaden', 'Probe-Eröffnung A', 'Probe-Eröffnung B'])
+      expect(wahl(d).value).toBe('')
+      fireEvent.change(wahl(d), { target: { value: 'lf-b' } })
+      ausfuellen(d, 'Petra', 'Probelauf')
+      fireEvent.click(d.getByRole('button', { name: 'Hinzufügen' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(m.anlegen).toHaveBeenCalledWith(expect.objectContaining({ vorname: 'Petra', leitfadenId: 'lf-b' }))
+    })
+
+    it('merkt sich die letzte Wahl: beim nächsten Anlegen ist derselbe Leitfaden vorgewählt', async () => {
+      m.vorlagen = ZWEI
+      m.anlegen.mockResolvedValue({ status: 'neu', lead_id: 'x', liste: 'angeschrieben', owner_id: V })
+      zeigen([])
+      let d = oeffnen()
+      fireEvent.change(wahl(d), { target: { value: 'lf-a' } })
+      ausfuellen(d, 'Petra', 'Probelauf')
+      fireEvent.click(d.getByRole('button', { name: 'Hinzufügen' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      d = oeffnen()
+      expect(wahl(d).value).toBe('lf-a')
+      ausfuellen(d, 'Otto', 'Ohnelink')
+      fireEvent.click(d.getByRole('button', { name: 'Hinzufügen' }))
+      await waitFor(() => expect(m.anlegen).toHaveBeenCalledTimes(2))
+      expect(m.anlegen).toHaveBeenLastCalledWith(expect.objectContaining({ vorname: 'Otto', leitfadenId: 'lf-a' }))
+    })
+
+    it('„Kein Leitfaden“ bewusst gewählt: es geht keiner mit, und gemerkt ist danach auch keiner', async () => {
+      m.vorlagen = ZWEI
+      window.localStorage.setItem('crm:board:leitfaden', 'lf-a')
+      m.anlegen.mockResolvedValue({ status: 'neu', lead_id: 'x', liste: 'angeschrieben', owner_id: V })
+      zeigen([])
+      const d = oeffnen()
+      expect(wahl(d).value).toBe('lf-a')
+      fireEvent.change(wahl(d), { target: { value: '' } })
+      ausfuellen(d, 'Petra', 'Probelauf')
+      fireEvent.click(d.getByRole('button', { name: 'Hinzufügen' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      expect(m.anlegen.mock.calls[0]?.[0].leitfadenId).toBeUndefined()
+      expect(window.localStorage.getItem('crm:board:leitfaden')).toBeNull()
+    })
+
+    it('gibt es nur einen Leitfaden, ist er vorgewählt; ein gemerkter, den es nicht mehr gibt, zählt nicht', () => {
+      m.vorlagen = [ZWEI[0], ZWEI[2]]
+      window.localStorage.setItem('crm:board:leitfaden', 'lf-alt')
+      zeigen([])
+      expect(wahl(oeffnen()).value).toBe('lf-b')
+    })
   })
 
   it('andere Zugehörigkeit wählbar; Enter im Feld schickt ab; unbekannter Vorname bleibt neutral', async () => {

@@ -1,7 +1,7 @@
 // Runde 2 (900 px): Im Icon-Rail trug JEDER Eintrag den Aktiv-Balken – der Tooltip-Trigger (Radix Slot) verkettete die
 // className-Funktion von NavLink als Text. Nur der aktive Eintrag darf die Aktiv-Klassen tragen.
-// Neustart 25.11.2026: E-Mail als eine Ikone für alle E-Mail-Seiten, unten nur Person und „Abmelden“. Seit 26.11.2026 sieben
-// Ikonen – KPIs steht nach E-Mail.
+// Neustart 25.11.2026: E-Mail als eine Ikone für alle E-Mail-Seiten, unten nur Person und „Abmelden“. Seit 26.11.2026 acht
+// Ikonen – KPIs steht nach E-Mail, Ziele (OKR) nach KPIs.
 import { render, screen, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -39,7 +39,7 @@ describe('IconRail', () => {
       within(nav)
         .getAllByRole('link')
         .map((a) => a.getAttribute('aria-label')),
-    ).toEqual(['Leads', 'Leitfäden', 'E-Mail', 'KPIs', 'Team', 'Einstellungen', 'Hilfe'])
+    ).toEqual(['Leads', 'Leitfäden', 'E-Mail', 'KPIs', 'Ziele', 'Team', 'Einstellungen', 'Hilfe'])
     expect(within(nav).getByRole('link', { name: 'Leads' })).toHaveAttribute('aria-current', 'page')
     expect(within(nav).getByRole('link', { name: 'Leitfäden' })).not.toHaveAttribute('aria-current')
     for (const a of screen.getAllByRole('link')) {
@@ -63,6 +63,14 @@ describe('IconRail', () => {
     expect(kpis).toHaveAttribute('href', '/kpis')
     expect(kpis).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: 'E-Mail' })).not.toHaveAttribute('aria-current')
+  })
+
+  it('Ziele ist auf /ziele die aktive Ikone', () => {
+    rendern('/ziele')
+    const ziele = screen.getByRole('link', { name: 'Ziele' })
+    expect(ziele).toHaveAttribute('href', '/ziele')
+    expect(ziele).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: 'KPIs' })).not.toHaveAttribute('aria-current')
   })
 
   it('sonst nichts: keine Suche, kein Feedback – nur „Abmelden“ als Knopf', () => {

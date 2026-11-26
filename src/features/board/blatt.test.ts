@@ -14,6 +14,7 @@ function werte(patch: Partial<BlattWerte> = {}): BlattWerte {
     linkedin_url: '',
     owner_id: 'mitglied-a',
     board_liste: 'angeschrieben',
+    board_leitfaden_id: null,
     notes: '',
     ...patch,
   }
@@ -80,5 +81,16 @@ describe('blattPatch: LinkedIn-Link', () => {
   it('eine Eingabe, die kein Profil-Link ist, zählt weiter als ungespeicherte Änderung', () => {
     const firma = 'https://www.linkedin.com/company/muster-solar-demo'
     expect(blattPatch(werte(), werte({ linkedin_url: firma }))).toEqual({ linkedin_url: firma })
+  })
+})
+
+describe('blattPatch: Leitfaden', () => {
+  it('gewählt, gewechselt und geleert steht im Patch; unverändert nicht', () => {
+    expect(blattPatch(werte(), werte({ board_leitfaden_id: 'lf-a' }))).toEqual({ board_leitfaden_id: 'lf-a' })
+    expect(blattPatch(werte({ board_leitfaden_id: 'lf-a' }), werte({ board_leitfaden_id: 'lf-b' }))).toEqual({
+      board_leitfaden_id: 'lf-b',
+    })
+    expect(blattPatch(werte({ board_leitfaden_id: 'lf-a' }), werte())).toEqual({ board_leitfaden_id: null })
+    expect(blattPatch(werte({ board_leitfaden_id: 'lf-a' }), werte({ board_leitfaden_id: 'lf-a' }))).toEqual({})
   })
 })

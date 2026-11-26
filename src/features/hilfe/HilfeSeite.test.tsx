@@ -1,6 +1,6 @@
-// Hilfe-Seite nach dem Neustart (25.11.2026): Übersicht mit höchstens drei Fragen, acht kurze Themen aus themen.ts (seit
-// 26.11.2026 mit KPIs), Suche (Enter öffnet den ersten Treffer), unbekanntes oder entferntes Thema → /hilfe. Keine Touren, kein
-// Feedback, keine Tastenhinweise.
+// Hilfe-Seite nach dem Neustart (25.11.2026): Übersicht mit höchstens drei Fragen, neun kurze Themen aus themen.ts (seit
+// 26.11.2026 mit KPIs und Ziele), Suche (Enter öffnet den ersten Treffer), unbekanntes oder entferntes Thema → /hilfe. Keine
+// Touren, kein Feedback, keine Tastenhinweise.
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryRouter, RouterProvider } from 'react-router'
@@ -45,7 +45,7 @@ beforeEach(() => {
 })
 
 describe('Hilfe', () => {
-  it('Übersicht: Titel, drei häufige Fragen mit Link zum Thema, Themenliste mit den acht Themen', () => {
+  it('Übersicht: Titel, drei häufige Fragen mit Link zum Thema, Themenliste mit den neun Themen', () => {
     rendern('/hilfe')
     expect(screen.getByRole('heading', { level: 1, name: 'Hilfe' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { level: 2, name: 'So funktioniert das CRM.' })).toBeInTheDocument()
@@ -66,10 +66,11 @@ describe('Hilfe', () => {
       'E-Mail',
       'E-Mail-Kampagnen',
       'KPIs',
+      'Ziele',
       'Team & Einstellungen',
       'Wo ist das alte CRM?',
     ])
-    expect(THEMEN).toHaveLength(8)
+    expect(THEMEN).toHaveLength(9)
     const liste = screen.getByRole('navigation', { name: 'Hilfe-Themen' })
     expect(within(liste).getByRole('link', { name: /Wo ist das alte CRM/ })).toHaveAttribute('href', '/hilfe/archiv')
   })
@@ -131,7 +132,7 @@ describe('Hilfe', () => {
     expect(text().getByRole('link', { name: 'Leitfäden' })).toHaveAttribute('href', '/leitfaeden')
   })
 
-  it('Thema KPIs: Link auf den Reiter, zwei Abschnitte, zwischen Kampagnen und Team & Einstellungen', () => {
+  it('Thema KPIs: Link auf den Reiter, zwei Abschnitte, zwischen Kampagnen und Ziele', () => {
     rendern('/hilfe/kpis')
     expect(screen.getByRole('heading', { level: 2, name: 'KPIs' })).toBeInTheDocument()
     expect(text().getByRole('link', { name: 'KPIs' })).toHaveAttribute('href', '/kpis')
@@ -144,6 +145,27 @@ describe('Hilfe', () => {
     expect(screen.getByText('Zahlen bis 24.11.2026 stammen aus dem alten CRM.')).toBeInTheDocument()
     const weiter = screen.getByRole('navigation', { name: 'Weitere Themen' })
     expect(weiter).toHaveTextContent('E-Mail-Kampagnen')
+    expect(weiter).toHaveTextContent('Ziele')
+    expect(weiter).not.toHaveTextContent('Team & Einstellungen')
+  })
+
+  it('Thema Ziele: Link auf den Reiter, drei Abschnitte, zwischen KPIs und Team & Einstellungen', () => {
+    rendern('/hilfe/ziele')
+    expect(screen.getByRole('heading', { level: 2, name: 'Ziele' })).toBeInTheDocument()
+    expect(text().getByRole('link', { name: 'Ziele' })).toHaveAttribute('href', '/ziele')
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+      'Key Results',
+      'Wie weit ihr seid',
+      'Neuer Monat',
+    ])
+    expect(screen.getByText(/Oben stehen die großen Ziele für Jahr und Quartal/)).toBeInTheDocument()
+    expect(screen.getByText(/Der kleine Strich darauf zeigt, wo ihr heute stehen müsstet/)).toBeInTheDocument()
+    expect(screen.getByText('Die Ampel sagt: Im Plan, Knapp, Hinten oder Geschafft.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Hat ein Monat noch keine Ziele, übernimmt ein Knopf Ziele und Key Results aus dem Vormonat.'),
+    ).toBeInTheDocument()
+    const weiter = screen.getByRole('navigation', { name: 'Weitere Themen' })
+    expect(weiter).toHaveTextContent('KPIs')
     expect(weiter).toHaveTextContent('Team & Einstellungen')
   })
 

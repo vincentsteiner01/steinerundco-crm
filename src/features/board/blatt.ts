@@ -15,12 +15,22 @@ export type BlattWerte = {
   owner_id: string | null
   /** `null` = liegt nicht auf dem Board (alle Leads von vor dem Neustart). */
   board_liste: BoardListe | null
+  /** Der benutzte Leitfaden; `null` = nicht angegeben. */
+  board_leitfaden_id: string | null
   notes: string
 }
 
 type BlattLead = Pick<
   Lead,
-  'first_name' | 'last_name' | 'salutation' | 'company_name' | 'linkedin_url' | 'owner_id' | 'board_liste' | 'notes'
+  | 'first_name'
+  | 'last_name'
+  | 'salutation'
+  | 'company_name'
+  | 'linkedin_url'
+  | 'owner_id'
+  | 'board_liste'
+  | 'board_leitfaden_id'
+  | 'notes'
 >
 
 export function blattWerte(lead: BlattLead): BlattWerte {
@@ -32,6 +42,7 @@ export function blattWerte(lead: BlattLead): BlattWerte {
     linkedin_url: lead.linkedin_url ?? '',
     owner_id: lead.owner_id,
     board_liste: istBoardListe(lead.board_liste) ? lead.board_liste : null,
+    board_leitfaden_id: lead.board_leitfaden_id ?? null,
     notes: lead.notes ?? '',
   }
 }
@@ -67,6 +78,7 @@ export function blattPatch(basis: BlattWerte, w: BlattWerte): KartePatch {
   if (link !== text(basis.linkedin_url)) p.linkedin_url = link ? (linkedinProfilLink(link) ?? link) : null
   if (w.owner_id !== basis.owner_id) p.owner_id = w.owner_id
   if (w.board_liste !== basis.board_liste) p.board_liste = w.board_liste
+  if (w.board_leitfaden_id !== basis.board_leitfaden_id) p.board_leitfaden_id = w.board_leitfaden_id
   if (text(w.notes) !== text(basis.notes)) p.notes = text(w.notes)
   return p
 }

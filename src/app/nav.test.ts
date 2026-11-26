@@ -1,5 +1,6 @@
 // Navigation des einfachen CRM (Neustart 25.11.2026): eine Quelle, drei Darstellungen (Sidebar, Icon-Rail, Tab-Leiste) und die
-// Aktiv-Logik – jede E-Mail-Seite markiert in Rail und Tab-Leiste denselben einen Punkt. 26.11.2026: KPIs ist zurück.
+// Aktiv-Logik – jede E-Mail-Seite markiert in Rail und Tab-Leiste denselben einen Punkt. 26.11.2026: KPIs ist zurück, Ziele
+// (OKR) ist neu – nach KPIs, am Telefon unter „Mehr“.
 import { describe, expect, it } from 'vitest'
 import {
   aktiverEintrag,
@@ -17,8 +18,18 @@ import {
 const label = (k: (typeof NAV_BAUM)[number]) => (k === 'trenner' ? '—' : k.label)
 
 describe('drei Darstellungen', () => {
-  it('Sidebar: Leads · Leitfäden · E-Mail (vier Unterpunkte, aufgeklappt) · KPIs · Trenner · Team · Einstellungen · Hilfe', () => {
-    expect(NAV_BAUM.map(label)).toEqual(['Leads', 'Leitfäden', 'E-Mail', 'KPIs', '—', 'Team', 'Einstellungen', 'Hilfe'])
+  it('Sidebar: Leads · Leitfäden · E-Mail (vier Unterpunkte, aufgeklappt) · KPIs · Ziele · Trenner · Team · Einstellungen · Hilfe', () => {
+    expect(NAV_BAUM.map(label)).toEqual([
+      'Leads',
+      'Leitfäden',
+      'E-Mail',
+      'KPIs',
+      'Ziele',
+      '—',
+      'Team',
+      'Einstellungen',
+      'Hilfe',
+    ])
     const email = NAV_BAUM.find((k) => k !== 'trenner' && istGruppe(k))
     if (!email || email === 'trenner' || !istGruppe(email)) throw new Error('Gruppe E-Mail fehlt')
     expect(email.offenStandard).toBe(true)
@@ -36,31 +47,34 @@ describe('drei Darstellungen', () => {
       '/email/postfaecher',
       '/email',
       '/kpis',
+      '/ziele',
       '/team',
       '/einstellungen',
       '/hilfe',
     ])
   })
 
-  it('Icon-Rail: sieben Ikonen, E-Mail als eine Ikone zur ersten E-Mail-Seite, KPIs vor dem Trenner', () => {
+  it('Icon-Rail: acht Ikonen, E-Mail als eine Ikone zur ersten E-Mail-Seite, KPIs und Ziele vor dem Trenner', () => {
     const punkte = NAV.filter((n) => n !== 'trenner')
     expect(punkte.map((n) => [n.label, n.pfad])).toEqual([
       ['Leads', '/leads'],
       ['Leitfäden', '/leitfaeden'],
       ['E-Mail', '/email/kampagnen'],
       ['KPIs', '/kpis'],
+      ['Ziele', '/ziele'],
       ['Team', '/team'],
       ['Einstellungen', '/einstellungen'],
       ['Hilfe', '/hilfe'],
     ])
     for (const n of punkte) expect(n.icon, n.label).toBeTruthy()
     expect(NAV.filter((n) => n === 'trenner')).toHaveLength(1)
-    expect(NAV.indexOf('trenner')).toBe(4)
+    expect(NAV.indexOf('trenner')).toBe(5)
   })
 
-  it('Tab-Leiste: Leads · Leitfäden · E-Mail · KPIs, unter „Mehr“ Team · Einstellungen · Hilfe – zusammen dieselben sieben Punkte', () => {
+  it('Tab-Leiste: Leads · Leitfäden · E-Mail · KPIs, unter „Mehr“ Ziele · Team · Einstellungen · Hilfe – zusammen dieselben acht Punkte', () => {
     expect(TAB_LEISTE.map((t) => t.label)).toEqual(['Leads', 'Leitfäden', 'E-Mail', 'KPIs'])
-    expect(MEHR_LEISTE.map((t) => t.label)).toEqual(['Team', 'Einstellungen', 'Hilfe'])
+    expect(MEHR_LEISTE.map((t) => t.label)).toEqual(['Ziele', 'Team', 'Einstellungen', 'Hilfe'])
+    for (const t of [...TAB_LEISTE, ...MEHR_LEISTE]) expect(t.icon, t.label).toBeTruthy()
     expect([...TAB_LEISTE, ...MEHR_LEISTE].map((t) => t.pfad)).toEqual(
       NAV.filter((n) => n !== 'trenner').map((n) => n.pfad),
     )
@@ -77,6 +91,8 @@ describe('Aktiv-Logik', () => {
     expect(aktiverEintrag('/einstellungen/profil')?.label).toBe('Einstellungen')
     expect(aktiverEintrag('/hilfe/leads')?.label).toBe('Hilfe')
     expect(aktiverEintrag('/kpis')?.label).toBe('KPIs')
+    expect(aktiverEintrag('/ziele')?.label).toBe('Ziele')
+    expect(aktiverEintrag('/zielex')).toBeNull()
     expect(aktiverEintrag('/leadsx')).toBeNull()
     expect(aktiverEintrag('/anmelden')).toBeNull()
   })
@@ -86,6 +102,7 @@ describe('Aktiv-Logik', () => {
     expect(gruppeVon(aktiverEintrag('/email'))?.gruppe).toBe('email')
     expect(gruppeVon(aktiverEintrag('/leads'))).toBeNull()
     expect(gruppeVon(aktiverEintrag('/kpis'))).toBeNull()
+    expect(gruppeVon(aktiverEintrag('/ziele'))).toBeNull()
     expect(gruppeVon(null)).toBeNull()
   })
 
@@ -94,17 +111,21 @@ describe('Aktiv-Logik', () => {
       expect(aktiverRailPfad(p), p).toBe('/email/kampagnen')
     expect(aktiverRailPfad('/leads')).toBe('/leads')
     expect(aktiverRailPfad('/kpis')).toBe('/kpis')
+    expect(aktiverRailPfad('/ziele')).toBe('/ziele')
     expect(aktiverRailPfad('/einstellungen/sperrliste')).toBe('/einstellungen')
     expect(aktiverRailPfad('/anmelden')).toBeNull()
   })
 
-  it('Tab-Leiste: der E-Mail-Tab ist auf allen /email-Seiten aktiv, „Mehr“ auf Team · Einstellungen · Hilfe', () => {
+  it('Tab-Leiste: der E-Mail-Tab ist auf allen /email-Seiten aktiv, „Mehr“ auf Ziele · Team · Einstellungen · Hilfe', () => {
     for (const p of ['/email', '/email/verfassen', '/email/kampagnen/42', '/email/antworten', '/email/postfaecher'])
       expect(aktiverTab(p)?.label, p).toBe('E-Mail')
     expect(aktiverTab('/leads')?.label).toBe('Leads')
     expect(aktiverTab('/leitfaeden')?.label).toBe('Leitfäden')
     expect(aktiverTab('/kpis')?.label).toBe('KPIs')
     expect(aktiverTab('/kpis', MEHR_LEISTE)).toBeNull()
+    // Ziele ist kein eigener Reiter der Leiste – es steht unter „Mehr“
+    expect(aktiverTab('/ziele')).toBeNull()
+    expect(aktiverTab('/ziele', MEHR_LEISTE)?.label).toBe('Ziele')
     expect(aktiverTab('/team')).toBeNull()
     expect(aktiverTab('/team', MEHR_LEISTE)?.label).toBe('Team')
     expect(aktiverTab('/einstellungen/export', MEHR_LEISTE)?.label).toBe('Einstellungen')

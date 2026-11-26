@@ -1,7 +1,7 @@
 // Jeder Link `[Text](/pfad)` in den Hilfe-Themen zeigt auf eine echte Seite (25.11.2026). Vorher prüfte das niemand: nach dem
 // Neustart standen Verweise auf /heute, /kpis, /feedback und entfernte Einstellungs-Bereiche im Handbuch. Geprüft wird gegen die
 // Routentabelle (ROUTEN): Weiterleitungen alter Adressen und die Seite „nicht gefunden“ zählen nicht als Ziel.
-// 26.11.2026: /kpis ist wieder eine echte Seite und ein gültiges Ziel.
+// 26.11.2026: /kpis ist wieder eine echte Seite und ein gültiges Ziel; /ziele (Reiter „Ziele“, OKR) ist neu.
 import { matchRoutes } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -39,10 +39,12 @@ describe('Links in den Hilfe-Themen', () => {
       '/email',
       '/email/kampagnen',
       '/kpis',
+      '/ziele',
       '/team',
       '/hilfe',
       '/hilfe/leads',
       '/hilfe/kpis',
+      '/hilfe/ziele',
     ])
       expect(mangel(gut), gut).toBeNull()
     for (const b of BEREICHE) expect(mangel(`/einstellungen/${b}`), b).toBeNull()
@@ -55,7 +57,8 @@ describe('Links in den Hilfe-Themen', () => {
       '/leads/abc', // nur noch Weiterleitung aufs Board
       '/leitfaeden/neu',
       '/einstellungen', // Weiterleitung aufs Profil
-      '/einstellungen/ziele',
+      '/einstellungen/ziele', // die alten Zielwerte in den Einstellungen – nicht der Reiter „Ziele“
+      '/ziele/2026-12', // der Reiter hat keine Unterseiten
       '/einstellungen/sequenzen',
       '/einstellungen/verbindungen',
       '/einstellungen/verbindungen?tab=eingang',
@@ -94,6 +97,7 @@ describe('Links in den Hilfe-Themen', () => {
       '/email/antworten',
       '/email/postfaecher',
       '/kpis',
+      '/ziele',
       '/team',
     ])
       expect(ziele, pfad).toContain(pfad)

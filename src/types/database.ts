@@ -1181,6 +1181,7 @@ export type Database = {
       }
       leads: {
         Row: {
+          board_leitfaden_id: string | null
           board_liste: string | null
           board_seit: string | null
           call_basis: Database['crm']['Enums']['call_basis'] | null
@@ -1257,6 +1258,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          board_leitfaden_id?: string | null
           board_liste?: string | null
           board_seit?: string | null
           call_basis?: Database['crm']['Enums']['call_basis'] | null
@@ -1333,6 +1335,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          board_leitfaden_id?: string | null
           board_liste?: string | null
           board_seit?: string | null
           call_basis?: Database['crm']['Enums']['call_basis'] | null
@@ -2253,6 +2256,171 @@ export type Database = {
             referencedColumns: ['id']
           },
         ]
+      }
+      okr_eintraege: {
+        Row: {
+          ergebnis_id: string
+          member_id: string
+          tag: string
+          updated_at: string
+          updated_by: string | null
+          wert: number
+        }
+        Insert: {
+          ergebnis_id: string
+          member_id: string
+          tag: string
+          updated_at?: string
+          updated_by?: string | null
+          wert: number
+        }
+        Update: {
+          ergebnis_id?: string
+          member_id?: string
+          tag?: string
+          updated_at?: string
+          updated_by?: string | null
+          wert?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'okr_eintraege_ergebnis_id_fkey'
+            columns: ['ergebnis_id']
+            isOneToOne: false
+            referencedRelation: 'okr_ergebnisse'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      okr_ergebnisse: {
+        Row: {
+          created_at: string
+          einheit: string | null
+          faktor: number
+          id: string
+          je_person: boolean
+          position: number
+          quelle: string
+          takt: string
+          titel: string
+          updated_at: string
+          ziel_id: string
+          zielwert: number
+        }
+        Insert: {
+          created_at?: string
+          einheit?: string | null
+          faktor?: number
+          id?: string
+          je_person?: boolean
+          position?: number
+          quelle?: string
+          takt?: string
+          titel: string
+          updated_at?: string
+          ziel_id: string
+          zielwert: number
+        }
+        Update: {
+          created_at?: string
+          einheit?: string | null
+          faktor?: number
+          id?: string
+          je_person?: boolean
+          position?: number
+          quelle?: string
+          takt?: string
+          titel?: string
+          updated_at?: string
+          ziel_id?: string
+          zielwert?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'okr_ergebnisse_ziel_id_fkey'
+            columns: ['ziel_id']
+            isOneToOne: false
+            referencedRelation: 'okr_ziele'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      okr_todos: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          ergebnis_id: string
+          erledigt_at: string | null
+          id: string
+          member_id: string | null
+          position: number
+          text: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          ergebnis_id: string
+          erledigt_at?: string | null
+          id?: string
+          member_id?: string | null
+          position?: number
+          text: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          ergebnis_id?: string
+          erledigt_at?: string | null
+          id?: string
+          member_id?: string | null
+          position?: number
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'okr_todos_ergebnis_id_fkey'
+            columns: ['ergebnis_id']
+            isOneToOne: false
+            referencedRelation: 'okr_ergebnisse'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      okr_ziele: {
+        Row: {
+          bis: string
+          created_at: string
+          created_by: string | null
+          ebene: string
+          id: string
+          position: number
+          titel: string
+          updated_at: string
+          von: string
+        }
+        Insert: {
+          bis: string
+          created_at?: string
+          created_by?: string | null
+          ebene: string
+          id?: string
+          position?: number
+          titel: string
+          updated_at?: string
+          von: string
+        }
+        Update: {
+          bis?: string
+          created_at?: string
+          created_by?: string | null
+          ebene?: string
+          id?: string
+          position?: number
+          titel?: string
+          updated_at?: string
+          von?: string
+        }
+        Relationships: []
       }
       payments: {
         Row: {
@@ -3581,6 +3749,7 @@ export type Database = {
       board_karte_anlegen: {
         Args: {
           p_anrede?: Database['crm']['Enums']['salutation']
+          p_leitfaden?: string | null
           p_linkedin_url?: string | null
           p_nachname: string | null
           p_owner?: string | null
@@ -4141,6 +4310,8 @@ export type Database = {
       normalize_linkedin_url: { Args: { p: string }; Returns: string }
       normalize_phone: { Args: { p: string }; Returns: string }
       parse_legacy_note: { Args: { p: string }; Returns: Json }
+      okr_monat_uebernehmen: { Args: { p_nach: string; p_von: string }; Returns: number }
+      okr_zaehlen: { Args: { p_delta?: number; p_ergebnis: string; p_member?: string | null }; Returns: number }
       ping: { Args: never; Returns: string }
       raise_stage: {
         Args: {

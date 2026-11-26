@@ -2,7 +2,7 @@
 // Neustart 25.11.2026: sieben kurze Themen für das einfache CRM (Board, Leitfäden, E-Mail). Geschrieben für Menschen, die keine
 // Software mögen: kurze Sätze, konkrete Schritte, keine Fachwörter, keine Tasten. Die neuen Themen passen auf eine Bildschirmseite
 // (der Test hält sie kurz); „E-Mail“ und „E-Mail-Kampagnen“ sind aus dem alten Handbuch übernommen, nur die Verweise stimmen wieder.
-// 26.11.2026: achtes Thema „KPIs“ – der Reiter ist zurück (verkleinert).
+// 26.11.2026: achtes Thema „KPIs“ – der Reiter ist zurück (verkleinert). Neuntes Thema „Ziele“ – der Reiter für OKR ist neu.
 // Nichts versprechen, was nicht gebaut ist. Auszeichnung: **betont** · [Link](/pfad) · {{geplant}} (markup.ts, Inline.tsx).
 // Jeder Link wird gegen die Routentabelle geprüft (links.test.ts).
 import type { PersonId } from '@/features/auth/personen'
@@ -32,7 +32,7 @@ export const THEMEN: readonly Thema[] = [
     kurz: 'Was das CRM ist – und die ersten drei Handgriffe.',
     stichworte: 'start anfang anfangen einführung überblick',
     bloecke: [
-      { art: 'absatz', text: 'Das CRM hat vier Teile. Mehr brauchst du im Alltag nicht.' },
+      { art: 'absatz', text: 'Das CRM hat fünf Teile. Mehr brauchst du im Alltag nicht.' },
       {
         art: 'liste',
         punkte: [
@@ -40,6 +40,7 @@ export const THEMEN: readonly Thema[] = [
           '**Leitfäden** – deine Texte zum Kopieren.',
           '**E-Mail** – Kampagnen, Antworten, Postfächer und einzelne Mails.',
           '**KPIs** – eure Zahlen.',
+          '**Ziele** – was ihr euch vornehmt und wie weit ihr seid.',
         ],
       },
       { art: 'zwischentitel', text: 'Die ersten drei Handgriffe' },
@@ -119,6 +120,7 @@ export const THEMEN: readonly Thema[] = [
         punkte: [
           'Jeder Leitfaden ist eine Karte. Klick auf „Text kopieren“ und füge den Text dort ein, wo du schreibst.',
           'Die Platzhalter werden mitkopiert. Ersetze sie vor dem Senden durch den echten Namen.',
+          'Bei „Lead hinzufügen“ wählst du aus, welchen Leitfaden du benutzt hast. Im Lead-Blatt lässt sich das ändern.',
           'Zum Ändern klickst du auf die Karte.',
         ],
       },
@@ -278,6 +280,44 @@ export const THEMEN: readonly Thema[] = [
           'Die Zahl gehört der Person, der die Karte gehört.',
           'Zahlen bis 24.11.2026 stammen aus dem alten CRM.',
         ],
+      },
+    ],
+  },
+  {
+    // 26.11.2026: Reiter „Ziele“ (OKR). Ziele mit Key Results – die meisten zählt das CRM selbst, der Rest wird abgehakt.
+    key: 'ziele',
+    titel: 'Ziele',
+    kurz: 'Eure Ziele für Jahr, Quartal und Monat – und wie weit ihr seid.',
+    stichworte:
+      'okr objective zielwert fortschritt balken ampel dms neukunden to-do todo aufgabe abhaken vormonat übernehmen',
+    bloecke: [
+      {
+        art: 'absatz',
+        text: 'Klick auf [Ziele](/ziele). Oben stehen die großen Ziele für Jahr und Quartal. Darunter stehen die Ziele des Monats mit ihren Key Results. Mit den Pfeilen blätterst du den Monat.',
+      },
+      { art: 'zwischentitel', text: 'Key Results' },
+      {
+        art: 'liste',
+        punkte: [
+          'Ein Key Result hat einen Zielwert: für den ganzen Zeitraum, je Woche oder je Tag – fürs Team oder für jede Person.',
+          'Die meisten zählen von selbst. DMs sind Karten in „Angeschrieben“. Vernetzungen kommen aus „Meine Vernetzungen“ im KPI-Reiter. Dazu E-Mails und Neukunden (Karten in „Im Geschäft“).',
+          'Was das CRM nicht kennt, zum Beispiel LinkedIn-Posts, hakst du von Hand ab.',
+          'To-dos hängen am Key Result.',
+        ],
+      },
+      { art: 'zwischentitel', text: 'Wie weit ihr seid' },
+      {
+        art: 'liste',
+        punkte: [
+          'Der Balken zeigt, wie weit ihr seid. Der kleine Strich darauf zeigt, wo ihr heute stehen müsstet.',
+          'Die Ampel sagt: Im Plan, Knapp, Hinten oder Geschafft.',
+          '„Heute“ und „Diese Woche“ rechnet die Seite aus dem Zielwert. Es zählen Werktage ohne Feiertage, bei E-Mails alle Tage.',
+        ],
+      },
+      { art: 'zwischentitel', text: 'Neuer Monat' },
+      {
+        art: 'absatz',
+        text: 'Hat ein Monat noch keine Ziele, übernimmt ein Knopf Ziele und Key Results aus dem Vormonat.',
       },
     ],
   },

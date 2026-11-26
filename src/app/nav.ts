@@ -1,7 +1,9 @@
 // Navigation des einfachen CRM (Neustart 25.11.2026, Vincent und Mike: „viel zu kompliziert“): Leads · Leitfäden · E-Mail ·
-// KPIs · Trenner · Team · Einstellungen · Hilfe. Eine Quelle für alle drei Darstellungen – Sidebar (≥ 1024), Icon-Rail
+// KPIs · Ziele · Trenner · Team · Einstellungen · Hilfe. Eine Quelle für alle drei Darstellungen – Sidebar (≥ 1024), Icon-Rail
 // (768–1023), Tab-Leiste (< 768). Keine Zähler, keine Tastenkürzel.
 // 26.11.2026: KPIs ist zurück (verkleinert) – direkt nach E-Mail, am Telefon als vierter Reiter vor „Mehr“.
+// 26.11.2026: Ziele (OKR) ist neu – direkt nach KPIs, vor dem Trenner. Am Telefon bleibt die Leiste bei fünf Spalten; Ziele
+// steht dort als erster Punkt unter „Mehr“.
 // Leads trägt die Board-Ikone (Spalten), nicht „zwei Personen“ – die sah neben Team (UsersRound) fast gleich aus, und in der
 // Icon-Rail steht kein Name daneben.
 import {
@@ -11,6 +13,7 @@ import {
   Mail,
   Settings,
   SquareKanban,
+  Target,
   UsersRound,
   type LucideIcon,
 } from 'lucide-react'
@@ -51,6 +54,7 @@ export const NAV_BAUM: NavKnoten[] = [
     ],
   },
   { pfad: '/kpis', label: 'KPIs', icon: ChartColumn },
+  { pfad: '/ziele', label: 'Ziele', icon: Target },
   'trenner',
   { pfad: '/team', label: 'Team', icon: UsersRound },
   { pfad: '/einstellungen', label: 'Einstellungen', icon: Settings },
@@ -108,8 +112,9 @@ export const TAB_LEISTE: TabEintrag[] = [
   { pfad: '/kpis', label: 'KPIs', icon: ChartColumn, bereich: '/kpis' },
 ]
 
-/** „Mehr“ in der Tab-Leiste: Team · Einstellungen · Hilfe. */
+/** „Mehr“ in der Tab-Leiste: Ziele · Team · Einstellungen · Hilfe (Ziele zuerst – die Reihenfolge der Navigation). */
 export const MEHR_LEISTE: TabEintrag[] = [
+  { pfad: '/ziele', label: 'Ziele', icon: Target, bereich: '/ziele' },
   { pfad: '/team', label: 'Team', icon: UsersRound, bereich: '/team' },
   { pfad: '/einstellungen', label: 'Einstellungen', icon: Settings, bereich: '/einstellungen' },
   { pfad: '/hilfe', label: 'Hilfe', icon: LifeBuoy, bereich: '/hilfe' },

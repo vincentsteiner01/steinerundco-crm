@@ -1,4 +1,4 @@
--- Integrationstest Board (Migration 28) gegen die echte Datenbank – eine Transaktion, am Ende per Exception zurückgerollt
+-- Integrationstest Board (Migrationen 28 und 33) gegen die echte Datenbank – eine Transaktion, am Ende per Exception zurückgerollt
 -- (es bleibt nichts zurück). Nur erfundene Namen und Adressen.
 -- Aufruf: bash tools/db-query.sh -f supabase/tests/board_test.sql
 -- Ergebnis steht in der Fehlermeldung „TESTERGEBNIS: …“ (oder „FEHLER: …“ bei einer verletzten Annahme).
@@ -6,7 +6,7 @@ do $$
 declare
   v_me uuid := (select id from crm.members where display_name = 'Vincent' limit 1);
   v_mike uuid := (select id from crm.members where display_name = 'Mike' limit 1);
-  r jsonb; l crm.leads; v_id uuid; v_alt uuid; v_seit timestamptz; n int; fehler text;
+  r jsonb; l crm.leads; v_id uuid; v_alt uuid; v_lf uuid; v_seit timestamptz; n int; fehler text;
   out text := '';
 begin
   perform set_config('request.jwt.claims', json_build_object('sub', v_me, 'role', 'authenticated')::text, true);
@@ -131,6 +131,31 @@ begin
   end;
   execute 'reset role';
   out := out || '7 Rechte ok; ';
+
+  -- 8. Leitfaden (Migration 33): beim Anlegen festgehalten; ein unbekannter wird abgelehnt; beim erneuten Anlegen ohne Angabe
+  --    bleibt der gesetzte stehen; im Lead-Blatt lässt er sich wieder leeren
+  perform set_config('request.jwt.claims', json_build_object('sub', v_me, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  select id into v_lf from crm.templates where channel <> 'email' order by created_at desc limit 1;
+  if v_lf is null then raise exception 'FEHLER: kein Leitfaden zum Testen'; end if;
+  r := crm.board_karte_anlegen('Lena', 'Leitfaden', 'https://www.linkedin.com/in/lena-leitfaden-board-test', p_leitfaden => v_lf);
+  select * into l from crm.leads where id = (r ->> 'lead_id')::uuid;
+  if r ->> 'status' <> 'neu' or l.board_leitfaden_id is distinct from v_lf then raise exception 'FEHLER: Leitfaden nicht gespeichert %', row_to_json(l); end if;
+  begin
+    perform crm.board_karte_anlegen('Lars', 'Leitfaden', null, p_leitfaden => gen_random_uuid());
+    raise exception 'FEHLER: unbekannter Leitfaden angenommen';
+  exception when raise_exception then
+    get stacked diagnostics fehler = message_text;
+    if fehler not like 'Diesen Leitfaden gibt es nicht mehr%' then raise exception 'FEHLER: %', fehler; end if;
+  end;
+  update crm.leads set board_liste = null where id = l.id;
+  r := crm.board_karte_anlegen('Lena', 'Leitfaden', 'linkedin.com/in/lena-leitfaden-board-test');
+  if r ->> 'status' <> 'uebernommen' or (select board_leitfaden_id from crm.leads where id = l.id) is distinct from v_lf then
+    raise exception 'FEHLER: Leitfaden beim erneuten Anlegen verloren'; end if;
+  update crm.leads set board_leitfaden_id = null where id = l.id;
+  if (select board_leitfaden_id from crm.leads where id = l.id) is not null then raise exception 'FEHLER: Leitfaden nicht geleert'; end if;
+  execute 'reset role';
+  out := out || '8 Leitfaden ok; ';
 
   raise exception 'TESTERGEBNIS: %', out;
 end

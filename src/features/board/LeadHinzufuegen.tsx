@@ -2,18 +2,22 @@
 // entscheidet (crm.board_karte_anlegen): neu · übernommen (Person war schon gespeichert) · schon da. Ihre deutschen Fehlertexte
 // stehen direkt am Formular. Die Anrede wird aus dem Vornamen geraten und lässt sich im Lead-Blatt korrigieren.
 // Der Link wird schon hier geprüft und auf den Profil-Teil gekürzt (lib/url linkedinProfilLink).
-import { useId, useState, type KeyboardEvent } from 'react'
+// 26.11.2026: dazu der benutzte Leitfaden (freiwillig; der zuletzt gewählte ist vorgewählt – LeitfadenWahl).
+import { useId, useMemo, useState, type KeyboardEvent } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Dialog } from '@/components/ui/Dialog'
 import { Feld } from '@/components/ui/Feld'
 import { Input } from '@/components/ui/Input'
 import { useKarteAnlegen, type KarteAngelegt } from '@/data/board'
 import { fehlerMeldung } from '@/data/errors'
+import { useTemplates } from '@/data/templates'
 import { anzeigeName } from '@/lib/mitglied'
 import { linkedinProfilLink } from '@/lib/url'
 import { anredeAusVorname } from '@/lib/vornamen'
 import type { Member } from '@/types/domain'
 import { KEIN_PROFIL_LINK } from './blatt'
+import { letzterLeitfaden, merkeLeitfaden, vorgewaehlterLeitfaden, waehlbareLeitfaeden } from './leitfaden'
+import { LeitfadenWahl } from './LeitfadenWahl'
 import { Wahl } from './Wahl'
 
 const NAME_FEHLT = 'Bitte einen Namen eingeben'
@@ -37,6 +41,16 @@ export function LeadHinzufuegen({ offen, onOpenChange, members, meId, onAngelegt
   const [owner, setOwner] = useState<string | null>(null)
   const [fehler, setFehler] = useState<string | null>(null)
   const ownerWert = owner ?? meId
+  // undefined = nicht angefasst → die Vorauswahl gilt (zuletzt benutzt, sonst der einzige); null = bewusst „Kein Leitfaden“
+  const [leitfaden, setLeitfaden] = useState<string | null | undefined>(undefined)
+  const { data: vorlagen } = useTemplates()
+  const leitfaeden = useMemo(() => waehlbareLeitfaeden(vorlagen), [vorlagen])
+  // `offen` gehört dazu: beim nächsten Öffnen zählt, was beim letzten Anlegen gemerkt wurde
+  const vorgewaehlt = useMemo(
+    () => (offen ? vorgewaehlterLeitfaden(leitfaeden, letzterLeitfaden()) : null),
+    [leitfaeden, offen],
+  )
+  const leitfadenWert = leitfaden === undefined ? vorgewaehlt : leitfaden
 
   const schliessen = (o: boolean) => {
     onOpenChange(o)
@@ -45,6 +59,7 @@ export function LeadHinzufuegen({ offen, onOpenChange, members, meId, onAngelegt
     setNachname('')
     setLink('')
     setOwner(null)
+    setLeitfaden(undefined)
     setFehler(null)
   }
 
@@ -63,7 +78,9 @@ export function LeadHinzufuegen({ offen, onOpenChange, members, meId, onAngelegt
         linkedinUrl: profil,
         ownerId: ownerWert,
         anrede: anredeAusVorname(vorname),
+        leitfadenId: leitfadenWert ?? undefined,
       })
+      merkeLeitfaden(leitfadenWert)
       onAngelegt(ergebnis, [vorname.trim(), nachname.trim()].filter(Boolean).join(' '))
       schliessen(false)
     } catch (e) {
@@ -151,6 +168,16 @@ export function LeadHinzufuegen({ offen, onOpenChange, members, meId, onAngelegt
                 }))}
             />
           </Feld>
+          {leitfaeden.length > 0 ? (
+            <Feld label="Leitfaden" htmlFor={`${id}-leitfaden`}>
+              <LeitfadenWahl
+                id={`${id}-leitfaden`}
+                leitfaeden={leitfaeden}
+                wert={leitfadenWert}
+                onChange={setLeitfaden}
+              />
+            </Feld>
+          ) : null}
           {fehler !== null && !amNamen && !amLink ? (
             <p className="text-small text-danger" role="alert">
               {fehler}

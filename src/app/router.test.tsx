@@ -1,6 +1,6 @@
 // Routen nach dem Neustart (25.11.2026): Start und alte Adressen (Lesezeichen, installierte App, Chrome-Erweiterung) führen aufs
 // Board; `/leads/:id` öffnet das Lead-Blatt über `?lead=`; `/leitfaeden/:id` gibt es nicht mehr. 26.11.2026: `/kpis` ist wieder
-// eine echte Seite.
+// eine echte Seite, `/ziele` ist neu (Reiter „Ziele“, OKR).
 import { render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, matchRoutes, Outlet, RouterProvider } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
@@ -12,6 +12,7 @@ vi.mock('./shell/AppShell', () => ({ AppShell: () => <Outlet /> }))
 vi.mock('@/features/board/BoardSeite', () => ({ Component: () => <h1>BOARD</h1> }))
 vi.mock('@/features/leitfaeden/Leitfaeden', () => ({ Component: () => <h1>LEITFAEDEN</h1> }))
 vi.mock('@/features/kpis/KpisSeite', () => ({ Component: () => <h1>KPIS</h1> }))
+vi.mock('@/features/okr/OkrSeite', () => ({ Component: () => <h1>ZIELE</h1> }))
 
 import { PFADE, ROUTEN } from './router'
 
@@ -58,6 +59,18 @@ describe('Routen', () => {
     const { unmount } = render(<RouterProvider router={router} />)
     expect(await screen.findByRole('heading', { name: 'KPIS' })).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/kpis')
+    unmount()
+  })
+
+  it('/ziele ist eine echte Seite (Reiter „Ziele“), keine Weiterleitung', async () => {
+    expect(PFADE.ziele).toBe('/ziele')
+    const route = matchRoutes(ROUTEN, PFADE.ziele)?.at(-1)?.route
+    expect(route?.path).toBe('ziele')
+    expect(route?.lazy).toBeTypeOf('function')
+    const router = createMemoryRouter(ROUTEN, { initialEntries: ['/ziele'] })
+    const { unmount } = render(<RouterProvider router={router} />)
+    expect(await screen.findByRole('heading', { name: 'ZIELE' })).toBeInTheDocument()
+    expect(router.state.location.pathname).toBe('/ziele')
     unmount()
   })
 

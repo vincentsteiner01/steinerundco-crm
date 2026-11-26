@@ -1,5 +1,6 @@
 // Reine Logik der Hilfe nach dem Neustart (25.11.2026): Themenliste, Suche, Wortlaut-Regeln, Auszeichnung.
-// 26.11.2026: Thema „KPIs“ ist zurück (neuer Schlüssel `kpis`; das alte `kpis-team` bleibt entfernt).
+// 26.11.2026: Thema „KPIs“ ist zurück (neuer Schlüssel `kpis`; das alte `kpis-team` bleibt entfernt). Thema „Ziele“ ist neu
+// (Reiter für OKR, Schlüssel `ziele`).
 // Die Links der Themen prüft links.test.ts gegen die Routentabelle.
 import { describe, expect, it } from 'vitest'
 import { klartext, linkZiele } from './markup'
@@ -15,12 +16,12 @@ import {
 } from './themen'
 
 /** Neu geschriebene Themen – „E-Mail“ und „E-Mail-Kampagnen“ sind übernommen und dürfen länger sein. */
-const NEU = ['erste-schritte', 'leads', 'leitfaeden', 'kpis', 'team-einstellungen', 'archiv']
+const NEU = ['erste-schritte', 'leads', 'leitfaeden', 'kpis', 'ziele', 'team-einstellungen', 'archiv']
 
 const woerter = (t: Thema) => klartext(themaRohtexte(t).join(' ')).split(/\s+/).filter(Boolean).length
 
 describe('Themen', () => {
-  it('genau die acht Themen des einfachen CRM, in dieser Reihenfolge', () => {
+  it('genau die neun Themen des einfachen CRM, in dieser Reihenfolge', () => {
     expect(THEMEN.map((t) => t.key)).toEqual([
       'erste-schritte',
       'leads',
@@ -28,9 +29,11 @@ describe('Themen', () => {
       'email',
       'kampagnen',
       'kpis',
+      'ziele',
       'team-einstellungen',
       'archiv',
     ])
+    expect(THEMEN).toHaveLength(9)
     for (const t of THEMEN) {
       expect(t.titel.trim(), t.key).not.toBe('')
       expect(t.kurz.trim(), t.key).not.toBe('')
@@ -129,6 +132,43 @@ describe('Themen', () => {
     expect(text).toContain('zahlen bis 24.11.2026 stammen aus dem alten crm')
   })
 
+  it('Ziele: große Ziele und Monat, Key Results mit Zielwert, was von selbst zählt, Balken und Ampel, neuer Monat', () => {
+    const thema = themaVon('ziele')!
+    expect(thema.titel).toBe('Ziele')
+    expect(THEMEN.indexOf(thema)).toBe(THEMEN.indexOf(themaVon('kpis')!) + 1)
+    expect(themaRohtexte(thema).flatMap(linkZiele)).toEqual(['/ziele'])
+    const text = themaText(thema)
+    // Aufbau der Seite
+    expect(text).toContain('oben stehen die großen ziele für jahr und quartal')
+    expect(text).toContain('darunter stehen die ziele des monats mit ihren key results')
+    expect(text).toContain('mit den pfeilen blätterst du den monat')
+    // Zielwert: drei Takte, Team oder Person
+    expect(text).toContain(
+      'ein key result hat einen zielwert: für den ganzen zeitraum, je woche oder je tag – fürs team oder für jede person',
+    )
+    // von selbst gezählt – und der Rest von Hand
+    expect(text).toContain('die meisten zählen von selbst')
+    expect(text).toContain('dms sind karten in „angeschrieben“')
+    expect(text).toContain('vernetzungen kommen aus „meine vernetzungen“ im kpi-reiter')
+    expect(text).toContain('dazu e-mails und neukunden (karten in „im geschäft“)')
+    expect(text).toContain('zum beispiel linkedin-posts, hakst du von hand ab')
+    expect(text).toContain('to-dos hängen am key result')
+    // Balken, Strich, Ampel – die vier Stände, die im Alltag vorkommen
+    expect(text).toContain('der balken zeigt, wie weit ihr seid')
+    expect(text).toContain('der kleine strich darauf zeigt, wo ihr heute stehen müsstet')
+    expect(text).toContain('im plan, knapp, hinten oder geschafft')
+    // Woche und Tag rechnet die Seite
+    expect(text).toContain('„heute“ und „diese woche“ rechnet die seite aus dem zielwert')
+    expect(text).toContain('es zählen werktage ohne feiertage, bei e-mails alle tage')
+    expect(text).toContain('übernimmt ein knopf ziele und key results aus dem vormonat')
+  })
+
+  it('Erste Schritte zählt die fünf Teile auf – mit Ziele', () => {
+    const text = themaText(themaVon('erste-schritte')!)
+    expect(text).toContain('das crm hat fünf teile')
+    for (const teil of ['leads –', 'leitfäden –', 'e-mail –', 'kpis –', 'ziele –']) expect(text, teil).toContain(teil)
+  })
+
   it('Team & Einstellungen nennt die fünf Bereiche, Archiv den gesicherten Stand', () => {
     const team = themaText(themaVon('team-einstellungen')!)
     for (const b of ['profil', 'passcode', 'sperrliste', 'feiertage', 'export & backup']) expect(team).toContain(b)
@@ -176,6 +216,16 @@ describe('Themen', () => {
     expect(erstes('heute eintragen')).toBe('kpis')
     expect(erstes('nachtragen')).toBe('kpis')
     expect(erstes('kennzahlen')).toBe('kpis')
+    // „Ziele“ steht auch in „Erste Schritte“ – der Titel holt das Thema nach oben
+    expect(sucheThemen('ziele').map((t) => t.key)).toEqual(['ziele', 'erste-schritte'])
+    expect(sucheThemen('okr').map((t) => t.key)).toEqual(['ziele'])
+    expect(sucheThemen('key results').map((t) => t.key)).toEqual(['ziele'])
+    expect(erstes('zielwert')).toBe('ziele')
+    // die „Ampel“ der DNS-Prüfung steht bei den Kampagnen – das Stichwort holt die Ziele nach oben
+    expect(sucheThemen('ampel').map((t) => t.key)).toEqual(['ziele', 'kampagnen'])
+    expect(erstes('to-dos')).toBe('ziele')
+    expect(erstes('vormonat übernehmen')).toBe('ziele')
+    expect(erstes('linkedin-posts')).toBe('ziele')
     expect(erstes('altes crm')).toBe('archiv')
     expect(erstes('pipeline')).toBe('archiv')
     expect(erstes('erste schritte')).toBe('erste-schritte')

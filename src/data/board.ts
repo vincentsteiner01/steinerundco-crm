@@ -167,6 +167,8 @@ export type KarteAnlegen = {
   /** Zugehörigkeit; ohne Angabe die angemeldete Person. */
   ownerId?: string | null
   anrede?: Salutation
+  /** Der benutzte Leitfaden (crm.templates.id); ohne Angabe bleibt das Feld leer bzw. wie es war. */
+  leitfadenId?: string | null
 }
 
 /** Antwort von `crm.board_karte_anlegen`. `uebernommen` = Person war schon gespeichert und liegt jetzt auf dem Board. */
@@ -193,6 +195,7 @@ export function useKarteAnlegen() {
           p_linkedin_url: k.linkedinUrl?.trim() || null,
           p_owner: k.ownerId ?? undefined,
           p_anrede: k.anrede,
+          p_leitfaden: k.leitfadenId ?? undefined,
         }),
       ) as unknown as KarteAngelegt,
     // Karte sofort oben einsortieren; das Neuladen danach bringt die echte Zeile (Firma und Notiz eines übernommenen Leads)
@@ -230,6 +233,7 @@ export type KartePatch = Pick<
   | 'notes'
   | 'board_liste'
   | 'board_seit'
+  | 'board_leitfaden_id'
 >
 
 /** Lead-Blatt speichern: einfaches Update ohne updated_at-Sperre (der letzte Stand gewinnt). */

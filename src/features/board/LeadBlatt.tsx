@@ -19,6 +19,7 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { Textarea } from '@/components/ui/Textarea'
 import { useLead, useMembers } from '@/data'
 import { useKarteSpeichern } from '@/data/board'
+import { useTemplates } from '@/data/templates'
 import { verfassenUrl } from '@/features/email/links'
 import { ErlaubnisBadge, ErlaubnisErfassen } from '@/features/email/public'
 import { anzeigeName } from '@/lib/mitglied'
@@ -27,6 +28,8 @@ import { blattPatch, blattWerte, pruefeBlatt, type BlattWerte } from './blatt'
 import { Wahl } from './Wahl'
 import { useKartenAktionen } from './kartenAktionen'
 import { kartenKnoten, nameAufKarte } from './kartenKnoten'
+import { waehlbareLeitfaeden } from './leitfaden'
+import { LeitfadenWahl } from './LeitfadenWahl'
 import { BOARD_LISTEN } from './listen'
 import { kartenName, sortiereMitglieder } from './logik'
 import { blattImVerlauf } from './verlauf'
@@ -173,6 +176,9 @@ function Formular({ lead, onGeaendert, mitRueckfrage, onClose }: FormularProps) 
   // Stand beim Öffnen: Vergleichsbasis für den Patch. Der E-Mail-Bereich liest dagegen immer den aktuellen Lead.
   const [basis] = useState<BlattWerte>(() => blattWerte(lead))
   const [w, setW] = useState<BlattWerte>(basis)
+  // der gesetzte Leitfaden bleibt wählbar, auch wenn er inzwischen archiviert ist
+  const { data: vorlagen } = useTemplates()
+  const leitfaeden = waehlbareLeitfaeden(vorlagen, basis.board_leitfaden_id)
   const [versucht, setVersucht] = useState(false)
   const setze = <K extends keyof BlattWerte>(feld: K, wert: BlattWerte[K]) => setW((alt) => ({ ...alt, [feld]: wert }))
   const fehler = versucht ? pruefeBlatt(basis, w) : {}
@@ -304,6 +310,16 @@ function Formular({ lead, onGeaendert, mitRueckfrage, onClose }: FormularProps) 
             }))}
           />
         </Feld>
+        {leitfaeden.length > 0 ? (
+          <Feld label="Leitfaden" htmlFor={`${id}-leitfaden`}>
+            <LeitfadenWahl
+              id={`${id}-leitfaden`}
+              leitfaeden={leitfaeden}
+              wert={w.board_leitfaden_id}
+              onChange={(k) => setze('board_leitfaden_id', k)}
+            />
+          </Feld>
+        ) : null}
         <Feld label="Liste">
           <fieldset disabled={listeGesperrt} className="min-w-0 disabled:opacity-50">
             <Wahl

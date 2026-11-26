@@ -14,6 +14,8 @@ const SEIT = '2026-11-25T09:00:00+00:00'
 
 const m = vi.hoisted(() => ({
   lead: null as unknown,
+  /** Leitfäden für die Auswahl „Leitfaden“ (useTemplates). */
+  vorlagen: [] as unknown[],
   fehler: false,
   /** Fehler der Datenbank beim Laden (`error` von useLead), z. B. `{ code: 'PGRST116' }`. */
   fehlerCode: null as string | null,
@@ -54,6 +56,7 @@ vi.mock('@/data', async () => {
     }),
   }
 })
+vi.mock('@/data/templates', () => ({ useTemplates: () => ({ data: m.vorlagen }) }))
 vi.mock('@/data/board', () => ({
   useKarteSpeichern: () => ({ mutate: m.speichern, isPending: false }),
   useKarteVerschieben: () => ({ mutateAsync: m.verschieben }),
@@ -165,6 +168,7 @@ const gewaehlt = (gruppe: HTMLElement) =>
     .map((b) => b.textContent)
 
 beforeEach(() => {
+  m.vorlagen = []
   m.fehler = false
   m.fehlerCode = null
   m.frisch = true
@@ -198,6 +202,53 @@ describe('Lead-Blatt', () => {
         .map((b) => b.textContent),
     ).toEqual(['Angeschrieben', 'Gespräch vereinbart', 'Im Geschäft', 'Verloren'])
     expect(gewaehlt(blatt.getByRole('group', { name: 'Liste' }))).toEqual(['Angeschrieben'])
+  })
+
+  // 26.11.2026: der benutzte Leitfaden lässt sich im Blatt nachtragen und ändern
+  describe('Leitfaden', () => {
+    const vorlage = (id: string, name: string, extra: object = {}) => ({
+      id,
+      name,
+      channel: 'linkedin',
+      archiviert_at: null,
+      ...extra,
+    })
+    const VORLAGEN = [
+      vorlage('lf-b', 'Probe-Eröffnung B'),
+      vorlage('lf-a', 'Probe-Eröffnung A'),
+      vorlage('lf-alt', 'Archivierte Eröffnung', { archiviert_at: '2026-11-25T08:00:00+00:00' }),
+    ]
+    const wahl = (blatt: ReturnType<typeof zeigen>['blatt']) => blatt.getByLabelText('Leitfaden') as HTMLSelectElement
+
+    it('ohne Leitfäden gibt es das Feld nicht', () => {
+      expect(zeigen(lead()).blatt.queryByLabelText('Leitfaden')).toBeNull()
+    })
+
+    it('zeigt den Leitfaden der Karte; ändern speichert nur dieses Feld', () => {
+      m.vorlagen = VORLAGEN
+      const l = lead({ board_leitfaden_id: 'lf-a' })
+      const { blatt } = zeigen(l)
+      expect(wahl(blatt).value).toBe('lf-a')
+      expect(Array.from(wahl(blatt).options).map((o) => o.textContent)).toEqual([
+        'Kein Leitfaden',
+        'Probe-Eröffnung A',
+        'Probe-Eröffnung B',
+      ])
+      fireEvent.change(wahl(blatt), { target: { value: 'lf-b' } })
+      fireEvent.click(blatt.getByRole('button', { name: 'Speichern' }))
+      expect(m.speichern.mock.calls[0]![0]).toEqual({ id: l.id, patch: { board_leitfaden_id: 'lf-b' } })
+    })
+
+    it('ein inzwischen archivierter Leitfaden bleibt stehen und wählbar; „Kein Leitfaden“ leert das Feld', () => {
+      m.vorlagen = VORLAGEN
+      const l = lead({ board_leitfaden_id: 'lf-alt' })
+      const { blatt } = zeigen(l)
+      expect(wahl(blatt).value).toBe('lf-alt')
+      expect(within(wahl(blatt)).getByRole('option', { name: 'Archivierte Eröffnung' })).toBeInTheDocument()
+      fireEvent.change(wahl(blatt), { target: { value: '' } })
+      fireEvent.click(blatt.getByRole('button', { name: 'Speichern' }))
+      expect(m.speichern.mock.calls[0]![0]).toEqual({ id: l.id, patch: { board_leitfaden_id: null } })
+    })
   })
 
   it('Speichern schickt nur die geänderten Felder, meldet „Gespeichert.“ und schließt', () => {

@@ -47,6 +47,8 @@ const EINGEFROREN: Record<RpcName, readonly string[]> = {
   export_backup: [],
   import_templates: ['p_rows'],
   ping: [],
+  okr_zaehlen: ['p_ergebnis', 'p_member', 'p_delta'],
+  okr_monat_uebernehmen: ['p_von', 'p_nach'],
   log_outbound: ['p_lead_id', 'p_channel', 'p_template_id', 'p_kind', 'p_note', 'p_occurred_at'],
   set_reply_label: ['p_activity_id', 'p_label', 'p_note'],
 }
@@ -98,6 +100,8 @@ const VOLL: Record<RpcName, () => Promise<unknown>> = {
   export_backup: () => rpc.exportBackup(),
   import_templates: () => rpc.importTemplates({ rows: [] }),
   ping: () => rpc.ping(),
+  okr_zaehlen: () => rpc.okrZaehlen({ ergebnisId: 'kr-1', memberId: 'm-1', delta: 1 }),
+  okr_monat_uebernehmen: () => rpc.okrMonatUebernehmen({ von: '2026-12-01', nach: '2027-01-01' }),
   log_outbound: () =>
     rpc.logOutbound({ leadId: ID, channel: 'linkedin', templateId: ID, kind: 'pitch', note: 'n', occurredAt: T }),
   set_reply_label: () => rpc.setReplyLabel({ activityId: 7, label: 'interessiert', note: 'n' }),

@@ -1,6 +1,7 @@
 // BAUPLAN § 3.1.6: Invalidierungs-Tabelle (Publikation, seit Migration 13 mit Umsatz) + Kanal crm:sync + Status → uiStore.
 // Neustart 25.11.2026: die Realtime-Toasts (Übergabe, Termin) sind entfallen – geprüft wird, dass keiner mehr erscheint.
 // 26.11.2026: Änderungen an `leads` laden auch die KPIs neu (Board-Züge ändern die Zahlen des KPI-Reiters).
+// 26.11.2026: Reiter „Ziele“ (OKR) – vier Tabellen mehr; sie laden OKR_KEY neu, außer der Reiter schreibt gerade selbst.
 import { QueryClient } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -14,6 +15,7 @@ vi.mock('@/components/toast', () => ({
 
 import * as toasts from '@/components/toast'
 import { BOARD_KEY, BOARD_SCHREIBEN } from './boardKeys'
+import { OKR_KEY, OKR_SCHREIBEN } from './okr'
 import { qk } from './queryKeys'
 import {
   invalidiere,
@@ -62,6 +64,10 @@ describe('invalidierungsKeys – Tabelle § 3.1.6 wörtlich', () => {
     settings: [qk.settings],
     contracts: [qk.umsatz],
     payments: [qk.umsatz],
+    okr_ziele: [OKR_KEY],
+    okr_ergebnisse: [OKR_KEY],
+    okr_eintraege: [OKR_KEY],
+    okr_todos: [OKR_KEY],
   }
 
   it('deckt genau die Tabellen der Publikation ab', () => {
@@ -73,6 +79,14 @@ describe('invalidierungsKeys – Tabelle § 3.1.6 wörtlich', () => {
       expect(invalidierungsKeys(t, { id: L, lead_id: L })).toEqual(faelle[t])
     })
   }
+
+  it('Reiter „Ziele“: die vier okr_-Tabellen stehen in der Liste und laden genau OKR_KEY neu – auch ohne Zeile', () => {
+    const okr = ['okr_ziele', 'okr_ergebnisse', 'okr_eintraege', 'okr_todos'] as const
+    expect(REALTIME_TABELLEN.filter((t) => t.startsWith('okr_'))).toEqual(okr)
+    expect(REALTIME_TABELLEN).toHaveLength(17)
+    expect(OKR_KEY).toEqual(['okr'])
+    for (const t of okr) expect(invalidierungsKeys(t, {}), t).toEqual([OKR_KEY])
+  })
 
   it('ohne lead_id (DELETE mit leerem old) fällt auf Präfixe zurück', () => {
     expect(invalidierungsKeys('tasks', {})).toEqual([['tasks'], qk.queue.all, qk.nav, qk.leads.telefon])
@@ -184,6 +198,109 @@ describe('invalidierungsBuendler', () => {
     expect(qc.getQueryState(kpiZeilen)?.isInvalidated).toBe(true)
     expect(invalidierungsKeys('emails', {})).toContainEqual(qk.kpis.all)
     b.stop()
+  })
+
+  // 26.11.2026: Reiter „Ziele“. Was die andere Person zählt, abhakt oder ändert, erscheint bei mir von selbst.
+  it('jede Änderung an einer der vier okr_-Tabellen lädt die Ziele neu – sonst nichts', () => {
+    vi.useFakeTimers()
+    const veraltet = (qc: QueryClient, key: readonly unknown[]) => qc.getQueryState(key)?.isInvalidated
+    const ereignisse = [
+      { tabelle: 'okr_ziele', eventType: 'UPDATE', neu: { id: 'z1', titel: 'Sales' }, alt: {} },
+      { tabelle: 'okr_ergebnisse', eventType: 'INSERT', neu: { id: 'e1', ziel_id: 'z1' }, alt: {} },
+      {
+        tabelle: 'okr_eintraege',
+        eventType: 'UPDATE',
+        neu: { ergebnis_id: 'e1', member_id: ANDERE, wert: 2 },
+        alt: {},
+      },
+      { tabelle: 'okr_todos', eventType: 'DELETE', neu: {}, alt: { id: 't1', ergebnis_id: 'e1' } },
+    ] as const
+    for (const e of ereignisse) {
+      const qc = new QueryClient()
+      const kpiZeilen = [...qk.kpis.all, 'tage', 'team', '2026-11-01', '2026-11-30']
+      qc.setQueryData(OKR_KEY, { ziele: [], ergebnisse: [], eintraege: [], todos: [] })
+      qc.setQueryData(kpiZeilen, [])
+      qc.setQueryData(BOARD_KEY, [])
+      const b = invalidierungsBuendler(qc, 400, 2000)
+      b.add(e)
+      expect(veraltet(qc, OKR_KEY), e.tabelle).toBe(false) // gebündelt: erst nach der Ruhezeit
+      vi.advanceTimersByTime(400)
+      expect(veraltet(qc, OKR_KEY), e.tabelle).toBe(true)
+      expect(veraltet(qc, kpiZeilen), e.tabelle).toBe(false)
+      expect(veraltet(qc, BOARD_KEY), e.tabelle).toBe(false)
+      b.stop()
+    }
+  })
+
+  // Wie beim Board: Das Ereignis zum ersten Klick auf +1 lüde die Ziele neu, während der zweite Klick noch unterwegs ist –
+  // der Zähler spränge kurz zurück. Solange der Reiter schreibt, wartet Realtime; der letzte Schreibvorgang lädt selbst neu.
+  it('schreibt der Reiter „Ziele“ gerade, bleiben die Ziele außen vor – alles andere lädt neu; danach wieder mit Zielen', () => {
+    vi.useFakeTimers()
+    const qc = new QueryClient()
+    const kpiZeilen = [...qk.kpis.all, 'tage', 'team', '2026-11-01', '2026-11-30']
+    qc.setQueryData(OKR_KEY, { ziele: [], ergebnisse: [], eintraege: [], todos: [] })
+    qc.setQueryData(kpiZeilen, [])
+    qc.setQueryData(BOARD_KEY, [])
+    const veraltet = (key: readonly unknown[]) => qc.getQueryState(key)?.isInvalidated
+    const b = invalidierungsBuendler(qc, 400, 2000)
+    const zaehlen = qc.getMutationCache().build(qc, {
+      mutationKey: OKR_SCHREIBEN,
+      networkMode: 'always',
+      mutationFn: () => new Promise<void>(() => {}),
+    })
+    void zaehlen.execute(undefined)
+    b.add({
+      tabelle: 'okr_eintraege',
+      eventType: 'INSERT',
+      neu: { ergebnis_id: 'e1', member_id: ME, wert: 1 },
+      alt: {},
+    })
+    b.add({ tabelle: 'okr_todos', eventType: 'UPDATE', neu: { id: 't1', ergebnis_id: 'e1' }, alt: {} })
+    // ein Board-Zug der anderen Person in derselben Welle: Board und KPIs laden wie immer
+    b.add({ tabelle: 'leads', eventType: 'UPDATE', neu: { id: L, board_liste: 'gespraech' }, alt: {} })
+    vi.advanceTimersByTime(400)
+    expect(veraltet(OKR_KEY)).toBe(false)
+    expect(veraltet(kpiZeilen)).toBe(true)
+    expect(veraltet(BOARD_KEY)).toBe(true)
+
+    // der Schreibvorgang ist durch: das nächste Ereignis lädt die Ziele wieder neu
+    qc.getMutationCache().clear()
+    b.add({
+      tabelle: 'okr_eintraege',
+      eventType: 'UPDATE',
+      neu: { ergebnis_id: 'e1', member_id: ANDERE, wert: 3 },
+      alt: {},
+    })
+    vi.advanceTimersByTime(400)
+    expect(veraltet(OKR_KEY)).toBe(true)
+    b.stop()
+  })
+
+  it('Board und Ziele warten getrennt: ein Board-Zug hält die Ziele nicht auf, ein Klick im Reiter „Ziele“ das Board nicht', () => {
+    vi.useFakeTimers()
+    const haengt = { networkMode: 'always', mutationFn: () => new Promise<void>(() => {}) } as const
+    const welle = (mutationKey: readonly string[]) => {
+      const qc = new QueryClient()
+      qc.setQueryData(OKR_KEY, { ziele: [], ergebnisse: [], eintraege: [], todos: [] })
+      qc.setQueryData(BOARD_KEY, [])
+      void qc
+        .getMutationCache()
+        .build(qc, { mutationKey, ...haengt })
+        .execute(undefined)
+      const b = invalidierungsBuendler(qc, 400, 2000)
+      b.add({ tabelle: 'okr_ziele', eventType: 'UPDATE', neu: { id: 'z1' }, alt: {} })
+      b.add({ tabelle: 'leads', eventType: 'UPDATE', neu: { id: L }, alt: {} })
+      vi.advanceTimersByTime(400)
+      const stand = {
+        ziele: qc.getQueryState(OKR_KEY)?.isInvalidated,
+        board: qc.getQueryState(BOARD_KEY)?.isInvalidated,
+      }
+      qc.getMutationCache().clear()
+      b.stop()
+      return stand
+    }
+    expect(welle(BOARD_SCHREIBEN)).toEqual({ ziele: true, board: false })
+    expect(welle(OKR_SCHREIBEN)).toEqual({ ziele: false, board: true })
   })
 
   it('Dauerfeuer: spätestens nach maxMs wird geladen; stop() verwirft Offenes', () => {
