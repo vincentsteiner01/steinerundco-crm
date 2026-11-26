@@ -7,7 +7,7 @@ import { join, basename } from 'node:path'
 import { gzipSync } from 'node:zlib'
 
 const KB = 1024
-const BUDGET = { initialJs: 220 * KB, initialCss: 30 * KB, routenChunk: 80 * KB, xlsx: 450 * KB, fonts: 180 * KB }
+const BUDGET = { initialJs: 220 * KB, initialCss: 30 * KB, routenChunk: 80 * KB, fonts: 180 * KB }
 
 const dist = process.argv[2] ?? 'dist'
 const html = readFileSync(join(dist, 'index.html'), 'utf8')
@@ -35,8 +35,7 @@ for (const f of assets) {
   const rel = `assets/${f}`
   if (initialJs.includes(rel)) continue
   const size = gz(join(dist, rel))
-  if (/^xlsx-/.test(f)) pruefe(`xlsx-Chunk ${f}`, size, BUDGET.xlsx)
-  else pruefe(`Routen-Chunk ${basename(f)}`, size, BUDGET.routenChunk)
+  pruefe(`Routen-Chunk ${basename(f)}`, size, BUDGET.routenChunk)
 }
 
 let fontSum = 0

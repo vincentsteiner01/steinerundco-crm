@@ -55,7 +55,6 @@ export const VERBOTEN: readonly string[] = [
 const IN_EINGABE_ERLAUBT = new Set(['escape', 'mod+enter', 'mod+shift+enter', 'mod+k'])
 
 export const istMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.platform ?? '')
-export const MOD_LABEL = istMac ? '⌘' : 'Ctrl'
 
 const KEY_ALIAS: Record<string, string> = {
   esc: 'escape',

@@ -30,8 +30,8 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          supabase db dump --db-url "$SUPABASE_DB_URL" --schema crm -f schema.sql
-          supabase db dump --db-url "$SUPABASE_DB_URL" --schema crm --data-only --use-copy -f data.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" --schema crm,crm_archiv -f schema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" --schema crm,crm_archiv --data-only --use-copy -f data.sql
           ls -la schema.sql data.sql
           grep -q 'create table' -i schema.sql
       - name: Verschlüsseln (AES-256, symmetrisch)

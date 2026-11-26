@@ -1,161 +1,217 @@
-// TeamSeite: Kopf (Dateline, Zeitraum-Segment), Vergleich Vincent | Mike (Fotos-Avatare, zuletzt aktiv, Heute-Status,
-// Kennzahlen wie die KPI-Seite inkl. Sheet-Regel), Team-Protokoll (Tagesgruppen, Timeline-Wortlaut, Filter, Peek, leer, Fehler).
-import { configure, fireEvent, screen, waitFor, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+// Team-Seite (25.11.2026, Neustart) mit den echten Daten-Hooks gegen einen gemockten Supabase-Client: je Person eine Karte in der
+// Reihenfolge Vincent · Mike, darunter vier Zahlen – Karten je Liste, gezählt nach Zugehörigkeit. Dazu leeres Board (überall 0),
+// Laden und Ladefehler mit „Erneut versuchen“. Nur erfundene Karten.
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { kette, type Antwort } from '@/test/supabaseMock'
 
-let TABELLEN: () => ReturnType<typeof import('./_testHilfe').tabellen>
-vi.mock('@/data/supabase', async () =>
-  (await import('@/features/kpis/_testHilfe')).supabaseMitTabellen(() => TABELLEN()),
-)
+vi.mock('@/data/supabase', async () => (await import('@/test/supabaseMock')).supabaseMock())
 
-import { useUiStore } from '@/app/uiStore'
-import { useAuth } from '@/features/auth/authStore'
-import { FEHLER } from '@/features/kpis/_testHilfe'
-import { _akkordZuruecksetzen } from '@/lib/keyboard'
-import { AKTIVITAETEN, JETZT, LEAD_1, MEMBER_V, rendern, tabellen } from './_testHilfe'
+import { BOARD_KEY, type BoardKarte } from '@/data/board'
+import { supabase } from '@/data/supabase'
+import type { BoardListe } from '@/features/board/listen'
+import { Component as TeamSeite } from './TeamSeite'
 
-configure({ asyncUtilTimeout: 8000 })
+const V = 'member-v'
+const M = 'member-m'
+// absichtlich alphabetisch wie aus der Datenbank – die Seite zeigt Vincent · Mike
+const MITGLIEDER = [
+  { id: M, display_name: 'Mike', short_name: 'Mike', email: 'mike@beispiel.test' },
+  { id: V, display_name: 'Vincent', short_name: 'VS', email: 'vincent@beispiel.test' },
+]
+const KAPUTT: Antwort = { data: null, error: { message: 'Verbindung unterbrochen', code: 'XX000' } }
+const NULLEN = ['0 Angeschrieben', '0 Gespräch vereinbart', '0 Im Geschäft', '0 Verloren']
 
-const metrik = (key: string) => document.querySelector(`[data-metrik="${key}"]`) as HTMLElement
-const werte = (key: string) =>
-  [...metrik(key).querySelectorAll('[data-wert]')].map((e) => e.textContent?.replace(/\s/g, ''))
-const protokoll = () => screen.getByRole('region', { name: 'Team-Protokoll' })
-
-describe('TeamSeite', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'], now: JETZT })
-    TABELLEN = () => tabellen()
-    useUiStore.setState({ hotkeyScope: 'global', scopeStack: [] })
-    useAuth.setState({
-      status: 'mitglied',
-      member: { user_id: MEMBER_V, email: 'vincent@steinerundco.de', display_name: 'Vincent' },
-    })
-    _akkordZuruecksetzen()
-    FEHLER.clear()
+let nr = 0
+/** `anzahl` erfundene Karten einer Person in einer Liste. */
+function karten(owner: string | null, liste: BoardListe, anzahl: number): BoardKarte[] {
+  return Array.from({ length: anzahl }, () => {
+    nr += 1
+    return {
+      id: `karte-${nr}`,
+      salutation: 'neutral',
+      first_name: 'Petra',
+      last_name: `Probelauf ${nr}`,
+      full_name: `Petra Probelauf ${nr}`,
+      company_name: null,
+      linkedin_url: null,
+      owner_id: owner,
+      board_liste: liste,
+      board_seit: '2026-11-25T09:00:00+00:00',
+    }
   })
-  afterEach(() => {
-    vi.useRealTimers()
-  })
+}
 
-  it('Woche (Standard): Kopf, beide Personen mit Status, Kennzahlen nach KPI-Regel, Sheet-Hinweis', async () => {
-    rendern()
-    await screen.findByRole('list', { name: /Kennzahlen KW 42: Vincent und Mike/ })
+/** Was der Supabase-Ersatz je Tabelle antwortet – ein Test darf es zwischendurch ändern („Erneut versuchen“). */
+let tabellen: Record<string, Antwort>
+const aufrufe = (tabelle: string) => vi.mocked(supabase.from).mock.calls.filter(([t]) => t === tabelle).length
+
+function zeigen() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  render(
+    <QueryClientProvider client={qc}>
+      <TeamSeite />
+    </QueryClientProvider>,
+  )
+  return qc
+}
+
+const personen = () =>
+  screen.queryAllByRole('region').map((r) => within(r).getByRole('heading', { level: 2 }).textContent)
+/** Die vier Zeilen einer Person als Text: „3 Angeschrieben“. */
+const zeilen = (name: string) =>
+  within(screen.getByRole('region', { name }))
+    .getAllByRole('listitem')
+    .map((li) =>
+      Array.from(li.children)
+        .map((c) => c.textContent)
+        .join(' '),
+    )
+
+beforeEach(() => {
+  nr = 0
+  tabellen = { members: { data: MITGLIEDER, error: null }, leads: { data: [], error: null } }
+  vi.mocked(supabase.from)
+    .mockReset()
+    .mockImplementation(((tabelle: string) => kette(tabellen[tabelle])) as never)
+})
+
+describe('Team', () => {
+  it('je Person eine Karte (Vincent vor Mike) mit der Zahl ihrer Karten je Liste', async () => {
+    tabellen.leads = {
+      data: [
+        ...karten(V, 'angeschrieben', 3),
+        ...karten(M, 'im_geschaeft', 4),
+        ...karten(V, 'verloren', 2),
+        ...karten(M, 'angeschrieben', 1),
+        ...karten(V, 'gespraech', 1),
+      ],
+      error: null,
+    }
+    zeigen()
+    await screen.findByRole('region', { name: 'Vincent' })
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Team')
-    expect(screen.getByText('Vincent · Mike · 12.–15.10.2026 · Stand 11:30')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Woche · KW 42/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(personen()).toEqual(['Vincent', 'Mike'])
+    expect(zeilen('Vincent')).toEqual(['3 Angeschrieben', '1 Gespräch vereinbart', '0 Im Geschäft', '2 Verloren'])
+    expect(zeilen('Mike')).toEqual(['1 Angeschrieben', '0 Gespräch vereinbart', '4 Im Geschäft', '0 Verloren'])
+  })
 
-    // Personenköpfe: Avatare (Fotos über Avatar), zuletzt aktiv, Heute-Status aus v_today_queue + Aktivitäten
-    const vincent = document.querySelector('[data-person="vincent"]') as HTMLElement
-    const mike = document.querySelector('[data-person="mike"]') as HTMLElement
-    expect(within(vincent).getByRole('heading', { name: 'Vincent' })).toBeInTheDocument()
-    await waitFor(() => expect(within(mike).getByText(/zuletzt aktiv vor 1\sStd\./)).toBeInTheDocument())
-    expect(within(vincent).getByText(/zuletzt aktiv vor 2\sStd\./)).toBeInTheDocument()
+  it('zeigt nur Personen und Zahlen: keine Links, keine Knöpfe, kein Zeitraum', async () => {
+    tabellen.leads = { data: karten(V, 'angeschrieben', 2), error: null }
+    zeigen()
+    await screen.findByRole('region', { name: 'Mike' })
+    expect(screen.queryByRole('link')).toBeNull()
+    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.queryByRole('group')).toBeNull()
+    expect(screen.getAllByRole('heading').map((h) => h.textContent)).toEqual(['Team', 'Vincent', 'Mike'])
+  })
+
+  it('Karten ohne Zugehörigkeit oder von Unbekannten zählen bei niemandem', async () => {
+    tabellen.leads = {
+      data: [
+        ...karten(null, 'angeschrieben', 2),
+        ...karten('nicht-mehr-dabei', 'verloren', 1),
+        ...karten(M, 'gespraech', 1),
+      ],
+      error: null,
+    }
+    zeigen()
+    await screen.findByRole('region', { name: 'Vincent' })
+    expect(zeilen('Vincent')).toEqual(NULLEN)
+    expect(zeilen('Mike')).toEqual(['0 Angeschrieben', '1 Gespräch vereinbart', '0 Im Geschäft', '0 Verloren'])
+  })
+
+  it('leeres Board: beide Personen stehen da, überall 0', async () => {
+    zeigen()
+    await screen.findByRole('region', { name: 'Vincent' })
+    expect(personen()).toEqual(['Vincent', 'Mike'])
+    expect(zeilen('Vincent')).toEqual(NULLEN)
+    expect(zeilen('Mike')).toEqual(NULLEN)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('weitere Personen stehen hinter Vincent und Mike, nach Name', async () => {
+    tabellen.members = {
+      data: [
+        { id: 'member-z', display_name: 'Zoe', short_name: 'ZZ', email: 'zoe@beispiel.test' },
+        { id: 'member-a', display_name: 'Anton', short_name: 'AA', email: 'anton@beispiel.test' },
+        ...MITGLIEDER,
+        { id: null, display_name: 'Ohne Konto', short_name: null, email: null },
+      ],
+      error: null,
+    }
+    tabellen.leads = { data: karten('member-z', 'im_geschaeft', 5), error: null }
+    zeigen()
+    await screen.findByRole('region', { name: 'Zoe' })
+    expect(personen()).toEqual(['Vincent', 'Mike', 'Anton', 'Zoe'])
+    expect(zeilen('Zoe')).toEqual(['0 Angeschrieben', '0 Gespräch vereinbart', '5 Im Geschäft', '0 Verloren'])
+  })
+
+  it('Laden: ruhiger Platzhalter, noch keine Karten und keine falschen Nullen', async () => {
+    zeigen()
+    expect(screen.getByRole('status')).toBeInTheDocument()
+    expect(screen.queryByRole('region')).toBeNull()
+    expect(screen.queryByText('Angeschrieben')).toBeNull()
+    await screen.findByRole('region', { name: 'Vincent' })
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('Ladefehler Board: ein Satz und „Erneut versuchen“ – keine Karten mit falschen Nullen; der zweite Versuch lädt', async () => {
+    tabellen.leads = KAPUTT
+    zeigen()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Das Team konnte nicht geladen werden.')
+    expect(screen.queryByRole('region')).toBeNull()
+    expect(screen.queryByRole('status')).toBeNull()
+
+    tabellen.leads = { data: karten(M, 'verloren', 2), error: null }
+    fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }))
+    await screen.findByRole('region', { name: 'Mike' })
+    expect(zeilen('Mike')).toEqual(['0 Angeschrieben', '0 Gespräch vereinbart', '0 Im Geschäft', '2 Verloren'])
+    expect(screen.queryByRole('alert')).toBeNull()
+    // nur das Gescheiterte wird neu geladen
+    expect(aufrufe('leads')).toBe(2)
+    expect(aufrufe('members')).toBe(1)
+  })
+
+  it('Ladefehler Mitglieder: derselbe Satz; „Erneut versuchen“ lädt die Personen nach', async () => {
+    tabellen.members = KAPUTT
+    tabellen.leads = { data: karten(V, 'gespraech', 1), error: null }
+    zeigen()
+    expect(await screen.findByRole('alert')).toHaveTextContent('Das Team konnte nicht geladen werden.')
+    expect(screen.queryByRole('region')).toBeNull()
+
+    tabellen.members = { data: MITGLIEDER, error: null }
+    fireEvent.click(screen.getByRole('button', { name: 'Erneut versuchen' }))
+    await screen.findByRole('region', { name: 'Vincent' })
+    expect(zeilen('Vincent')).toEqual(['0 Angeschrieben', '1 Gespräch vereinbart', '0 Im Geschäft', '0 Verloren'])
+    expect(aufrufe('members')).toBe(2)
+    expect(aufrufe('leads')).toBe(1)
+  })
+
+  it('scheitert erst ein späteres Neuladen, bleiben die geladenen Zahlen stehen', async () => {
+    tabellen.leads = { data: karten(V, 'angeschrieben', 7), error: null }
+    const qc = zeigen()
+    await screen.findByRole('region', { name: 'Vincent' })
+
+    tabellen.leads = KAPUTT
+    await act(() => qc.refetchQueries({ queryKey: BOARD_KEY }))
+    await waitFor(() => expect(qc.getQueryState(BOARD_KEY)?.status).toBe('error'))
+    expect(zeilen('Vincent')).toEqual(['7 Angeschrieben', '0 Gespräch vereinbart', '0 Im Geschäft', '0 Verloren'])
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('Zahlen folgen dem Board: nach dem Neuladen steht der neue Stand da', async () => {
+    tabellen.leads = { data: karten(V, 'angeschrieben', 2), error: null }
+    const qc = zeigen()
+    await screen.findByRole('region', { name: 'Vincent' })
+    expect(zeilen('Vincent')[0]).toBe('2 Angeschrieben')
+
+    // so kommt eine Änderung der zweiten Person an: Realtime invalidiert alles unter ['leads']
+    tabellen.leads = { data: [...karten(V, 'angeschrieben', 1), ...karten(V, 'gespraech', 1)], error: null }
+    await act(() => qc.invalidateQueries({ queryKey: ['leads'] }))
     await waitFor(() =>
-      expect(within(vincent).getByLabelText('Heute: 5 fällig, 3 überfällig, 1 erledigt')).toBeInTheDocument(),
+      expect(zeilen('Vincent')).toEqual(['1 Angeschrieben', '1 Gespräch vereinbart', '0 Im Geschäft', '0 Verloren']),
     )
-    expect(within(mike).getByLabelText('Heute: 5 fällig, 4 überfällig, 1 erledigt')).toBeInTheDocument()
-    // Heute-Liste und KPI-Seite gibt es nicht mehr – keine Links dorthin (Neustart 25.11.2026)
-    expect(screen.queryByRole('link', { name: /Heute-Liste|KPIs/ })).toBeNull()
-    expect(vincent.querySelector('img')).toHaveAttribute('src', '/avatars/vincent.webp')
-
-    // Kennzahlen: Vincents Sheet-Monatswerte zählen in der Woche nicht, Tageszähler schon; Mike aus Ereignissen
-    expect(werte('anfragen')).toEqual(['0', '0'])
-    expect(werte('annahmen')).toEqual(['0', '2'])
-    expect(werte('eroeffnet')).toEqual(['17', '3'])
-    expect(werte('followups')).toEqual(['0', '1'])
-    expect(werte('anrufe')).toEqual(['0', '5'])
-    expect(metrik('anrufe')).toHaveTextContent('davon 2 erreicht')
-    expect(metrik('eroeffnet')).toHaveAttribute('aria-label', 'Gespräche eröffnet: Vincent 17, Mike 3')
-    const balken = [...metrik('eroeffnet').querySelectorAll('[data-anteil]')].map((e) => e.getAttribute('data-anteil'))
-    expect(balken).toEqual(['100', '18'])
-    expect(document.querySelector('[data-hinweis="sheet"]')).toHaveTextContent(
-      'Für Vincent gelten in diesem Monat die Werte aus dem KPI-Sheet',
-    )
-  })
-
-  it('Zeitraum-Segment wechselt Monat und Heute (URL), Monat zeigt Sheet-Werte mit Badge', async () => {
-    const { router } = rendern()
-    await screen.findByRole('list', { name: /Kennzahlen KW 42/ })
-    const zeitraum = screen.getByRole('group', { name: 'Zeitraum' })
-    fireEvent.click(within(zeitraum).getByRole('button', { name: 'Monat' }))
-    await screen.findByRole('list', { name: /Kennzahlen Oktober 2026/ })
-    expect(router.state.location.search).toBe('?zeitraum=monat')
-    expect(werte('anfragen')).toEqual(['305', '0'])
-    expect(within(metrik('anfragen')).getByText('aus Sheet')).toBeInTheDocument()
-    expect(werte('antworten')).toEqual(['19', '1'])
-    expect(werte('followups')).toEqual(['0', '2'])
-    expect(document.querySelector('[data-hinweis="sheet"]')).toBeNull()
-
-    fireEvent.click(within(zeitraum).getByRole('button', { name: 'Heute' }))
-    await screen.findByRole('list', { name: /Kennzahlen Heute/ })
-    expect(router.state.location.search).toBe('?zeitraum=heute')
-  })
-
-  it('Heute ohne jede Zahl: ein Satz statt acht Nullzeilen, Weg zur Woche', async () => {
-    TABELLEN = () =>
-      tabellen({ activities: AKTIVITAETEN.filter((a) => !String(a.occurred_at).startsWith('2026-10-15')) })
-    const { router } = rendern('/team?zeitraum=heute')
-    const leer = await waitFor(() => {
-      const el = document.querySelector('[data-leer="kennzahlen"]')
-      expect(el).not.toBeNull()
-      return el as HTMLElement
-    })
-    expect(leer).toHaveTextContent('Heute ist für Vincent und Mike noch nichts gezählt.')
-    expect(screen.queryByRole('list', { name: /Kennzahlen Heute/ })).toBeNull()
-    fireEvent.click(within(leer).getByRole('button', { name: /Woche ansehen/ }))
-    await screen.findByRole('list', { name: /Kennzahlen KW 42/ })
-    expect(router.state.location.search).toBe('?zeitraum=woche')
-  })
-
-  it('Team-Protokoll: Tagesgruppen, Timeline-Wortlaut, nur Mitglieder, Lead-Name öffnet den Peek', async () => {
-    const { router } = rendern()
-    const p = await waitFor(() => protokoll())
-    const gruppen = await within(p).findAllByRole('group', { name: /Eintr/ })
-    expect(gruppen.map((g) => g.getAttribute('aria-label'))).toEqual([
-      'Heute, 2 Einträge',
-      'Gestern, 1 Eintrag',
-      'Mo 12.10., 1 Eintrag',
-    ])
-    expect(within(p).getByText('Gesprächseröffnung gesendet · Vorlage Eröffnung V1')).toBeInTheDocument()
-    expect(within(p).getByText(/^Phase geändert: /)).toBeInTheDocument()
-    expect(within(p).getByText(/^Antwort erhalten/)).toBeInTheDocument()
-    expect(p.querySelector('[data-eintrag="5"]')).toBeNull() // Import ohne Person
-    expect(p.querySelector('[data-eintrag="6"]')).toBeNull() // außerhalb der Woche
-    expect(p.querySelector('[data-protokoll-hinweis]')).toHaveTextContent(
-      'KW 42 · neueste oben · aktualisiert sich live · 4 Einträge',
-    )
-
-    const eintrag = p.querySelector('[data-eintrag="9"]') as HTMLElement
-    expect(within(eintrag).getByText('09:05')).toBeInTheDocument()
-    expect(within(eintrag).getByText(/Windparkentwicklung Norddeutschland/)).toBeInTheDocument()
-    fireEvent.click(within(eintrag).getByRole('button', { name: 'Test Person 91' }))
-    expect(new URLSearchParams(router.state.location.search).get('lead')).toBe(LEAD_1)
-  })
-
-  it('Filter Person und Kanal in der URL; leerer Filter mit „Filter zurücksetzen“', async () => {
-    const { router } = rendern()
-    const p = await waitFor(() => protokoll())
-    await within(p).findAllByRole('group', { name: /Eintr/ })
-    fireEvent.click(within(within(p).getByRole('group', { name: 'Person' })).getByRole('button', { name: 'Mike' }))
-    await waitFor(() => {
-      expect(p.querySelector('[data-eintrag="9"]')).toBeNull()
-      expect(p.querySelector('[data-eintrag="10"]')).not.toBeNull()
-    })
-    expect(p.querySelector('[data-eintrag="7"]')).not.toBeNull()
-    expect(new URLSearchParams(router.state.location.search).get('person')).toBe('mike')
-
-    fireEvent.click(within(within(p).getByRole('group', { name: 'Kanal' })).getByRole('button', { name: 'Telefon' }))
-    await within(p).findByText('Mit diesem Filter ist in KW 42 noch nichts erfasst.')
-    fireEvent.click(within(p).getByRole('button', { name: 'Filter zurücksetzen' }))
-    await waitFor(() => expect(p.querySelector('[data-eintrag="9"]')).not.toBeNull())
-    expect(router.state.location.search).toBe('')
-  })
-
-  it('Fehler beim Laden: Fehlerzeilen statt falscher Nullen', async () => {
-    FEHLER.add('activities')
-    FEHLER.add('v_metric_events')
-    rendern()
-    expect(await screen.findByText(/Kennzahlen konnten nicht geladen werden/)).toBeInTheDocument()
-    expect(await screen.findByText(/Das Team-Protokoll konnte nicht geladen werden/)).toBeInTheDocument()
   })
 })

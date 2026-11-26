@@ -1,78 +1,72 @@
-// Einstellungen (BAUPLAN § 3.9, DESIGN-SYSTEM § 5.18): zwei Spalten 220px 1fr – Unternavigation (Einträge 34 px) + Formulare
-// 560 px; Bereich aus der Route `/einstellungen/:bereich`; unbekannter Bereich → Profil; mobil: Liste (Tabs) → Formular.
-import { Navigate, NavLink, useNavigate, useParams } from 'react-router'
+// Einstellungen (Route `/einstellungen/:bereich`, Neustart 25.11.2026): fünf Bereiche – links die Unternavigation, rechts der
+// Bereich. Unter 768 px steht die Unternavigation als umbrechende Reihe darüber: alle fünf Einträge bleiben sichtbar, nichts
+// scrollt zur Seite. Unbekannte und entfallene Bereiche (ziele, sequenzen, verbindungen) leiten hier aufs Profil um – der
+// Router kennt nur `/einstellungen/:bereich`.
+import { Navigate, NavLink, useParams } from 'react-router'
 import { PFADE } from '@/app/pfade'
-import { SeitenKopf, Tabs, cn } from '@/components/ui'
+import { cn } from '@/components/ui/cn'
 import { BEREICHE, STANDARD_BEREICH, istBereich, type Bereich } from './bereiche'
 import { Export } from './Export'
+import { Feiertage } from './Feiertage'
 import { Passcode } from './Passcode'
 import { Profil } from './Profil'
-import { Sequenzen } from './Sequenzen'
 import { Sperrliste } from './Sperrliste'
-import { Verbindungen } from './Verbindungen'
-import { Ziele } from './Ziele'
 
-const INHALT: Record<Bereich, () => React.JSX.Element> = {
+const INHALT: Record<Bereich, () => React.JSX.Element | null> = {
   profil: Profil,
   passcode: Passcode,
-  ziele: Ziele,
-  sequenzen: Sequenzen,
   sperrliste: Sperrliste,
+  feiertage: Feiertage,
   export: Export,
-  verbindungen: Verbindungen,
 }
 
 export function Component() {
   const { bereich } = useParams()
-  const navigate = useNavigate()
 
-  // Mobil: den aktiven Tab der quer scrollenden Leiste hält `Tabs` selbst in Sicht (Runde 3, 7. Tab „Verbindungen“ bei 390 px)
   if (!istBereich(bereich)) return <Navigate to={PFADE.einstellungen(STANDARD_BEREICH)} replace />
   const aktiv = BEREICHE.find((b) => b.key === bereich) ?? BEREICHE[0]!
   const Inhalt = INHALT[bereich]
 
   return (
-    <>
-      <SeitenKopf titel="Einstellungen" kontext={aktiv.label} />
-      <div className="grid gap-8 md:grid-cols-[220px_1fr]">
-        <nav aria-label="Einstellungen" className="max-md:hidden">
-          <ul className="grid gap-0.5">
+    <div>
+      <header className="pt-7 pb-6 max-md:pt-5 max-md:pb-5">
+        {/* min-h-11 wie auf Leads, Leitfäden und Team: der Titel sitzt auf allen Seiten gleich */}
+        <h1 className="headline flex min-h-11 items-center">Einstellungen</h1>
+      </header>
+      <div className="grid gap-6 md:grid-cols-[200px_minmax(0,1fr)] md:gap-10">
+        <nav aria-label="Einstellungen">
+          <ul className="flex flex-wrap gap-2 md:grid md:gap-0.5">
             {BEREICHE.map((b) => (
               <li key={b.key}>
                 <NavLink
                   to={PFADE.einstellungen(b.key)}
                   className={({ isActive }) =>
                     cn(
-                      'text-ui ease-brand flex h-[34px] items-center justify-between gap-2 rounded-sm px-2.5 transition-[background,color] duration-[var(--t-1)]',
-                      isActive ? 'bg-surface-hover text-ink' : 'text-ink-2 hover:bg-surface-hover hover:text-ink',
+                      'text-ui ease-brand flex h-11 items-center rounded-sm px-3.5 transition-[background,color] duration-[var(--t-1)] max-md:border md:h-10 md:px-3',
+                      isActive
+                        ? 'bg-surface-hover text-ink max-md:border-line-strong'
+                        : 'text-ink-2 hover:bg-surface-hover hover:text-ink max-md:border-line',
                     )
                   }
                 >
-                  <span>{b.label}</span>
+                  {b.label}
                 </NavLink>
               </li>
             ))}
           </ul>
         </nav>
-        <div className="min-w-0">
-          <Tabs
-            className="mb-5 md:hidden"
-            ariaLabel="Einstellungen"
-            tabs={BEREICHE.map((b) => ({ key: b.key, label: b.label }))}
-            wert={bereich}
-            onChange={(k) => navigate(PFADE.einstellungen(k))}
-          />
-          <div className="mb-6 max-md:hidden">
-            <h2 id={`bereich-${bereich}`} className="text-h2 text-ink-bright">
-              {aktiv.label}
-            </h2>
-            <p className="text-small text-ink-3 mt-1">{aktiv.beschreibung}</p>
-          </div>
-          <section aria-labelledby={`bereich-${bereich}`} key={bereich}>
+        {/* key: beim Wechsel des Bereichs beginnt der Inhalt frisch (keine halb getippten Eingaben aus dem vorigen Bereich) */}
+        <section aria-labelledby={`bereich-${bereich}`} key={bereich} className="min-w-0 pb-10">
+          {/* Unter 768 px zeigt die Reihe darüber schon, wo man ist – die Überschrift bleibt für Vorleseprogramme */}
+          <h2 id={`bereich-${bereich}`} className="text-h2 text-ink-bright mb-6 max-md:sr-only">
+            {aktiv.label}
+          </h2>
+          {/* Eigener Rahmen: der erste Abschnitt des Bereichs ist darin das erste Kind und bekommt keine Trennlinie */}
+          <div>
             <Inhalt />
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
-    </>
+    </div>
   )
 }

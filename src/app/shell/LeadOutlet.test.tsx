@@ -1,6 +1,7 @@
 // LeadOutlet (Neustart 25.11.2026, ersetzt den Peek): öffnet das Lead-Blatt bei `?lead=` auf jeder Seite – nur nicht im Composer
-// (/email/verfassen, dort meint `lead` den Empfänger). Schließen entfernt allein diesen Parameter.
-import { act, fireEvent, render, screen } from '@testing-library/react'
+// (/email/verfassen, dort meint `lead` den Empfänger). Schließen: nach einem Direktaufruf wird allein dieser Parameter entfernt
+// (replace); hat ein eigener Verlaufseintrag das Blatt geöffnet (Karte auf dem Board), geht es genau einen Schritt zurück.
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUiStore } from '@/app/uiStore'
@@ -12,10 +13,20 @@ vi.mock('@/features/board/LeadBlatt', () => ({
       <button type="button" onClick={onClose}>
         Schließen
       </button>
+      <button
+        type="button"
+        onClick={() => {
+          onClose()
+          onClose()
+        }}
+      >
+        Zweimal schließen
+      </button>
     </div>
   ),
 }))
 
+import { BLATT_IM_VERLAUF } from '@/features/board/verlauf'
 import { LeadOutlet } from './LeadOutlet'
 
 function Ort() {
@@ -23,7 +34,7 @@ function Ort() {
   return <output data-testid="ort">{`${l.pathname}${l.search}`}</output>
 }
 
-function rendern(start: string) {
+function rendern(...verlauf: string[]) {
   const router = createMemoryRouter(
     [
       {
@@ -36,7 +47,7 @@ function rendern(start: string) {
         ),
       },
     ],
-    { initialEntries: [start] },
+    { initialEntries: verlauf },
   )
   render(<RouterProvider router={router} />)
   return router
@@ -55,6 +66,53 @@ describe('LeadOutlet', () => {
     expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByTestId('ort')).toHaveTextContent(/^\/email\?tab=gesendet$/)
     expect(useUiStore.getState().hotkeyScope).toBe('global')
+  })
+
+  it('Direktaufruf mit ?lead=: Schließen ersetzt den Eintrag (replace) – es gibt nichts, wohin „zurück“ führen dürfte', async () => {
+    const router = rendern('/hilfe', '/leads?lead=l1')
+    await screen.findByRole('dialog', { name: 'Lead-Blatt' })
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(router.state.historyAction).toBe('REPLACE')
+    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/leads$/)
+    // der Eintrag davor ist unberührt: ein Schritt zurück führt dorthin, nicht ins Blatt
+    await act(() => router.navigate(-1))
+    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/hilfe$/)
+  })
+
+  it('über einen eigenen Verlaufseintrag geöffnet (Karte): Schließen geht einen Schritt zurück, „Vor“ öffnet wieder', async () => {
+    const router = rendern('/hilfe', '/leads')
+    await act(() => router.navigate('/leads?lead=l1', { state: BLATT_IM_VERLAUF }))
+    await screen.findByRole('dialog', { name: 'Lead-Blatt' })
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(router.state.historyAction).toBe('POP')
+    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/leads$/)
+    // kein toter Eintrag: „Vor“ führt wieder ins Blatt – und es lässt sich erneut schließen
+    await act(() => router.navigate(1))
+    expect(await screen.findByRole('dialog', { name: 'Lead-Blatt' })).toHaveAttribute('data-lead', 'l1')
+    fireEvent.click(screen.getByRole('button', { name: 'Schließen' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/leads$/)
+  })
+
+  it('„Zurück“ des Browsers schließt das so geöffnete Blatt und bleibt auf dem Board', async () => {
+    const router = rendern('/hilfe', '/leads')
+    await act(() => router.navigate('/leads?lead=l1', { state: BLATT_IM_VERLAUF }))
+    await screen.findByRole('dialog', { name: 'Lead-Blatt' })
+    await act(() => router.navigate(-1))
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/leads$/)
+    expect(useUiStore.getState().hotkeyScope).toBe('global')
+  })
+
+  it('zweimal Schließen hintereinander geht nur EINEN Schritt zurück (sonst verließe es das Board)', async () => {
+    const router = rendern('/hilfe', '/leads')
+    await act(() => router.navigate('/leads?lead=l1', { state: BLATT_IM_VERLAUF }))
+    await screen.findByRole('dialog', { name: 'Lead-Blatt' })
+    fireEvent.click(screen.getByRole('button', { name: 'Zweimal schließen' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/leads$/)
   })
 
   it('öffnet auf dem Board und folgt einem Wechsel des Leads', async () => {

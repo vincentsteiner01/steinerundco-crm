@@ -95,6 +95,9 @@ export type KarteVerschieben = {
 export function useKarteVerschieben() {
   const qc = useQueryClient()
   return useMutation({
+    // 25.11.2026: offline nicht pausieren (Voreinstellung 'online') – sonst liegt die Karte sichtbar in der neuen Liste,
+    // gespeichert ist nichts. So scheitert der Zug sofort: Karte zurück + Offline-Meldung.
+    networkMode: 'always',
     mutationFn: async ({ id, liste, seit }: KarteVerschieben): Promise<BoardKarte | null> => {
       const patch: LeadUpdate = { board_liste: liste }
       if (liste && seit) patch.board_seit = seit

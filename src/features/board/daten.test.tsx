@@ -1,7 +1,7 @@
 // Daten-Schicht des Boards (src/data/board.ts) gegen einen gemockten Supabase-Client: Abfrage, optimistisches Verschieben mit
 // Zurückrollen, „Rückgängig“ mit board_seit, Anlegen über das RPC, Lead-Blatt speichern. Nur erfundene Namen.
 // Die Regeln der Datenbank selbst (Trigger, RPC) prüft supabase/tests/board_test.sql.
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -149,6 +149,32 @@ describe('useKarteVerschieben', () => {
     expect(board()).toEqual(start)
     expect(m.toastFehler).toHaveBeenCalledWith('Das geht gerade nicht', undefined)
     konsole.mockRestore()
+  })
+
+  // 25.11.2026: Offline pausierte der Zug (Voreinstellung 'online') – die Karte lag sichtbar in der neuen Liste, gespeichert war nichts
+  it('offline: der Zug wartet nicht, er scheitert sofort – Karte zurück, Offline-Meldung', async () => {
+    const k = kette()
+    k['single'] = vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    })
+    vi.mocked(supabase.from).mockReturnValue(k as never)
+    const konsole = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const start = [karte('a', 'angeschrieben', T0)]
+    const { wrapper, board } = umgebung(start)
+    const { result } = renderHook(() => useKarteVerschieben(), { wrapper })
+    onlineManager.setOnline(false)
+    try {
+      await act(async () => {
+        await result.current.mutateAsync({ id: 'a', liste: 'gespraech' }).catch(() => {})
+      })
+      expect(k['update']).toHaveBeenCalledWith({ board_liste: 'gespraech' })
+      expect(result.current.isPaused).toBe(false)
+      expect(board()).toEqual(start)
+      expect(m.toastFehler).toHaveBeenCalledWith('Offline – Änderungen werden nicht gespeichert.', undefined)
+    } finally {
+      onlineManager.setOnline(true)
+      konsole.mockRestore()
+    }
   })
 
   it('Liste null nimmt die Karte vom Board (kein Löschen: nur board_liste wird geleert)', async () => {

@@ -1,7 +1,9 @@
 // Navigation des einfachen CRM (Neustart 25.11.2026, Vincent und Mike: „viel zu kompliziert“): Leads · Leitfäden · E-Mail ·
 // Trenner · Team · Einstellungen · Hilfe. Eine Quelle für alle drei Darstellungen – Sidebar (≥ 1024), Icon-Rail (768–1023),
 // Tab-Leiste (< 768). Keine Zähler, keine Tastenkürzel.
-import { BookOpen, LifeBuoy, Mail, Settings, Users, UsersRound, type LucideIcon } from 'lucide-react'
+// Leads trägt die Board-Ikone (Spalten), nicht „zwei Personen“ – die sah neben Team (UsersRound) fast gleich aus, und in der
+// Icon-Rail steht kein Name daneben.
+import { BookOpen, LifeBuoy, Mail, Settings, SquareKanban, UsersRound, type LucideIcon } from 'lucide-react'
 
 export type NavEintrag = {
   pfad: string
@@ -23,7 +25,7 @@ export const istGruppe = (k: NavKnoten): k is NavGruppe => typeof k === 'object'
 
 /** Sidebar: der ganze Baum. */
 export const NAV_BAUM: NavKnoten[] = [
-  { pfad: '/leads', label: 'Leads', icon: Users },
+  { pfad: '/leads', label: 'Leads', icon: SquareKanban },
   { pfad: '/leitfaeden', label: 'Leitfäden', icon: BookOpen },
   {
     // Kampagnen, Antworten (Unibox), Postfächer – Einzelmails bleiben unter /email (01.11.2026, unverändert)
@@ -89,7 +91,7 @@ export type TabEintrag = {
 
 /** Tab-Leiste: Leads · Leitfäden · E-Mail, dahinter der Knopf „Mehr“. */
 export const TAB_LEISTE: TabEintrag[] = [
-  { pfad: '/leads', label: 'Leads', icon: Users, bereich: '/leads' },
+  { pfad: '/leads', label: 'Leads', icon: SquareKanban, bereich: '/leads' },
   { pfad: '/leitfaeden', label: 'Leitfäden', icon: BookOpen, bereich: '/leitfaeden' },
   { pfad: '/email/kampagnen', label: 'E-Mail', icon: Mail, bereich: '/email' },
 ]

@@ -35,13 +35,3 @@ function execCommandKopieren(text: string): boolean {
     feld.remove()
   }
 }
-
-/** Markiert den Inhalt eines Elements (Fallback-Anzeige: „Text markiert – ⌘C/Teilen“). */
-export function textMarkieren(el: HTMLElement): void {
-  const auswahl = window.getSelection?.()
-  if (!auswahl) return
-  const bereich = document.createRange()
-  bereich.selectNodeContents(el)
-  auswahl.removeAllRanges()
-  auswahl.addRange(bereich)
-}

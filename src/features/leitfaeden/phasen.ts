@@ -13,14 +13,6 @@ export const BEREICHE = [
   { key: 'sales', label: 'Sales', kanaele: ['sonstiges'] },
 ] as const satisfies readonly { key: string; label: string; kanaele: readonly Channel[] }[]
 
-/** Anzeige in den Leitfäden: der Kanal „sonstiges“ heißt hier „Sales“. */
-export const LEITFADEN_LABEL: Record<Channel, string> = {
-  linkedin: 'LinkedIn',
-  telefon: 'Telefon',
-  email: 'E-Mail',
-  sonstiges: 'Sales',
-}
-
 export const PHASEN: Record<Channel, readonly PhaseDef[]> = {
   linkedin: [
     { key: 'vernetzung', label: '0 Vernetzung', beschreibung: 'Anfrage mit Notiz: Grund für die Vernetzung nennen' },

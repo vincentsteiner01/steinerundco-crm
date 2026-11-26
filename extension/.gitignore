@@ -1,6 +1,0 @@
-# Steiner & Co. CRM – Chrome-Erweiterung
-node_modules/
-dist/
-*.zip
-test-results/
-.vite/

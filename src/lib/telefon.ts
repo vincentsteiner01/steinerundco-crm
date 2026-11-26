@@ -7,29 +7,6 @@ import type { Json } from '@/types/database'
 export type Land = CountryCode
 export const STANDARD_LAND: Land = 'DE'
 
-/** Auswahl im Formular: DACH zuerst, dann Nachbarn und häufige Länder. */
-export const LAENDER: readonly { land: Land; name: string }[] = [
-  { land: 'DE', name: 'Deutschland' },
-  { land: 'AT', name: 'Österreich' },
-  { land: 'CH', name: 'Schweiz' },
-  { land: 'NL', name: 'Niederlande' },
-  { land: 'BE', name: 'Belgien' },
-  { land: 'LU', name: 'Luxemburg' },
-  { land: 'DK', name: 'Dänemark' },
-  { land: 'PL', name: 'Polen' },
-  { land: 'CZ', name: 'Tschechien' },
-  { land: 'FR', name: 'Frankreich' },
-  { land: 'IT', name: 'Italien' },
-  { land: 'ES', name: 'Spanien' },
-  { land: 'PT', name: 'Portugal' },
-  { land: 'GB', name: 'Vereinigtes Königreich' },
-  { land: 'IE', name: 'Irland' },
-  { land: 'SE', name: 'Schweden' },
-  { land: 'NO', name: 'Norwegen' },
-  { land: 'FI', name: 'Finnland' },
-  { land: 'US', name: 'USA' },
-]
-
 /** „DE +49“ – kurz genug für ein Select neben dem Nummernfeld. */
 export const landLabel = (land: Land): string => `${land} +${getCountryCallingCode(land)}`
 
@@ -53,13 +30,6 @@ export function landVon(e164: string | null | undefined): Land | null {
 
 export type NummerTyp = 'zentrale' | 'durchwahl' | 'mobil' | 'sonstige'
 export type WeitereNummer = { e164: string; typ: NummerTyp }
-
-export const NUMMER_TYP_LABEL: Record<NummerTyp, string> = {
-  zentrale: 'Zentrale',
-  durchwahl: 'Durchwahl',
-  mobil: 'Mobil',
-  sonstige: 'Sonstige',
-}
 
 const istTyp = (t: unknown): t is NummerTyp =>
   t === 'zentrale' || t === 'durchwahl' || t === 'mobil' || t === 'sonstige'

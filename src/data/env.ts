@@ -1,7 +1,7 @@
 // Validierte Umgebung (architektur § 2, BAUPLAN § 3.1.6). Wirft beim Start, wenn URL oder Key fehlen.
 // Konflikt (Konfliktregel § 0): § 3.1.6 nennt „env.ts (zod)“, E22/F-02 verlangen ≤ 220 kB initiales JS – zod/mini zog trotzdem
-// den ganzen zod-Kern (≈ 13 kB gzip) ins initiale Bundle. Drei Prüfungen von Hand erfüllen dieselbe Zusage; zod bleibt für
-// Import/Schnellimport (M7) im Routen-Chunk.
+// den ganzen zod-Kern (≈ 13 kB gzip) ins initiale Bundle. Drei Prüfungen von Hand erfüllen dieselbe Zusage; zod bleibt nur
+// für „Passcode ändern“ im Routen-Chunk (seit dem Neustart 25.11.2026; Import und Schnellimport gibt es nicht mehr).
 export type Env = { VITE_SUPABASE_URL: string; VITE_SUPABASE_KEY: string; VITE_APP_VERSION: string }
 
 const roh: Record<keyof Env, unknown> = {

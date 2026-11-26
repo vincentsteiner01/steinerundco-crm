@@ -3,7 +3,6 @@
 // Lint (texte.test.ts): keine geraden Anführungszeichen, kein Ausrufezeichen, kein „...“, kein „--“,
 // nicht „erfolgreich“, „OK“, „Snooze“, „Owner“.
 import type {
-  Activity,
   CallBasis,
   CallOutcome,
   Channel,
@@ -188,11 +187,9 @@ export const TOAST = {
   antwortErhalten: (vorlage: string) => `Antwort erhalten – Vorlage ‚${vorlage}‘ vorgeschlagen.`,
   terminVereinbart: (typ: string, wann: string) => `${typ} vereinbart für ${wann}`,
   passcodeGeaendert: 'Passcode geändert.',
-  abgemeldet: 'Abgemeldet.',
   keinZugriff: 'Dieses Konto hat keinen Zugriff auf das CRM.',
   neueVersion: 'Neue Version verfügbar',
   neueVersionLaden: 'Jetzt laden',
-  rueckgaengig: 'Rückgängig',
   rueckgaengigGemacht: 'Rückgängig gemacht.',
   erstReaktion: 'Erst Reaktion eintragen.',
   // Integration M1–M8: gemeinsame Wortlaute aus M4 (E-Mail)
@@ -211,25 +208,18 @@ export const DIALOG = {
   },
   widerspruch: (name: string) => ({
     text: `Werbewiderspruch für ${name} erfassen? Der Lead wird beendet, alle Sequenzen enden, und die Person kann nicht erneut importiert oder kontaktiert werden.`,
+    // Lead-Blatt des Neustarts (25.11.2026): Sequenzen und Import gibt es in der Oberfläche nicht mehr, der Titel fragt schon
+    kurz: 'Die Person kommt auf die Sperrliste und wird nicht mehr kontaktiert.',
     primaer: 'Widerspruch erfassen',
   }),
   sperrlisteEntfernen: {
     text: 'Eintrag entfernen? Die Person könnte wieder kontaktiert werden. Grund: Pflicht.',
     primaer: 'Entfernen',
   },
-  passcodeZuruecksetzen: (name: string) => ({
-    text: `${name}s Passcode zurücksetzen? ${name} muss sich beim nächsten Mal mit dem Einmal-Passcode anmelden.`,
-    primaer: 'Zurücksetzen',
-  }),
-  anonymisieren: (n: number) => ({
-    text: `${n} Leads anonymisieren? Name, URL, Telefon, E-Mail werden entfernt; Zählwerte bleiben.`,
-    primaer: 'Anonymisieren',
-  }),
   ueberallAbmelden: {
     text: 'Überall abmelden? Alle Geräte werden abgemeldet – auch die Akten-Sitzung desselben Kontos.',
     primaer: 'Überall abmelden',
   },
-  abbrechen: 'Abbrechen',
 } as const
 
 export const ALLGEMEIN = {
@@ -240,15 +230,12 @@ export const ALLGEMEIN = {
   angemeldetBleiben: 'Angemeldet bleiben',
   werBistDu: 'Wer bist du?',
   nurFuer: 'Nur für Vincent und Mike.',
-  passcodeVergessen: 'Passcode vergessen? Die andere Person setzt ihn unter Einstellungen → Passcode zurück.',
   passcodeFalsch: 'Passcode stimmt nicht – versuch es nochmal.',
   passcodeZuKurz: 'Mindestens 10 Zeichen.',
   nochmalIn: (s: number) => `Nochmal in ${s} s`,
   zuVieleVersuche: 'Zu viele Versuche – bitte in ein paar Minuten noch einmal.',
   keineVerbindung: 'Keine Verbindung – bitte später noch einmal.',
   offlineBanner: 'Offline – du kannst lesen, Änderungen werden nicht gespeichert.',
-  schliessen: 'Schließen',
-  laden: 'Lade …',
   mehr: 'Mehr',
   // Integration M1–M8: gemeinsame Formular-Wortlaute (M2, M6, M8)
   speichern: 'Speichern',
@@ -256,160 +243,3 @@ export const ALLGEMEIN = {
   nummerUnvollstaendig: 'Nummer unvollständig',
   grundEingeben: 'Grund eingeben',
 } as const
-
-// ux § 6.3 – Timeline-Wortlaute. `ctx` liefert Namen, die die Aktivität nur als ID kennt.
-export type TimelineKontext = {
-  vorlage?: string | null
-  stufe?: (s: string) => string
-  /** Rang einer Stufe (lib/stufen.stageRank) – „Phase zurückgesetzt“, wenn der Trigger kein `rank`/`prev_rank` schreibt. */
-  rang?: (s: string) => number
-  mitglied?: (id: string | null) => string
-  datum?: (iso: string) => string
-}
-type Meta = Record<string, unknown>
-const meta = (a: Activity): Meta => (a.metadata && typeof a.metadata === 'object' ? (a.metadata as Meta) : {})
-const str = (v: unknown): string | null => (typeof v === 'string' && v.length > 0 ? v : null)
-const num = (v: unknown): number | null => (typeof v === 'number' ? v : null)
-
-export function TIMELINE_TEXT(a: Activity, ctx: TimelineKontext = {}): string {
-  const m = meta(a)
-  const stufe = (s: unknown) =>
-    str(s)
-      ? ctx.stufe
-        ? ctx.stufe(str(s) as string)
-        : (STUFEN_LABEL[str(s) as LeadStage]?.label ?? (str(s) as string))
-      : '–'
-  const datum = (iso: unknown) => (str(iso) ? (ctx.datum ? ctx.datum(str(iso) as string) : (str(iso) as string)) : '')
-  const vorlage = ctx.vorlage ?? str(m.template_name)
-  const zitat = a.note ? ` – ‚${a.note}‘` : ''
-  switch (a.type) {
-    case 'angelegt': {
-      const quelle = a.source
-      if (quelle === 'schnellimport') return 'Angelegt per Schnellimport (ChatGPT)'
-      // Runde 3 (Wunsch daten.md Nr. 6): diese Zeile trägt das rückdatierte erste Sheet-Datum – nicht wie der Importzeitpunkt klingen
-      if (quelle === 'import_sheet')
-        return `Angelegt in der CRM-Tabelle (importiert${num(m.row) !== null ? `, Zeile ${num(m.row)}` : ''})`
-      if (quelle === 'import_csv') return 'Importiert aus CSV'
-      return 'Angelegt'
-    }
-    case 'import':
-      return `Importiert aus CRM-Tabelle${num(m.row) !== null ? ` (Zeile ${num(m.row)})` : ''}`
-    case 'vernetzung_gesendet': {
-      const v = str(m.note_variant)
-      return `Vernetzung angefragt (${v === 'note_v1' ? 'Notiz V1' : v === 'note_v2' ? 'Notiz V2' : 'ohne Notiz'})`
-    }
-    case 'vernetzung_angenommen': {
-      const t = num(m.days_after_request)
-      return `Vernetzung angenommen${t !== null ? ` (${t} Tage nach Anfrage)` : ''}`
-    }
-    case 'vernetzung_zurueckgezogen':
-      return a.note === 'abgelehnt' ? 'Anfrage abgelehnt' : 'Anfrage zurückgezogen' // § 1.5 Nr. 34
-    case 'vernetzung_abgelaufen':
-      return 'Anfrage abgelaufen'
-    case 'gespraech_eroeffnet':
-      return `Gesprächseröffnung gesendet${vorlage ? ` · Vorlage ${vorlage}` : ''}`
-    case 'nachricht_gesendet':
-      if (!a.enrollment_id) return `Antwort gesendet${vorlage ? ` · ${vorlage}` : ''}` // § 1.5 Nr. 25
-      return `${vorlage ?? 'Nachricht'} gesendet`
-    case 'nachricht_erhalten': {
-      const label = a.reply_label ? reaktionLabel(a.reply_label as ReplyLabel, !!a.note) : null
-      return `Antwort erhalten${label ? `: ${label}` : ''}${zitat}`
-    }
-    case 'pitch_gesendet':
-      return `Pitch ${str(m.variante) ?? (vorlage?.includes('B') ? 'B' : 'A')} gesendet`
-    case 'anruf': {
-      const ergebnis = a.outcome ? (ERGEBNIS_LABEL[a.outcome as CallOutcome] ?? a.outcome) : 'Ergebnis offen'
-      const versuch = num(m.attempt_no) !== null ? ` · Versuch ${num(m.attempt_no)}/${num(m.max_attempts) ?? 5}` : ''
-      const dauer = str(m.dauer) ? ` · ${str(m.dauer)}` : ''
-      const wer = str(m.reached_name) ? ` · ${str(m.reached_name)}` : ''
-      return `Anruf · ${ergebnis}${wer}${versuch}${dauer}`
-    }
-    case 'email_gesendet':
-      return a.outcome === 'opened_in_client'
-        ? `E-Mail in Gmail geöffnet${vorlage ? ` · ${vorlage}` : ''}`
-        : `E-Mail gesendet${vorlage ? ` · ${vorlage}` : ''}`
-    case 'email_erhalten':
-      return 'E-Mail beantwortet'
-    case 'meeting_geplant': {
-      const typ = str(m.meeting_type) === 'strategiegespraech' ? 'Strategiegespräch' : 'Erstgespräch'
-      return `${typ} vereinbart${str(m.scheduled_at) ? ` für ${datum(m.scheduled_at)}` : ''}`
-    }
-    case 'meeting_stattgefunden':
-      return `${str(m.meeting_type) === 'strategiegespraech' ? 'Strategiegespräch' : 'Erstgespräch'} stattgefunden`
-    case 'meeting_no_show':
-      return `${str(m.meeting_type) === 'strategiegespraech' ? 'Strategiegespräch' : 'Erstgespräch'} No-Show`
-    case 'meeting_abgesagt':
-      return `${str(m.meeting_type) === 'strategiegespraech' ? 'Strategiegespräch' : 'Erstgespräch'} abgesagt`
-    case 'meeting_verschoben':
-      return `${str(m.meeting_type) === 'strategiegespraech' ? 'Strategiegespräch' : 'Erstgespräch'} verschoben${str(m.scheduled_at) ? ` auf ${datum(m.scheduled_at)}` : ''}`
-    case 'notiz':
-      if (str(m.kind) === 'auskunft_export') return 'Auskunft exportiert (JSON)' // § 1.5 Nr. 32
-      if (str(m.kind) === 'bearbeitet') return 'Notiz bearbeitet'
-      return 'Notiz'
-    case 'stage_wechsel': {
-      // Trigger leads_after_update schreibt `from`/`to`/`ended_reason` und `outcome = <neue Stufe>`; ältere Zeilen
-      // `prev_stage`/`stage`/`prev_rank`/`rank` und den Grund in `outcome` (Integration, FOUNDATION-WUNSCH M2).
-      const vonKey = str(m.prev_stage ?? m.from)
-      const nachKey = str(m.stage ?? m.to)
-      const von = stufe(vonKey)
-      const nach = stufe(nachKey)
-      if (nachKey === 'beendet') {
-        const grund = str(m.ended_reason) ?? (a.outcome && a.outcome !== 'beendet' ? a.outcome : null)
-        return `Beendet · ${grund ? (GRUND_LABEL[grund as EndedReason] ?? grund) : 'Sonstiges'}`
-      }
-      if (nachKey === 'langfristig') return `Wiedervorlage${str(m.due) ? ` am ${datum(m.due)}` : ''}`
-      if (vonKey === 'beendet') return 'Reaktiviert'
-      const rangVon = num(m.prev_rank) ?? (vonKey && ctx.rang ? ctx.rang(vonKey) : null)
-      const rangNach = num(m.rank) ?? (nachKey && ctx.rang ? ctx.rang(nachKey) : null)
-      const rueck = rangVon !== null && rangNach !== null && rangVon > rangNach
-      const quelle = str(m.via) === 'pipeline' ? ' (per Pipeline)' : ''
-      return `${rueck ? 'Phase zurückgesetzt' : 'Phase geändert'}: ${von} → ${nach}${quelle}`
-    }
-    case 'uebergabe':
-      return `Übergeben an ${ctx.mitglied ? ctx.mitglied(str(m.to_owner_id)) : (str(m.to_name) ?? 'die andere Person')}${zitat}`
-    case 'freigabe':
-      return str(m.taken) ? 'Übernommen' : `Freigegeben${a.note ? ` · ${a.note}` : ''}`
-    case 'sequenz_gestartet':
-      return `Sequenz ${str(m.sequence_name) ?? ''} gestartet${num(m.version) !== null ? ` (Version ${num(m.version)})` : ''}`.replace(
-        '  ',
-        ' ',
-      )
-    case 'sequenz_gestoppt':
-      return `Sequenz beendet${a.outcome ? `: ${STOP_LABEL[a.outcome] ?? a.outcome}` : ''}`
-    case 'sequenz_abgeschlossen':
-      return 'Sequenz abgeschlossen'
-    case 'sequenz_pausiert':
-      return 'Sequenz pausiert wegen E-Mail-Sequenz'
-    case 'schritt_uebersprungen':
-      return `Schritt übersprungen${vorlage ? ` · ${vorlage}` : ''}`
-    case 'schritt_verschoben': {
-      const delta = num(m.delta_days)
-      return `Schritt verschoben${str(m.due) ? ` auf ${datum(m.due)}` : ''}${delta !== null ? ` (${delta >= 0 ? '+' : '−'}${Math.abs(delta)} T)` : ''}`
-    }
-    case 'aufgabe_erledigt':
-      return str(m.kind) === 'rueckruf'
-        ? `Rückruf vereinbart${str(m.due) ? ` ${datum(m.due)}` : ''}`
-        : `Aufgabe erledigt${str(m.title) ? ` · ${str(m.title)}` : ''}`
-    case 'einwilligung':
-      if (str(m.kind) === 'anrufgrund')
-        return `Anrufgrund gesetzt: ${a.outcome ? (ANRUFGRUND_LABEL[a.outcome as CallBasis] ?? a.outcome) : '–'}` // § 1.5 Nr. 14
-      if (str(m.kind) === 'datenschutz')
-        return `Datenschutz-Info gesendet (${str(m.version) ?? 'v1.0'}, ${str(m.kanal) ?? 'E-Mail'})`
-      return `Erlaubnis erfasst: ${a.outcome ? (ERLAUBNIS_LABEL[a.outcome as EmailConsentBasis] ?? a.outcome) : '–'}${zitat}`
-    case 'widerspruch':
-      return `Widerspruch erfasst · ${str(m.channels) ?? 'alle Kanäle'}`
-    default:
-      return a.type
-  }
-}
-
-const STOP_LABEL: Record<string, string> = {
-  antwort_erhalten: 'Antwort erhalten',
-  meeting_gebucht: 'Termin gebucht',
-  lead_beendet: 'Lead beendet',
-  verbindung_entfernt: 'Verbindung entfernt',
-  widerspruch: 'Widerspruch',
-  manuell: 'manuell',
-  ersetzt: 'ersetzt',
-  uebergabe: 'Übergabe',
-}

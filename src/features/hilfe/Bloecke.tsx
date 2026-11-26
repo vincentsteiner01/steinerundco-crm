@@ -1,27 +1,9 @@
 // Handbuch-Blöcke (themen.ts) als Lesetext: Body 15/1,55 auf 64 ch, Zwischentitel H3, Listen mit Gedankenstrich, Schritte mit
-// Mono-Ziffer, Tastenzeilen als Haarlinien-Liste, „geplant“-Hinweis mit Chip. Das Tastenregister ist mit der Tastenliste entfallen
+// Mono-Ziffer, „geplant“-Hinweis mit Chip. Tastenzeilen und Tastenregister sind mit den Tastenkürzeln entfallen
 // (Neustart 25.11.2026).
 import { Chip } from '@/components/ui/Chip'
-import { Inline, TastenFolge } from './Inline'
+import { Inline } from './Inline'
 import type { Block } from './themen'
-
-function TastenZeilen({ zeilen }: { zeilen: readonly { tasten: readonly string[]; text: string }[] }) {
-  return (
-    <dl className="border-line max-w-[64ch] border-t">
-      {zeilen.map((z) => (
-        <div
-          key={`${z.tasten.join('+')}:${z.text}`}
-          className="border-line grid grid-cols-[minmax(52px,auto)_1fr] items-baseline gap-3 border-b py-2 md:grid-cols-[minmax(88px,auto)_1fr] md:gap-4"
-        >
-          <dt>
-            <TastenFolge tasten={z.tasten} />
-          </dt>
-          <dd className="text-ui text-ink-2 min-w-0 font-normal">{z.text}</dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
 
 export function Bloecke({ bloecke }: { bloecke: readonly Block[] }) {
   return (
@@ -71,8 +53,6 @@ export function Bloecke({ bloecke }: { bloecke: readonly Block[] }) {
                 ))}
               </ol>
             )
-          case 'tasten':
-            return <TastenZeilen key={key} zeilen={b.zeilen} />
           case 'hinweis':
             return (
               <p

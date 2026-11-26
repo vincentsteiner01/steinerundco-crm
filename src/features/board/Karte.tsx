@@ -1,4 +1,6 @@
 // Die Karte nach der Skizze der Inhaber (25.11.2026): @Zugehörigkeit · Name · LinkedIn-Link · grüner und roter Knopf – sonst nichts.
+// Die zwei Knöpfe stehen nebeneinander (ab 1280 px Fensterbreite in jeder Liste); nur wenn die Beschriftungen einmal nicht
+// hineinpassen, brechen sie von selbst um.
 // Klick auf die Karte öffnet das Lead-Blatt: der Name ist der echte Knopf, seine Klickfläche (::after) liegt über der ganzen Karte;
 // Link und Knöpfe liegen darüber und tragen `data-kein-ziehen` (sie starten weder ein Ziehen noch öffnen sie das Blatt).
 import { useDraggable } from '@dnd-kit/core'
@@ -12,6 +14,10 @@ import { linkedinHref } from '@/lib/url'
 import type { Member } from '@/types/domain'
 import { KARTEN_KNOEPFE, type BoardListe } from './listen'
 import { kartenName } from './logik'
+
+const KNOPF_REIHE = '-mx-1 mt-2 flex flex-wrap gap-1.5'
+// Schmaler Innenabstand und 13/14 px statt der Vorgaben von Größe L (px-4, 15 px) – deshalb die Ausrufezeichen. Höhe bleibt 44 px.
+const KARTEN_KNOPF = 'relative z-[1] min-w-max grow basis-0 px-1! text-[13px]! @[240px]:text-[14px]!'
 
 type FlaecheProps = {
   karte: BoardKarte
@@ -29,7 +35,7 @@ export function KartenFlaeche({ karte, member, onOeffnen, onVerschieben, classNa
   return (
     <div
       className={cn(
-        'bg-surface shadow-card relative touch-manipulation rounded-md p-3.5 select-none [-webkit-touch-callout:none]',
+        'bg-surface shadow-card relative touch-manipulation rounded-md p-3 select-none [-webkit-touch-callout:none]',
         className,
       )}
     >
@@ -42,11 +48,11 @@ export function KartenFlaeche({ karte, member, onOeffnen, onVerschieben, classNa
       <h3 className="mt-2">
         <button
           type="button"
-          title={name}
           onClick={() => onOeffnen?.(karte.id)}
-          className="text-ink-bright block w-full truncate text-left text-[16px] leading-[1.35] font-semibold after:absolute after:inset-0 after:rounded-md"
+          className="text-ink-bright block w-full text-left text-[16px] leading-[1.35] font-semibold after:absolute after:inset-0 after:rounded-md"
         >
-          {name}
+          {/* Lange Namen laufen in eine zweite Zeile statt mit „…“ zu enden – ohne Tooltip über der ganzen Karte */}
+          <span className="line-clamp-2 [overflow-wrap:anywhere]">{name}</span>
         </button>
       </h3>
       {href ? (
@@ -56,20 +62,26 @@ export function KartenFlaeche({ karte, member, onOeffnen, onVerschieben, classNa
           rel="noopener noreferrer"
           draggable={false}
           data-kein-ziehen
-          className="text-signal text-ui relative z-[1] -mx-1 mt-0.5 inline-flex h-9 items-center rounded-xs px-1 font-medium hover:underline"
+          // Sichtbar 36 px hoch; die Trefferfläche reicht je 4 px darüber und darunter (44 px), ohne die Karte höher zu machen
+          className="text-signal text-ui relative z-[1] -mx-1 mt-0.5 inline-flex h-9 items-center rounded-xs px-1 font-medium before:absolute before:inset-x-0 before:-inset-y-1 hover:underline"
         >
           LinkedIn-Profil
         </a>
       ) : null}
       {knoepfe.length > 0 ? (
-        <div className="mt-2 grid gap-2">
+        // Nebeneinander und gleich breit (Grundbreite 0, beide wachsen gleich). `min-w-max` hält jede Beschriftung ganz: Passen
+        // die zwei einmal nicht in eine Zeile (andere Systemschrift, vergrößerte Schrift), bricht die Reihe um und jeder Knopf
+        // nimmt die volle Breite – nie abgeschnitten. Damit es ab 1280 px Fensterbreite passt (Karte dann 221 px breit): Reihe
+        // 4 px über den Kartenrand hinaus (-mx-1), 6 px Abstand, in schmalen Listen 13 px Schrift, ab 240 px Kartenbreite 14 px
+        // (@[240px] misst die Liste, siehe Liste.tsx).
+        <div className={KNOPF_REIHE}>
           {knoepfe.map((k) => (
             <Button
               key={k.ziel}
               variante={k.art}
               groesse="L"
               data-kein-ziehen
-              className="relative z-[1] w-full"
+              className={KARTEN_KNOPF}
               // Nur der erste Klick zählt: nach dem Zug rückt die nächste Karte unter den Zeiger – ein Doppelklick träfe sie mit
               onClick={(e) => {
                 if (e.detail <= 1) onVerschieben?.(karte, k.ziel)

@@ -24,23 +24,6 @@ export function useMeetings(leadId: string | null | undefined) {
   })
 }
 
-/** Geplante Termine einer Person (Kalenderblock, M3/M5). */
-export function useMeetingsMember(memberId: string | null | undefined) {
-  return useQuery({
-    queryKey: qk.meetings.member(memberId ?? ''),
-    enabled: !!memberId,
-    queryFn: async (): Promise<Meeting[]> =>
-      pruefe(
-        await supabase
-          .from('meetings')
-          .select('*')
-          .eq('member_id', memberId as string)
-          .eq('status', 'geplant')
-          .order('scheduled_at', { ascending: true }),
-      ),
-  })
-}
-
 function useMeetingInvalidierung() {
   const qc = useQueryClient()
   return (leadId: string) => {

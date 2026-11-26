@@ -70,19 +70,3 @@ export function useTemplatePerformance() {
       pruefe(await supabase.from('v_template_performance').select('*')),
   })
 }
-
-/** Vorlage endgültig löschen – nur erlaubt, wenn ungenutzt (BAUPLAN § 3.7 „Regeln“; die Seite prüft vorher). */
-export function useTemplateLoeschen() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (id: string): Promise<void> => {
-      const r = await supabase.from('templates').delete().eq('id', id)
-      if (r.error) throw r.error
-    },
-    onError: mutationFehler,
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: qk.templates.all })
-      void qc.invalidateQueries({ queryKey: qk.templates.perf })
-    },
-  })
-}

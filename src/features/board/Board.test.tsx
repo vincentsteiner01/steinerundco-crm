@@ -1,8 +1,8 @@
 // Board-Seite (25.11.2026) mit gemockten Daten-Hooks: Listen und Karte nach der Skizze der Inhaber, Knöpfe je Liste, Verschieben
 // mit „Rückgängig“ (Liste und board_seit), Suche/Filter, „Weitere anzeigen“, Lead hinzufügen (neu · übernommen · schon da · Fehler),
-// Klick auf die Karte setzt ?lead=. Nur erfundene Namen. Die Daten-Schicht selbst prüft daten.test.tsx.
+// Klick auf die Karte setzt ?lead= als neuen Verlaufseintrag. Nur erfundene Namen. Die Daten-Schicht selbst prüft daten.test.tsx.
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router'
+import { MemoryRouter, Route, Routes, useLocation, useNavigate, useNavigationType } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BoardKarte } from '@/data/board'
 import type { BoardListe } from './listen'
@@ -45,6 +45,8 @@ vi.mock('@/data/members', () => ({
 vi.mock('@/components/toast', () => ({ toast: m.toast, toastUndo: m.toastUndo, toastFehler: vi.fn() }))
 
 import { Component as BoardSeite } from './BoardSeite'
+import { Liste } from './Liste'
+import { blattImVerlauf } from './verlauf'
 
 function karte(id: string, liste: BoardListe, name = 'Petra Probelauf', patch: Partial<BoardKarte> = {}): BoardKarte {
   const [vor, ...rest] = name.split(' ')
@@ -64,14 +66,25 @@ function karte(id: string, liste: BoardListe, name = 'Petra Probelauf', patch: P
 }
 
 function Ort() {
-  const { pathname, search } = useLocation()
-  return <output data-testid="ort">{pathname + search}</output>
+  const { pathname, search, state } = useLocation()
+  const art = useNavigationType()
+  const navigate = useNavigate()
+  return (
+    <>
+      <output data-testid="ort">{pathname + search}</output>
+      {/* wie der Eintrag entstand (PUSH = neuer Verlaufseintrag) und ob er als „Blatt geöffnet“ markiert ist */}
+      <output data-testid="verlauf">{`${art}${blattImVerlauf(state) ? ' Blatt' : ''}`}</output>
+      <button type="button" onClick={() => void navigate(-1)}>
+        Browser zurück
+      </button>
+    </>
+  )
 }
 
-function zeigen(karten: BoardKarte[] = []) {
+function zeigen(karten: BoardKarte[] = [], start = '/leads') {
   m.karten = karten
   return render(
-    <MemoryRouter initialEntries={['/leads']}>
+    <MemoryRouter initialEntries={[start]}>
       <Routes>
         <Route
           path="/leads"
@@ -149,6 +162,15 @@ describe('Board: Listen und Karten', () => {
     expect(m.refetch).toHaveBeenCalledTimes(1)
   })
 
+  it('Fehlerzeile wie auf Leitfäden und Team: ein Satz, großer Knopf, kein Tastenhinweis', () => {
+    m.fehler = true
+    zeigen([])
+    const zeile = screen.getByRole('alert')
+    expect(zeile).toHaveTextContent(/^Die Leads konnten nicht geladen werden\.Erneut versuchen$/)
+    expect(zeile.querySelector('kbd')).toBeNull()
+    expect(within(zeile).getByRole('button', { name: 'Erneut versuchen' })).toHaveClass('h-11')
+  })
+
   it('Karte nach Skizze: @Zugehörigkeit, Name, LinkedIn-Link in neuem Tab, grüner und roter Knopf', () => {
     zeigen([karte('a', 'angeschrieben', 'Petra Probelauf'), karte('b', 'angeschrieben', 'Max Muster', { owner_id: M })])
     const a = within(karteVon('a'))
@@ -161,6 +183,23 @@ describe('Board: Listen und Karten', () => {
     expect(a.getByRole('button', { name: 'Hat Interesse' })).toHaveClass('bg-done', 'h-11')
     expect(a.getByRole('button', { name: 'Kein Interesse' })).toHaveClass('bg-danger', 'h-11')
     expect(within(karteVon('b')).getByText('@Mike')).toBeInTheDocument()
+  })
+
+  it('die zwei Knöpfe stehen nebeneinander und gleich breit; die Reihe bricht nur um, wenn ein Text nicht passt – 44 px hoch', () => {
+    zeigen([karte('a', 'angeschrieben')])
+    const gruen = within(karteVon('a')).getByRole('button', { name: 'Hat Interesse' })
+    const rot = within(karteVon('a')).getByRole('button', { name: 'Kein Interesse' })
+    // jsdom rechnet kein Layout: geprüft wird die Bauart (flex-wrap als Sicherung, gleiche Grundbreite 0, nie schmaler als
+    // der Text); dass bei 1280/1366/1440/1024/390 px beide nebeneinander stehen und nichts abgeschnitten ist, misst die
+    // Sichtprüfung im Browser
+    expect(gruen.parentElement).toBe(rot.parentElement)
+    expect(gruen.parentElement).toHaveClass('flex', 'flex-wrap', 'gap-1.5', '-mx-1')
+    for (const knopf of [gruen, rot]) {
+      expect(knopf).toHaveClass('h-11', 'grow', 'basis-0', 'min-w-max', 'whitespace-nowrap')
+      // 13 px in schmalen Listen, 14 px ab 240 px Kartenbreite; schmaler Innenabstand statt px-4
+      expect(knopf).toHaveClass('text-[13px]!', '@[240px]:text-[14px]!', 'px-1!')
+    }
+    expect(rot.className).not.toMatch(/truncate|overflow-hidden/)
   })
 
   it('Karte ohne LinkedIn-Link kommt ohne Link aus; fremde Adressen werden nie verlinkt', () => {
@@ -191,7 +230,8 @@ describe('Board: Verschieben mit Rückgängig', () => {
     expect(m.verschieben).toHaveBeenCalledWith({ id: 'a', liste: 'gespraech' })
     await waitFor(() => expect(m.toastUndo).toHaveBeenCalledTimes(1))
     const [text, zurueck] = m.toastUndo.mock.calls[0] as [string, () => Promise<void>]
-    expect(text).toBe('Verschoben nach „Gespräch vereinbart“.')
+    // kurz: bleibt im Toast neben „Rückgängig“ einzeilig
+    expect(text).toBe('Jetzt in „Gespräch vereinbart“.')
     await act(async () => {
       await zurueck()
     })
@@ -205,10 +245,7 @@ describe('Board: Verschieben mit Rückgängig', () => {
     fireEvent.click(within(karteVon('g')).getByRole('button', { name: 'Im Geschäft' }))
     expect(m.verschieben).toHaveBeenLastCalledWith({ id: 'g', liste: 'im_geschaeft' })
     await waitFor(() => expect(m.toastUndo).toHaveBeenCalledTimes(2))
-    expect(m.toastUndo.mock.calls.map((c) => c[0])).toEqual([
-      'Verschoben nach „Verloren“.',
-      'Verschoben nach „Im Geschäft“.',
-    ])
+    expect(m.toastUndo.mock.calls.map((c) => c[0])).toEqual(['Jetzt in „Verloren“.', 'Jetzt in „Im Geschäft“.'])
   })
 
   it('nur der erste Klick zählt – ein Doppelklick trifft nicht die nachrückende Karte', () => {
@@ -234,6 +271,118 @@ describe('Board: Verschieben mit Rückgängig', () => {
     expect(screen.getByTestId('ort')).not.toHaveTextContent('lead=')
     fireEvent.click(within(karteVon('a')).getByRole('button', { name: 'Petra Probelauf' }))
     expect(screen.getByTestId('ort')).toHaveTextContent('/leads?lead=a')
+  })
+})
+
+// Fund 36 (25.11.2026): Nach einem Zug per Knopf verschwand die Karte samt Fokus – er fiel auf <body>
+describe('Board: Fokus nach einem Zug per Knopf', () => {
+  const zeichne = (karten: BoardKarte[], onVerschieben = vi.fn()) => (
+    <Liste
+      liste="angeschrieben"
+      titel="Angeschrieben"
+      karten={karten}
+      members={[]}
+      onOeffnen={vi.fn()}
+      onVerschieben={onVerschieben}
+    />
+  )
+  const a = karte('a', 'angeschrieben', 'Petra Probelauf')
+  const b = karte('b', 'angeschrieben', 'Max Muster')
+  const c = karte('c', 'angeschrieben', 'Jonas Beispiel')
+  /** Wie mit der Tastatur: der Knopf hat den Fokus und wird ausgelöst. */
+  const druecke = (id: string, name: string) => {
+    const knopf = within(karteVon(id)).getByRole('button', { name })
+    knopf.focus()
+    fireEvent.click(knopf)
+  }
+  const nameVon = (id: string) => karteVon(id).querySelector('h3 button')
+
+  it('die nachrückende Karte bekommt den Fokus – auf ihrem Namen, nicht auf einem ihrer Knöpfe', () => {
+    const verschieben = vi.fn()
+    const { rerender } = render(zeichne([a, b, c], verschieben))
+    druecke('a', 'Hat Interesse')
+    expect(verschieben).toHaveBeenCalledWith(a, 'gespraech')
+    // die Karte liegt noch da (der Zug erscheint einen Augenblick später): der Fokus bleibt, wo er ist
+    expect(within(karteVon('a')).getByRole('button', { name: 'Hat Interesse' })).toHaveFocus()
+    rerender(zeichne([b, c], verschieben))
+    expect(nameVon('b')).toHaveFocus()
+    expect(nameVon('b')).toHaveTextContent('Max Muster')
+  })
+
+  it('war es die letzte Karte der Liste, bekommt die Karte davor den Fokus', () => {
+    const { rerender } = render(zeichne([a, b, c]))
+    druecke('c', 'Kein Interesse')
+    rerender(zeichne([a, b]))
+    expect(nameVon('b')).toHaveFocus()
+  })
+
+  it('ist die Liste danach leer, bekommt ihr Titel den Fokus', () => {
+    const { rerender } = render(zeichne([a]))
+    druecke('a', 'Hat Interesse')
+    rerender(zeichne([]))
+    expect(screen.getByRole('heading', { level: 2, name: 'Angeschrieben' })).toHaveFocus()
+  })
+
+  it('jenseits der ersten 50: die Karte, die in die Ansicht nachrückt, bekommt den Fokus', () => {
+    const viele = Array.from({ length: 52 }, (_, i) => karte(`k${i}`, 'angeschrieben', `Test Person ${i}`))
+    const { rerender } = render(zeichne(viele))
+    druecke('k49', 'Hat Interesse')
+    rerender(zeichne(viele.filter((k) => k.id !== 'k49')))
+    expect(nameVon('k50')).toHaveFocus()
+  })
+
+  it('lag der Fokus nicht auf der Karte (Mausklick in Safari, Ziehen), wird er nicht versetzt', () => {
+    const { rerender } = render(zeichne([a, b]))
+    fireEvent.click(within(karteVon('a')).getByRole('button', { name: 'Hat Interesse' }))
+    rerender(zeichne([b]))
+    expect(document.body).toHaveFocus()
+  })
+
+  it('hat inzwischen etwas anderes den Fokus, bleibt er dort', () => {
+    const { rerender } = render(
+      <>
+        <input aria-label="Suchen" />
+        {zeichne([a, b])}
+      </>,
+    )
+    druecke('a', 'Hat Interesse')
+    screen.getByLabelText('Suchen').focus()
+    rerender(
+      <>
+        <input aria-label="Suchen" />
+        {zeichne([b])}
+      </>,
+    )
+    expect(screen.getByLabelText('Suchen')).toHaveFocus()
+  })
+
+  it('scheitert der Zug und die Karte bleibt, wird später kein Fokus gestohlen', () => {
+    const { rerender } = render(zeichne([a, b]))
+    druecke('a', 'Hat Interesse')
+    // neu gezeichnet, die Karte ist noch da (Zug zurückgerollt)
+    rerender(zeichne([a, b]))
+    expect(within(karteVon('a')).getByRole('button', { name: 'Hat Interesse' })).toHaveFocus()
+  })
+})
+
+describe('Board: Karte öffnen und die Zurück-Taste', () => {
+  it('Öffnen legt einen markierten Verlaufseintrag an; „Zurück“ des Browsers schließt und bleibt auf dem Board', () => {
+    zeigen([karte('a', 'angeschrieben')])
+    expect(screen.getByTestId('verlauf')).toHaveTextContent(/^POP$/)
+    fireEvent.click(within(karteVon('a')).getByRole('button', { name: 'Petra Probelauf' }))
+    expect(screen.getByTestId('ort')).toHaveTextContent('/leads?lead=a')
+    // PUSH (nicht REPLACE) und die Marke, an der die Hülle erkennt: „Schließen“ darf einen Schritt zurück
+    expect(screen.getByTestId('verlauf')).toHaveTextContent(/^PUSH Blatt$/)
+    fireEvent.click(screen.getByRole('button', { name: 'Browser zurück' }))
+    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/leads$/)
+    expect(screen.getByRole('heading', { level: 1, name: 'Leads' })).toBeInTheDocument()
+  })
+
+  it('steht schon ein Lead in der Adresse (Direktaufruf), ersetzt eine Karte ihn – kein zweiter Eintrag, keine Marke', () => {
+    zeigen([karte('a', 'angeschrieben')], '/leads?lead=x')
+    fireEvent.click(within(karteVon('a')).getByRole('button', { name: 'Petra Probelauf' }))
+    expect(screen.getByTestId('ort')).toHaveTextContent('/leads?lead=a')
+    expect(screen.getByTestId('verlauf')).toHaveTextContent(/^REPLACE$/)
   })
 })
 
@@ -332,6 +481,33 @@ describe('Board: Suche, Filter, lange Listen', () => {
     fireEvent.click(within(liste('Angeschrieben')).getByRole('button', { name: 'Weitere anzeigen' }))
     expect(kartenIn('Angeschrieben')).toHaveLength(60)
     expect(screen.queryByRole('button', { name: 'Weitere anzeigen' })).toBeNull()
+  })
+
+  // 25.11.2026: „… liegt schon in …“ für eine Karte jenseits der ersten 50 – nach 2,5 s klappte die Liste zurück
+  it('lange Liste: eine hervorgehobene Karte weiter unten bleibt zu sehen, auch wenn das Hervorheben endet', () => {
+    const karten = Array.from({ length: 64 }, (_, i) => karte(`k${i}`, 'angeschrieben', `Test Person ${i}`))
+    const zeichne = (hervorgehoben: string | null) => (
+      <Liste
+        liste="angeschrieben"
+        titel="Angeschrieben"
+        karten={karten}
+        members={[]}
+        hervorgehoben={hervorgehoben}
+        onOeffnen={vi.fn()}
+        onVerschieben={vi.fn()}
+      />
+    )
+    const { rerender } = render(zeichne(null))
+    expect(kartenIn('Angeschrieben')).toHaveLength(50)
+    rerender(zeichne('k58'))
+    expect(kartenIn('Angeschrieben')).toHaveLength(59)
+    expect(karteVon('k58')).toHaveAttribute('data-hervorgehoben')
+    rerender(zeichne(null))
+    expect(kartenIn('Angeschrieben')).toHaveLength(59)
+    expect(karteVon('k58')).not.toHaveAttribute('data-hervorgehoben')
+    // „Weitere anzeigen“ legt von dort aus nach
+    fireEvent.click(within(liste('Angeschrieben')).getByRole('button', { name: 'Weitere anzeigen' }))
+    expect(kartenIn('Angeschrieben')).toHaveLength(64)
   })
 })
 

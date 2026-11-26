@@ -5,7 +5,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { rollToWeekday } from '@/lib/werktage'
 import { tagZuDate } from '@/lib/zeit'
-import type { Channel, Enrollment } from '@/types/domain'
+import type { Enrollment } from '@/types/domain'
 import { heuteBerlin, pruefe } from './_helfer'
 import { mutationFehler } from './errors'
 import { qk } from './queryKeys'
@@ -28,22 +28,6 @@ export function useEnrollments(leadId: string | null | undefined) {
   })
 }
 
-/**
- * Alle aktiven/pausierten Enrollments eines Kanals – einer Person (`memberId`) oder aller (`null`); z. B. Anrufliste (M3).
- * Key `qk.enrollmentsKanal` (Präfix `['enrollments']` → Realtime/Undo frischen ihn mit auf).
- */
-export function useEnrollmentsKanal(kanal: Channel, memberId: string | null, enabled = true) {
-  return useQuery({
-    queryKey: qk.enrollmentsKanal(kanal, memberId),
-    enabled,
-    queryFn: async (): Promise<Enrollment[]> => {
-      let q = supabase.from('enrollments').select('*').eq('channel', kanal).in('status', ['aktiv', 'pausiert'])
-      if (memberId) q = q.eq('member_id', memberId)
-      return pruefe(await q.order('next_due_at', { ascending: true, nullsFirst: false }).range(0, 999))
-    },
-  })
-}
-
 export type EnrollmentZaehler = Map<string, number>
 
 /** Zeilen `{ sequence_id }` → Anzahl je Sequenz. */
@@ -51,18 +35,6 @@ export function zaehleJeSequenz(zeilen: readonly { sequence_id: string }[]): Enr
   const m = new Map<string, number>()
   for (const z of zeilen) m.set(z.sequence_id, (m.get(z.sequence_id) ?? 0) + 1)
   return m
-}
-
-/** Laufende Leads (`aktiv` + `pausiert`) je `sequence_id` – Einstellungen → Sequenzen (BAUPLAN § 3.9). */
-export function useEnrollmentZaehler() {
-  return useQuery({
-    queryKey: qk.enrollmentsLaufend,
-    staleTime: 60_000,
-    queryFn: async (): Promise<EnrollmentZaehler> =>
-      zaehleJeSequenz(
-        pruefe(await supabase.from('enrollments').select('sequence_id,status').in('status', ['aktiv', 'pausiert'])),
-      ),
-  })
 }
 
 function useEnrollmentInvalidierung() {

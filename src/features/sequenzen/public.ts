@@ -1,4 +1,4 @@
-// src/features/sequenzen/public.ts – Vertrag BAUPLAN § 3.1.10a (M1): SequenzStartenMenue · SequenzEditor · SequenzStatus.
+// src/features/sequenzen/public.ts – Vertrag BAUPLAN § 3.1.10a (M1): SequenzStartenMenue · SequenzStatus.
+// 25.11.2026: Der SequenzEditor ist mit Einstellungen › Sequenzen entfallen.
 export { SequenzStartenMenue } from './SequenzStartenMenue'
-export { SequenzEditor } from './SequenzEditor'
 export { SequenzStatus } from './SequenzStatus'

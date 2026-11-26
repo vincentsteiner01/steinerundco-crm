@@ -1,8 +1,8 @@
 // BAUPLAN § 3.1.6 members.ts: useMembers() (View crm.members), useMe(), useAndere().
-// Integration (FOUNDATION-WUNSCH M8): Schreibpfad `member_profiles` (useProfilSpeichern) + Lesen/Mergen von `preferences`.
+// Integration (FOUNDATION-WUNSCH M8): Schreibpfad `member_profiles` (useProfilSpeichern).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/authStore'
-import type { Database, Json } from '@/types/database'
+import type { Database } from '@/types/database'
 import type { Member } from '@/types/domain'
 import { pruefe } from './_helfer'
 import { mutationFehler } from './errors'
@@ -43,28 +43,6 @@ export function useMeId(): string | null {
 export type Preferences = {
   kanaele: { linkedin: boolean; telefon: boolean; email: boolean }
   realtime_toasts: boolean
-}
-
-const istObjekt = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
-const bool = (v: unknown, standard: boolean): boolean => (typeof v === 'boolean' ? v : standard)
-
-export function liesPreferences(json: Json | null | undefined): Preferences {
-  const o = istObjekt(json) ? json : {}
-  const k = istObjekt(o['kanaele']) ? o['kanaele'] : {}
-  return {
-    kanaele: {
-      linkedin: bool(k['linkedin'], true),
-      telefon: bool(k['telefon'], true),
-      email: bool(k['email'], true),
-    },
-    realtime_toasts: bool(o['realtime_toasts'], true),
-  }
-}
-
-/** Bisherige `preferences` (unbekannte Keys bleiben) + neue Werte. */
-export function mergePreferences(alt: Json | null | undefined, neu: Preferences): Json {
-  const o = istObjekt(alt) ? alt : {}
-  return { ...o, kanaele: { ...neu.kanaele }, realtime_toasts: neu.realtime_toasts } as Json
 }
 
 /** Profilwerte aus der View-Zeile (`crm.members`) als Upsert-Vorlage. */

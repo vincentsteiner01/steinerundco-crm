@@ -1,4 +1,4 @@
-// Realtime (E17, BAUPLAN § 3.1.6): ein Kanal `crm:sync`, postgres_changes auf 11 Tabellen, Invalidierung nach Tabelle.
+// Realtime (E17, BAUPLAN § 3.1.6): ein Kanal `crm:sync`, postgres_changes auf 13 Tabellen, Invalidierung nach Tabelle.
 // Nicht architektur § 4.3 (dort stehen falsche Tabellennamen). Status → uiStore.realtime.
 // Neustart 25.11.2026: nur noch Invalidierung – die Toasts „übergeben“/„Termin der anderen Person“ gehörten zum alten CRM.
 import { useQueryClient, type QueryClient, type QueryKey } from '@tanstack/react-query'

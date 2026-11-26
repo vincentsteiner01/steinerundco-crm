@@ -1,4 +1,5 @@
 // E-01 (BAUPLAN § 3.9 Passcode.test.tsx): ≥ 10 Zeichen, ungleich alt, Wiederholung; Erfolg → Re-Auth, updateUser, signOut(others).
+// Neustart 25.11.2026: der tote Knopf zum Zurücksetzen der anderen Person und die Tastenhinweise sind entfallen.
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -39,14 +40,26 @@ describe('Passcode', () => {
     signIn.mockResolvedValue({ data: { session: null, user: null }, error: null } as never)
   })
 
-  it('zeigt drei Felder, Checkbox „Andere Geräte abmelden“ (an) und den deaktivierten Reset der anderen Person', () => {
+  it('zeigt drei Felder und die Checkbox „Andere Geräte abmelden“ (an)', () => {
     rendern(<Passcode />, '/einstellungen/passcode')
     expect(screen.getByLabelText('Aktueller Passcode')).toHaveAttribute('type', 'password')
+    expect(screen.getByLabelText('Neuer Passcode')).toHaveAttribute('type', 'password')
+    expect(screen.getByLabelText('Neuen Passcode wiederholen')).toHaveAttribute('type', 'password')
     expect(screen.getByLabelText('Andere Geräte abmelden')).toBeChecked()
-    const reset = screen.getByRole('button', { name: /zurücksetzen/ })
-    expect(reset).toBeDisabled()
-    expect(screen.getByLabelText('Kommt in v1.1 – bis dahin: Lead fragen')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Passcode ändern/ })).toBeDisabled()
+  })
+
+  it('Neustart: kein Knopf „Passcode von … zurücksetzen“, keine Tastenhinweise, kein „Lead“ für den Entwickler', () => {
+    const { container } = rendern(<Passcode />, '/einstellungen/passcode')
+    expect(screen.queryByRole('button', { name: /zurücksetzen/ })).not.toBeInTheDocument()
+    expect(screen.queryByText(/zurücksetzen/)).not.toBeInTheDocument()
+    expect(container.querySelector('kbd')).toBeNull()
+    expect(container.textContent).not.toMatch(/Lead|v1\.1/)
+    // Es bleiben genau zwei Abschnitte
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+      'Passcode ändern',
+      'Überall abmelden',
+    ])
   })
 
   it('unter 10 Zeichen → Fehler am neuen Feld, kein Request', () => {

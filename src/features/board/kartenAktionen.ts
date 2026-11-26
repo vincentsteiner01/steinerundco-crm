@@ -32,7 +32,8 @@ export function useKartenAktionen() {
   const verschiebe = useCallback(
     (karte: KartenStand, ziel: BoardListe) => {
       if (karte.board_liste === ziel) return
-      lege(karte, ziel, `Verschoben nach „${listenTitel(ziel)}“.`)
+      // kurz genug für eine Zeile im Toast (360 px) neben „Rückgängig“ – auch beim längsten Titel „Gespräch vereinbart“
+      lege(karte, ziel, `Jetzt in „${listenTitel(ziel)}“.`)
     },
     [lege],
   )

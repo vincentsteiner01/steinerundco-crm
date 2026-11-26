@@ -1,5 +1,6 @@
-// Leitfäden (Neustart 25.11.2026): Liste zeigt nur nicht archivierte Leitfäden des Kanals sonstiges; Anlegen, Bearbeiten,
-// „Löschen“ = archivieren (kein delete), Text kopieren, Platzhalter-Chips im Editor, Rückfrage vor dem Verwerfen.
+// Leitfäden (Neustart 25.11.2026): Liste zeigt alles nicht Archivierte außer E-Mail-Vorlagen (auch Leitfäden aus dem alten CRM
+// im Kanal linkedin), neueste Änderung oben; Anlegen, Bearbeiten (Kanal/Phase/Schlüssel bleiben), „Löschen“ = archivieren
+// (kein delete), Text kopieren, Platzhalter-Chips im Editor, Rückfrage vor dem Verwerfen.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -36,6 +37,7 @@ const ABLAUF = vorlage('sales_ablauf_erstgespraech', {
   name: 'Ablauf Erstgespräch',
   body: 'Guten Tag [Anrede] [Nachname],\n\ndanke für Ihre Zeit.',
   created_at: '2026-11-25T09:00:00+00:00',
+  updated_at: '2026-11-25T09:00:00+00:00',
   archiviert_at: null,
 })
 const EINWAND = vorlage('sales_einwand_preis', {
@@ -45,6 +47,19 @@ const EINWAND = vorlage('sales_einwand_preis', {
   name: 'Einwand Preis',
   body: 'Verstehe ich. Was wäre es Ihnen wert?',
   created_at: '2026-11-25T10:00:00+00:00',
+  updated_at: '2026-11-25T10:00:00+00:00',
+  archiviert_at: null,
+})
+/** Heute noch im alten CRM geschrieben: Kanal linkedin, eigene Phase, freier Platzhalter [Position] – muss erscheinen. */
+const STELLE = vorlage('test_stelle_ausgeschrieben', {
+  id: id(7),
+  channel: 'linkedin',
+  phase: 'eroeffnung',
+  name: 'Stelle ausgeschrieben',
+  body: 'Guten Tag [Anrede] [Nachname], ich habe gesehen, dass Sie eine [Position] suchen.',
+  // früher angelegt, aber zuletzt geändert: steht oben
+  created_at: '2026-11-25T08:30:00+00:00',
+  updated_at: '2026-11-25T11:00:00+00:00',
   archiviert_at: null,
 })
 /** Was NICHT erscheinen darf: alte Vorlagen (archiviert), ein gelöschter eigener Leitfaden, eine E-Mail-Vorlage des Composers. */
@@ -79,23 +94,35 @@ const titelDerKarten = () => screen.getAllByRole('heading', { level: 2 }).map((h
 describe('Leitfäden', () => {
   beforeEach(() => {
     useAuth.setState({ status: 'mitglied', member: { user_id: MEMBER_V, email: 'v@x', display_name: 'Vincent' } })
-    setze([ABLAUF, EINWAND, ...FREMD])
+    setze([ABLAUF, EINWAND, STELLE, ...FREMD])
     vi.mocked(supabase.from).mockClear()
     vi.mocked(toast).mockClear()
   })
 
-  it('zeigt nur nicht archivierte Leitfäden des Kanals sonstiges – keine alten, keine gelöschten, keine E-Mail-Vorlagen', async () => {
+  it('zeigt alle nicht archivierten Leitfäden, auch die aus dem alten CRM (Kanal linkedin) – keine archivierten, keine E-Mail-Vorlagen', async () => {
     rendern(<Leitfaeden />)
     expect(screen.getByRole('heading', { level: 1, name: 'Leitfäden' })).toBeInTheDocument()
     await screen.findByRole('heading', { level: 2, name: 'Ablauf Erstgespräch' })
-    // zuletzt geschriebener oben
-    expect(titelDerKarten()).toEqual(['Einwand Preis', 'Ablauf Erstgespräch'])
+    // neueste Änderung oben (updated_at) – nicht das Anlegedatum
+    expect(titelDerKarten()).toEqual(['Stelle ausgeschrieben', 'Einwand Preis', 'Ablauf Erstgespräch'])
     for (const fremd of ['Alte Eröffnung', 'Altes Skript', 'Gelöschter Leitfaden', 'Infomail'])
       expect(screen.queryByText(fremd)).not.toBeInTheDocument()
     // Auszug: Zeilen zusammengezogen
     expect(screen.getByText('Guten Tag [Anrede] [Nachname], danke für Ihre Zeit.')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Leitfaden schreiben' })).toHaveLength(1)
-    expect(screen.getAllByRole('button', { name: 'Text kopieren' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Text kopieren' })).toHaveLength(3)
+  })
+
+  it('ein gerade geänderter Leitfaden rückt nach oben', async () => {
+    setze([
+      ABLAUF,
+      { ...EINWAND, updated_at: '2026-11-25T08:00:00+00:00' },
+      { ...STELLE, updated_at: ABLAUF.updated_at },
+    ])
+    rendern(<Leitfaeden />)
+    await screen.findByRole('heading', { level: 2, name: 'Ablauf Erstgespräch' })
+    // gleicher Zeitpunkt: nach Titel
+    expect(titelDerKarten()).toEqual(['Ablauf Erstgespräch', 'Stelle ausgeschrieben', 'Einwand Preis'])
   })
 
   it('Leerzustand: ein Satz und derselbe Knopf – genau einmal', async () => {
@@ -110,12 +137,12 @@ describe('Leitfäden', () => {
     rendern(<Leitfaeden />)
     fireEvent.click(await screen.findByRole('button', { name: 'Leitfaden schreiben' }))
     const fenster = await screen.findByRole('dialog', { name: 'Leitfaden schreiben' })
-    // genau die fünf Chips aus dem Bauplan
+    // die fünf Chips aus dem Bauplan und „Position“ (freier Platzhalter, den Mike benutzt)
     expect(
       within(within(fenster).getByRole('group', { name: 'Platzhalter einfügen' }))
         .getAllByRole('button')
         .map((b) => b.textContent),
-    ).toEqual(['Anrede', 'Vorname', 'Nachname', 'Unternehmen', 'Absender Vorname'])
+    ).toEqual(['Anrede', 'Vorname', 'Nachname', 'Unternehmen', 'Position', 'Absender Vorname'])
     expect(within(fenster).queryByRole('button', { name: 'Löschen' })).not.toBeInTheDocument()
 
     fireEvent.change(within(fenster).getByLabelText('Titel'), { target: { value: ' Ablauf ' } })
@@ -182,6 +209,28 @@ describe('Leitfäden', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })
 
+  it('Bearbeiten eines Leitfadens aus dem alten CRM lässt Kanal, Phase und Schlüssel, wie sie sind; der Chip „Position“ fügt ein', async () => {
+    rendern(<Leitfaeden />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Stelle ausgeschrieben' }))
+    const fenster = await screen.findByRole('dialog', { name: 'Leitfaden bearbeiten' })
+    const text = within(fenster).getByLabelText('Text') as HTMLTextAreaElement
+    expect(text).toHaveValue(STELLE.body)
+    text.focus()
+    text.setSelectionRange(text.value.length, text.value.length)
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Position' }))
+    expect(text).toHaveValue(`${STELLE.body}[Position]`)
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Speichern' }))
+    await waitFor(() => expect(aufrufe('upsert')).toHaveLength(1))
+    expect(aufrufe('upsert')[0]).toMatchObject({
+      id: STELLE.id,
+      key: 'test_stelle_ausgeschrieben',
+      channel: 'linkedin',
+      phase: 'eroeffnung',
+      name: 'Stelle ausgeschrieben',
+      body: `${STELLE.body}[Position]`,
+    })
+  })
+
   it('↵ im Titel springt in den Text; ⌘↵ im Text speichert', async () => {
     rendern(<Leitfaeden />)
     fireEvent.click(await screen.findByRole('button', { name: 'Leitfaden schreiben' }))
@@ -212,6 +261,29 @@ describe('Leitfäden', () => {
     await waitFor(() => expect(document.activeElement).toBe(fenster))
   })
 
+  // Fund 36: nach dem Schließen fiel der Fokus auf <body>
+  it('nach dem Schließen liegt der Fokus wieder auf dem Knopf bzw. der Karte, von der aus geöffnet wurde', async () => {
+    rendern(<Leitfaeden />)
+    const schreiben = await screen.findByRole('button', { name: 'Leitfaden schreiben' })
+    schreiben.focus()
+    fireEvent.click(schreiben)
+    let fenster = await screen.findByRole('dialog', { name: 'Leitfaden schreiben' })
+    // neuer Leitfaden: der Cursor steht im Titel
+    await waitFor(() => expect(within(fenster).getByLabelText('Titel')).toHaveFocus())
+    fireEvent.click(within(fenster).getByRole('button', { name: 'Abbrechen' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await waitFor(() => expect(schreiben).toHaveFocus())
+
+    const karte = screen.getByRole('button', { name: 'Ablauf Erstgespräch' })
+    karte.focus()
+    fireEvent.click(karte)
+    fenster = await screen.findByRole('dialog', { name: 'Leitfaden bearbeiten' })
+    await waitFor(() => expect(document.activeElement).toBe(fenster))
+    fireEvent.keyDown(fenster, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await waitFor(() => expect(karte).toHaveFocus())
+  })
+
   it('„Löschen“ fragt nach und archiviert nur (archiviert_at) – es wird nichts gelöscht', async () => {
     rendern(<Leitfaeden />)
     fireEvent.click(await screen.findByRole('button', { name: 'Einwand Preis' }))
@@ -219,6 +291,8 @@ describe('Leitfäden', () => {
     fireEvent.click(within(fenster).getByRole('button', { name: 'Löschen' }))
     const frage = await screen.findByRole('dialog', { name: 'Leitfaden löschen?' })
     expect(frage).toHaveTextContent('„Einwand Preis“ verschwindet aus deiner Liste.')
+    // Knöpfe der Rückfrage 44 px
+    for (const knopf of within(frage).getAllByRole('button')) expect(knopf).toHaveClass('h-11')
     expect(aufrufe('upsert')).toHaveLength(0)
     fireEvent.click(within(frage).getByRole('button', { name: 'Löschen' }))
     await waitFor(() => expect(aufrufe('upsert')).toHaveLength(1))
@@ -260,6 +334,12 @@ describe('Leitfäden', () => {
     rendern(<Leitfaeden />)
     fireEvent.click(await screen.findByRole('button', { name: 'Ablauf Erstgespräch' }))
     let fenster = await screen.findByRole('dialog', { name: 'Leitfaden bearbeiten' })
+    // „Abbrechen“ ohne Rahmen wie im Lead-Blatt und in den Dialogen
+    expect(within(fenster).getByRole('button', { name: 'Abbrechen' })).toHaveClass('border-transparent', 'h-11')
+    // Platzhalter-Leiste bricht um (auch am Telefon): kein Knopf liegt unsichtbar außerhalb
+    const chips = within(fenster).getByRole('group', { name: 'Platzhalter einfügen' })
+    expect(chips).toHaveClass('flex-wrap')
+    expect(chips.className).not.toMatch(/nowrap|overflow-x/)
     fireEvent.click(within(fenster).getByRole('button', { name: 'Abbrechen' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
 
@@ -279,6 +359,7 @@ describe('Leitfäden', () => {
 
     fireEvent.click(within(fenster).getByRole('button', { name: 'Abbrechen' }))
     frage = await screen.findByRole('dialog', { name: 'Änderungen verwerfen?' })
+    for (const knopf of within(frage).getAllByRole('button')) expect(knopf).toHaveClass('h-11')
     fireEvent.click(within(frage).getByRole('button', { name: 'Verwerfen' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     expect(aufrufe('upsert')).toHaveLength(0)

@@ -1,6 +1,6 @@
-// Leitfäden (Route /leitfaeden, Neustart 25.11.2026): Titel, ein großer Knopf „Leitfaden schreiben“, darunter die eigenen
-// Leitfäden als Karten. Gezeigt wird nur, was im neuen CRM geschrieben wurde (Kanal sonstiges, nicht archiviert): die alten
-// Vorlagen sind archiviert, E-Mail-Vorlagen gehören dem Composer.
+// Leitfäden (Route /leitfaeden, Neustart 25.11.2026): Titel, ein großer Knopf „Leitfaden schreiben“, darunter die Leitfäden
+// als Karten. Gezeigt wird alles, was nicht archiviert ist – außer E-Mail-Vorlagen (die gehören dem Composer). Der Kanal
+// entscheidet sonst nicht: Leitfäden, die noch im alten CRM geschrieben wurden (Kanal linkedin), erscheinen genauso.
 import { Copy, Plus } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@/components/toast'
@@ -62,9 +62,9 @@ export function Component() {
   const leitfaeden = useMemo(
     () =>
       (alle ?? [])
-        .filter((t) => t.archiviert_at == null && t.channel === 'sonstiges')
-        // zuletzt geschriebener oben, wie neue Karten auf dem Board
-        .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at) || a.name.localeCompare(b.name, 'de')),
+        .filter((t) => t.archiviert_at == null && t.channel !== 'email')
+        // neueste Änderung oben
+        .sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at) || a.name.localeCompare(b.name, 'de')),
     [alle],
   )
   const keys = useMemo(() => (alle ?? []).map((t) => t.key), [alle])

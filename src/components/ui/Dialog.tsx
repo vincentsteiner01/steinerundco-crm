@@ -2,6 +2,7 @@ import * as RD from '@radix-ui/react-dialog'
 import type { ReactNode } from 'react'
 import { Button } from './Button'
 import { cn } from './cn'
+import { useFokusZurueck } from './useFokusZurueck'
 
 export type DialogProps = {
   offen: boolean
@@ -11,6 +12,8 @@ export type DialogProps = {
   kinder?: ReactNode
   primaer: { label: string; onClick: () => void; danger?: boolean; disabled?: boolean; busy?: boolean }
   abbrechen?: string
+  /** Knöpfe 44 px hoch (Neustart 25.11.2026: Dialoge des Boards und der Leitfäden). Ohne Angabe wie bisher 36 px. */
+  gross?: boolean
   className?: string
 }
 
@@ -23,13 +26,18 @@ export function Dialog({
   kinder,
   primaer,
   abbrechen = 'Abbrechen',
+  gross,
   className,
 }: DialogProps) {
+  const groesse = gross ? 'L' : 'M'
+  // Nach dem Schließen zurück zu dem Knopf, der den Dialog geöffnet hat (25.11.2026) – vorher fiel der Fokus auf <body>
+  const fokusZurueck = useFokusZurueck(offen)
   return (
     <RD.Root open={offen} onOpenChange={onOpenChange}>
       <RD.Portal>
         <RD.Overlay className="bg-scrim fixed inset-0 z-[60] data-[state=open]:animate-[screen-in_var(--t-3)_var(--ease-brand)]" />
         <RD.Content
+          onCloseAutoFocus={fokusZurueck}
           className={cn(
             'bg-surface-raised shadow-float fixed top-1/2 left-1/2 z-[61] w-[min(440px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-lg p-6 outline-none',
             'data-[state=open]:animate-[screen-in_var(--t-3)_var(--ease-brand)]',
@@ -43,13 +51,17 @@ export function Dialog({
             <RD.Description className="sr-only">{titel}</RD.Description>
           )}
           {kinder ? <div className="mt-4 grid min-w-0 grid-cols-1 gap-3.5">{kinder}</div> : null}
-          <div className="mt-6 flex justify-end gap-1.5">
+          <div className={cn('mt-6 flex justify-end', gross ? 'gap-2' : 'gap-1.5')}>
             <RD.Close asChild>
-              <Button variante="quiet">{abbrechen}</Button>
+              <Button variante="quiet" groesse={groesse}>
+                {abbrechen}
+              </Button>
             </RD.Close>
-            {/* danger über die Variante: per className umgefärbt blieb der Knopf blau (.bg-danger steht vor .bg-signal, 25.11.2026) */}
+            {/* danger über die Variante (per className umgefärbt blieb der Knopf blau). Rot nur in den neuen, großen Dialogen –
+                Dialoge ohne `gross` (E-Mail-Bereich) bleiben blau wie vor dem Neustart, 25.11.2026 */}
             <Button
-              variante={primaer.danger ? 'negativ' : 'primary'}
+              variante={primaer.danger && gross ? 'negativ' : 'primary'}
+              groesse={groesse}
               onClick={primaer.onClick}
               disabled={primaer.disabled}
               busy={primaer.busy}

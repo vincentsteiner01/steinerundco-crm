@@ -14,10 +14,8 @@ export const PFADE = {
   emailAntworten: '/email/antworten',
   emailPostfaecher: '/email/postfaecher',
   leitfaeden: '/leitfaeden',
-  team: '/team',
   hilfe: (thema?: string) => (thema ? `/hilfe/${thema}` : '/hilfe'),
-  // Runde 3: 'verbindungen' (LinkedIn-Brücke, Eingang – Wunsch verbindungen.md Nr. 2)
-  einstellungen: (
-    bereich: 'profil' | 'passcode' | 'ziele' | 'sequenzen' | 'sperrliste' | 'export' | 'verbindungen' = 'profil',
-  ) => `/einstellungen/${bereich}`,
+  // 25.11.2026: fünf Bereiche. Ziele, Sequenzen und Verbindungen sind entfallen – die Seite leitet die alten Adressen aufs Profil
+  einstellungen: (bereich: 'profil' | 'passcode' | 'sperrliste' | 'feiertage' | 'export' = 'profil') =>
+    `/einstellungen/${bereich}`,
 } as const

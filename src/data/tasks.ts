@@ -45,22 +45,6 @@ export function useTasksFaellig(memberId: string | null | undefined) {
   })
 }
 
-/**
- * Alle offenen Rückruf-Tasks einer Person (`memberId`) oder aller (`null`) – auch künftige. `useTasksFaellig` endet heute;
- * ein künftig vereinbarter Rückruf hält den Lead trotzdem aus der Anrufliste (ux § 2.5 Schritt 1, M3).
- */
-export function useRueckrufeOffen(memberId: string | null, enabled = true) {
-  return useQuery({
-    queryKey: qk.tasks.rueckrufeOffen(memberId),
-    enabled,
-    queryFn: async (): Promise<Task[]> => {
-      let q = supabase.from('tasks').select('*').eq('kind', 'rueckruf').eq('status', 'offen')
-      if (memberId) q = q.eq('member_id', memberId)
-      return pruefe(await q.order('due_at', { ascending: true }).range(0, 999))
-    },
-  })
-}
-
 function useTaskInvalidierung() {
   const qc = useQueryClient()
   return (leadId: string | null | undefined) => {

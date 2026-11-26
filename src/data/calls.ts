@@ -1,6 +1,6 @@
 // BAUPLAN § 3.1.6 calls.ts: useCalls(leadId, limit), useCallsSession(sessionKey), useCallsHeute(memberId), useCallsZeitraum (§ 1.5 Nr. 40), useLogCall().
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { Call, CallOutcomeDef } from '@/types/domain'
+import type { Call } from '@/types/domain'
 import { heuteBerlin, pruefe, useAlleSeiten, zeitraumGrenzen } from './_helfer'
 import { mutationFehler } from './errors'
 import { qk } from './queryKeys'
@@ -103,16 +103,6 @@ export function useLogCall() {
   })
 }
 
-/** Ergebnis-Stammdaten `call_outcome_defs` (Hotkey, Label, Gruppe, is_connect/is_dm) – Anruf-Screen (M3), KPIs (M5). */
-export function useCallOutcomeDefs() {
-  return useQuery({
-    queryKey: qk.calls.outcomeDefs,
-    staleTime: 10 * 60_000,
-    queryFn: async (): Promise<CallOutcomeDef[]> =>
-      pruefe(await supabase.from('call_outcome_defs').select('*').order('sort_order', { ascending: true })),
-  })
-}
-
 export type LetzterAnruf = Pick<
   Call,
   'id' | 'lead_id' | 'started_at' | 'outcome' | 'reached_person' | 'reached_name' | 'attempt_no'
@@ -126,25 +116,4 @@ export function letzterJeLead(calls: readonly LetzterAnruf[]): Map<string, Letzt
     if (!alt || c.started_at > alt.started_at) m.set(c.lead_id, c)
   }
   return m
-}
-
-/** Letzter Anruf je Lead für Listen-Chips (Anrufliste, ux § 3.5.1) – eine Abfrage über die Lead-IDs. */
-export function useLetzteAnrufe(leadIds: readonly string[]) {
-  const ids = [...leadIds].sort()
-  return useQuery({
-    queryKey: qk.calls.letzte(ids.join(',')),
-    enabled: ids.length > 0,
-    staleTime: 30_000,
-    queryFn: async (): Promise<Map<string, LetzterAnruf>> =>
-      letzterJeLead(
-        pruefe(
-          await supabase
-            .from('calls')
-            .select('id, lead_id, started_at, outcome, reached_person, reached_name, attempt_no')
-            .in('lead_id', ids)
-            .order('started_at', { ascending: false })
-            .range(0, 999),
-        ),
-      ),
-  })
 }

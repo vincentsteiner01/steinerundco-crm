@@ -280,22 +280,6 @@ describe('Zeitraum-Hooks (§ 1.5 Nr. 40)', () => {
   })
 })
 
-describe('kpis', () => {
-  it('useFunnelMonatlich(team) summiert beide Personen und rechnet Quoten neu', async () => {
-    const { useFunnelMonatlich } = await import('./kpis')
-    const { result } = renderHook(() => useFunnelMonatlich('team', '2026-09'), { wrapper })
-    await waitFor(() => expect(result.current.data).toBeTruthy())
-    expect(result.current.data).toMatchObject({
-      vernetzungen_versendet: 150,
-      vernetzungen_angenommen: 50,
-      annahme_quote: 0.3333,
-      connect_rate: 0.5,
-      termine_pro_100_anrufe: 10,
-    })
-    expect(letzteKette('v_funnel_monthly')['eq']).not.toHaveBeenCalledWith('member_id', expect.anything())
-  })
-})
-
 describe('Mutationen mit RPC und Optimistik', () => {
   it('useLogOutbound entfernt die Antworten-Karte optimistisch und ruft log_outbound', async () => {
     const { useLogOutbound } = await import('./outbound')

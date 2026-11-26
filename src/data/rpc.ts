@@ -282,5 +282,3 @@ export const rpc = {
   setReplyLabel: (p: { activityId: number; label: ReplyLabel; note?: string | null }) =>
     aufruf<number>('set_reply_label', { p_activity_id: p.activityId, p_label: p.label, p_note: p.note }),
 }
-
-export type Rpc = typeof rpc

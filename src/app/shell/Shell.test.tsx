@@ -6,6 +6,7 @@ import type { ReactNode } from 'react'
 import { createMemoryRouter, RouterProvider, useLocation } from 'react-router'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useUiStore } from '@/app/uiStore'
+import { hatFehlerToast, toastFehler } from '@/components/toast'
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { _akkordZuruecksetzen } from '@/lib/keyboard'
 import { supabaseMock } from '@/test/supabaseMock'
@@ -53,7 +54,7 @@ describe('Shell', () => {
     localStorage.clear()
   })
 
-  it('Esc in einem Eingabefeld verlässt nur das Feld – das Lead-Blatt (?lead=) bleibt; das nächste Esc schließt es', () => {
+  it('Esc in einem Eingabefeld verlässt das Feld; ?lead= fasst die Hülle nie an – das Lead-Blatt schließt sein Sheet selbst', () => {
     mitRouter(
       <>
         <GlobaleTasten />
@@ -67,21 +68,27 @@ describe('Shell', () => {
     fireEvent.keyDown(feld, { key: 'Escape' })
     expect(screen.getByTestId('ort')).toHaveTextContent('/leads?lead=l1')
     expect(document.activeElement).not.toBe(feld)
+    // auch das zweite Esc (kein Feld mehr im Fokus) lässt die Adresse stehen
     fireEvent.keyDown(document.body, { key: 'Escape' })
-    expect(screen.getByTestId('ort')).toHaveTextContent(/^\/leads$/)
+    expect(screen.getByTestId('ort')).toHaveTextContent('/leads?lead=l1')
   })
 
-  it('Esc lässt ?lead= im Composer stehen; Gehe-zu-Akkorde und ⌘K gibt es nicht mehr', () => {
-    const router = mitRouter(
+  it('Esc schließt den Fehler-Toast', () => {
+    mitRouter(<GlobaleTasten />, '/leads')
+    toastFehler('Nicht gespeichert.')
+    expect(hatFehlerToast()).toBe(true)
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    expect(hatFehlerToast()).toBe(false)
+  })
+
+  it('Gehe-zu-Akkorde und ⌘K gibt es nicht mehr', () => {
+    mitRouter(
       <>
         <GlobaleTasten />
         <Ort />
       </>,
-      '/email/verfassen?lead=l1',
+      '/leitfaeden',
     )
-    fireEvent.keyDown(document.body, { key: 'Escape' })
-    expect(screen.getByTestId('ort')).toHaveTextContent('/email/verfassen?lead=l1')
-    act(() => void router.navigate('/leitfaeden'))
     fireEvent.keyDown(document.body, { key: 'g' })
     fireEvent.keyDown(document.body, { key: 'l' })
     fireEvent.keyDown(document.body, { key: 'k', metaKey: true })

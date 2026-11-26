@@ -1,16 +1,16 @@
 // Leads als Board wie Trello (25.11.2026, Neustart als einfaches CRM): vier Listen nebeneinander, jede Karte ein Lead.
 // Hauptweg sind die zwei Knöpfe auf der Karte, Ziehen ist Zusatz; nach jedem Zug ein Toast mit „Rückgängig“.
 // Ab 1280 px stehen die vier Listen im Raster, darunter als quer scrollende Reihe, die einrastet (Telefon: eine Liste je Wisch).
-// Klick auf eine Karte setzt `?lead=<id>` – das Lead-Blatt rendert die Hülle (LeadOutlet), nicht diese Seite.
+// Klick auf eine Karte setzt `?lead=<id>` als neuen Verlaufseintrag (Zurück schließt das Blatt) – das Lead-Blatt rendert die
+// Hülle (LeadOutlet), nicht diese Seite.
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core'
 import { Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 import { toast } from '@/components/toast'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/components/ui/cn'
 import { Input } from '@/components/ui/Input'
-import { LadeFehler } from '@/components/ui/LadeFehler'
 import { Segment } from '@/components/ui/Segment'
 import { useBoardKarten, type BoardKarte, type KarteAngelegt } from '@/data/board'
 import { useMeId, useMembers } from '@/data/members'
@@ -24,10 +24,12 @@ import { Liste } from './Liste'
 import { BOARD_LISTEN, listenTitel } from './listen'
 import { ALLE, filtereKarten, kartenName, nachListen, sortiereMitglieder } from './logik'
 import { useBoardHoehe } from './useBoardHoehe'
+import { BLATT_IM_VERLAUF } from './verlauf'
 import { kollision, useZiehSensoren, zielListe } from './ziehen'
 
 /** So lange bleibt eine Karte hervorgehoben (gerade hinzugefügt bzw. „liegt schon in …“). */
 const HERVORHEBEN_MS = 2500
+const BOARD_AUTOSCROLL = { acceleration: 2, threshold: { x: 0.08, y: 0.2 } }
 
 export function Component() {
   const { data: karten, isPending, isError, refetch } = useBoardKarten()
@@ -35,6 +37,7 @@ export function Component() {
   const meId = useMeId()
   const telefon = useIstTelefon()
   const [params, setParams] = useSearchParams()
+  const { state: verlaufState } = useLocation()
   const [suche, setSuche] = useState('')
   const [person, setPerson] = useState<string>(ALLE)
   const [dialog, setDialog] = useState(false)
@@ -55,10 +58,13 @@ export function Component() {
   const oeffne = useCallback(
     (id: string) => {
       const p = new URLSearchParams(params)
+      const schonOffen = p.has('lead')
       p.set('lead', id)
-      setParams(p, { replace: true })
+      // Neuer Verlaufseintrag, damit „Zurück“ das Blatt schließt. Steht schon ein Lead in der Adresse, wird er nur ersetzt –
+      // sonst lägen zwei Blätter übereinander im Verlauf.
+      setParams(p, schonOffen ? { replace: true, state: verlaufState } : { state: BLATT_IM_VERLAUF })
     },
-    [params, setParams],
+    [params, setParams, verlaufState],
   )
 
   useEffect(() => {
@@ -116,10 +122,22 @@ export function Component() {
           Lead hinzufügen
         </Button>
       </header>
-      {isError ? <LadeFehler text="Die Leads konnten nicht geladen werden" onNochmal={() => void refetch()} /> : null}
+      {/* Derselbe Baustein wie auf Leitfäden und Team: ein Satz, ein großer Knopf, kein Tastenhinweis */}
+      {isError ? (
+        <div role="alert" className="grid justify-items-start gap-5 pb-5">
+          <p className="text-body text-ink-2">Die Leads konnten nicht geladen werden.</p>
+          <Button groesse="L" onClick={() => void refetch()}>
+            Erneut versuchen
+          </Button>
+        </div>
+      ) : null}
       <DndContext
         sensors={sensoren}
         collisionDetection={kollision}
+        // Weiterscrollen am Rand gedrosselt (schmale Zone, langsam): Mit den dnd-kit-Vorgaben rutschte unter 1280 px beim
+        // Verweilen eine andere Liste unter den Zeiger. Nicht abgeschaltet – am Telefon sind die hinteren Listen beim Ziehen
+        // nur darüber erreichbar.
+        autoScroll={BOARD_AUTOSCROLL}
         onDragStart={ziehStart}
         onDragEnd={ziehEnde}
         onDragCancel={() => setGezogen(null)}
@@ -133,7 +151,8 @@ export function Component() {
             'max-xl:-mx-gutter max-xl:px-gutter max-xl:scroll-px-gutter max-xl:pb-3',
             // Beim Ziehen kein Einrasten: es kämpft sonst mit dem automatischen Weiterscrollen am Rand
             gezogen ? 'snap-none' : 'snap-x max-md:snap-mandatory',
-            'xl:grid xl:grid-cols-4 xl:grid-rows-[minmax(0,1fr)] xl:gap-4 xl:overflow-visible',
+            // 12 px zwischen den Listen auch im Raster: bei 1280 px Fensterbreite zählt für die zwei Karten-Knöpfe jeder Pixel
+            'xl:grid xl:grid-cols-4 xl:grid-rows-[minmax(0,1fr)] xl:overflow-visible',
           )}
         >
           {BOARD_LISTEN.map((l) => (
@@ -154,7 +173,8 @@ export function Component() {
         </div>
         <DragOverlay dropAnimation={null}>
           {gezogen ? (
-            <div inert className="shadow-float rotate-1 cursor-grabbing rounded-md">
+            // @container: die gezogene Karte misst ihre Breite wie in der Liste (gleiche Schriftgröße der Knöpfe)
+            <div inert className="shadow-float @container rotate-1 cursor-grabbing rounded-md">
               <KartenFlaeche karte={gezogen} member={members.find((m) => m.id === gezogen.owner_id)} />
             </div>
           ) : null}

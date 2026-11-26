@@ -1,51 +1,156 @@
-// Reine Logik der Hilfe: Themen-Suche, Themen-Schlüssel und Wortlaut-Regeln (25.11.2026: Touren und Onboarding-Merker sind entfallen).
+// Reine Logik der Hilfe nach dem Neustart (25.11.2026): Themenliste, Suche, Wortlaut-Regeln, Auszeichnung.
+// Die Links der Themen prüft links.test.ts gegen die Routentabelle.
 import { describe, expect, it } from 'vitest'
-import { klartext, tastenTeile } from './markup'
-import { bloeckeVon, HAEUFIGE_FRAGEN, sucheThemen, THEMEN, themaText, themaVon } from './themen'
+import { klartext, linkZiele } from './markup'
+import {
+  bloeckeVon,
+  HAEUFIGE_FRAGEN,
+  sucheThemen,
+  THEMEN,
+  themaRohtexte,
+  themaText,
+  themaVon,
+  type Thema,
+} from './themen'
+
+/** Neu geschriebene Themen – „E-Mail“ und „E-Mail-Kampagnen“ sind übernommen und dürfen länger sein. */
+const NEU = ['erste-schritte', 'leads', 'leitfaeden', 'team-einstellungen', 'archiv']
+
+const woerter = (t: Thema) => klartext(themaRohtexte(t).join(' ')).split(/\s+/).filter(Boolean).length
 
 describe('Themen', () => {
-  it('eindeutige Schlüssel, jede Frage zeigt auf ein Thema', () => {
-    expect(new Set(THEMEN.map((t) => t.key)).size).toBe(THEMEN.length)
-    for (const f of HAEUFIGE_FRAGEN) expect(themaVon(f.thema)).toBeDefined()
-    expect(THEMEN.map((t) => t.key)).toEqual(
-      expect.arrayContaining(['erste-schritte', 'dein-tag', 'linkedin', 'verbindungen', 'feedback', 'noch-nicht']),
-    )
-    // Runde 3: „Verbindungen einrichten“ steht direkt hinter dem LinkedIn-Thema
-    const keys = THEMEN.map((t) => t.key)
-    expect(keys.indexOf('verbindungen')).toBe(keys.indexOf('linkedin') + 1)
-    // die Gmail-Erkennung ist gebaut – nicht mehr als „geplant“ geführt
-    expect(themaText(themaVon('noch-nicht')!)).not.toMatch(/geplant linkedin-antworten über die gmail/)
-    expect(themaText(themaVon('noch-nicht')!)).toContain('grenzen der linkedin-brücke')
-    // Runde 3: {A} im CRM trägt nur die Reaktion nach (antwortErfassen) – keine „zweite Antwort“ mehr als Grenze
-    expect(themaText(themaVon('noch-nicht')!)).not.toMatch(/zweite antwort/)
-    expect(themaText(themaVon('linkedin')!)).toMatch(/genauso hier im crm: .*nur die reaktion an dieser antwort nach/)
-    expect(HAEUFIGE_FRAGEN.find((f) => f.frage.startsWith('Kommen LinkedIn'))!.antwort).toMatch(/^Zum Teil/)
+  it('genau die sieben Themen des einfachen CRM, in dieser Reihenfolge', () => {
+    expect(THEMEN.map((t) => t.key)).toEqual([
+      'erste-schritte',
+      'leads',
+      'leitfaeden',
+      'email',
+      'kampagnen',
+      'team-einstellungen',
+      'archiv',
+    ])
+    for (const t of THEMEN) {
+      expect(t.titel.trim(), t.key).not.toBe('')
+      expect(t.kurz.trim(), t.key).not.toBe('')
+      expect(bloeckeVon(t, null).length, t.key).toBeGreaterThan(0)
+    }
   })
 
-  it('Suche über den ganzen Text: Gmail → E-Mail, synchronisieren → LinkedIn, mehrere Wörter = alle müssen passen', () => {
+  it('entfernte Themen gibt es nicht mehr', () => {
+    for (const alt of [
+      'dein-tag',
+      'heute',
+      'linkedin',
+      'verbindungen',
+      'recherche',
+      'telefon',
+      'kpis-team',
+      'import',
+      'tastenkuerzel',
+      'feedback',
+      'noch-nicht',
+    ])
+      expect(themaVon(alt), alt).toBeUndefined()
+  })
+
+  it('häufige Fragen: höchstens drei, kurz, jede zeigt auf ein Thema, ohne Auszeichnung', () => {
+    expect(HAEUFIGE_FRAGEN.length).toBeGreaterThan(0)
+    expect(HAEUFIGE_FRAGEN.length).toBeLessThanOrEqual(3)
+    for (const f of HAEUFIGE_FRAGEN) {
+      expect(themaVon(f.thema), f.frage).toBeDefined()
+      // die Übersicht zeigt die Antwort als reinen Text
+      expect(klartext(f.antwort), f.frage).toBe(f.antwort)
+      expect(f.antwort.split(/\s+/).length, f.frage).toBeLessThanOrEqual(30)
+    }
+    expect(HAEUFIGE_FRAGEN.map((f) => f.thema)).toContain('archiv')
+  })
+
+  it('neue Themen bleiben kurz – höchstens eine Bildschirmseite', () => {
+    // Gemessen bei 1440 × 900: „Leads“ (178 Wörter) endet bei 884 px. Wer hier anstößt, kürzt den Text, nicht die Grenze.
+    for (const key of NEU) expect(woerter(themaVon(key)!), key).toBeLessThanOrEqual(180)
+  })
+
+  it('Leads: vier Listen, die Knöpfe je Liste, Lead-Blatt, Entfernen löscht nichts', () => {
+    const text = themaText(themaVon('leads')!)
+    for (const liste of ['angeschrieben', 'gespräch vereinbart', 'im geschäft', 'verloren'])
+      expect(text).toContain(liste)
+    expect(text).toMatch(/in „angeschrieben“: der grüne knopf „hat interesse“ legt die karte in „gespräch vereinbart“/)
+    expect(text).toMatch(/in „gespräch vereinbart“: der grüne knopf „im geschäft“ legt sie in „im geschäft“/)
+    expect(text.match(/der rote knopf „kein interesse“ legt sie in „verloren“/g)).toHaveLength(2)
+    for (const wort of ['lead hinzufügen', 'ziehen', 'rückgängig', 'suchen', 'zugehörigkeit', 'e-mail-erlaubnis'])
+      expect(text, wort).toContain(wort)
+    for (const feld of ['name', 'anrede', 'firma', 'linkedin-link', 'liste', 'notiz'])
+      expect(text, feld).toContain(feld)
+    expect(text).toMatch(/„karte entfernen“ .*nur vom board\. gelöscht wird nichts/)
+  })
+
+  it('Leitfäden: blauer Knopf, Platzhalter-Knöpfe, Text kopieren, „Löschen“ archiviert nur', () => {
+    const text = themaText(themaVon('leitfaeden')!)
+    expect(text).toContain('großen blauen knopf „leitfaden schreiben“')
+    for (const chip of ['anrede', 'vorname', 'nachname', 'unternehmen', 'absender vorname'])
+      expect(text).toContain(chip)
+    expect(text).toContain('[vorname]')
+    expect(text).toContain('„text kopieren“')
+    expect(text).toMatch(/„löschen“\. er verschwindet aus deiner liste, bleibt aber gespeichert/)
+  })
+
+  it('Team & Einstellungen nennt die fünf Bereiche, Archiv den gesicherten Stand', () => {
+    const team = themaText(themaVon('team-einstellungen')!)
+    for (const b of ['profil', 'passcode', 'sperrliste', 'feiertage', 'export & backup']) expect(team).toContain(b)
+    const archiv = themaText(themaVon('archiv')!)
+    expect(themaVon('archiv')!.titel).toBe('Wo ist das alte CRM?')
+    expect(archiv).toContain('nichts gelöscht')
+    expect(archiv).toContain('25.11.2026')
+    expect(archiv).toContain('vollständig gesichert')
+    expect(archiv).toMatch(/mit ihrem linkedin-link neu als karte hinzu, bekommst du denselben lead zurück/)
+    expect(archiv).toContain('die alten leitfäden sind archiviert')
+  })
+
+  it('übernommene Themen ohne Verweise auf Entferntes: Erlaubnis in der Lead-Karte, nichts „unter Heute“', () => {
+    const email = themaText(themaVon('email')!)
+    expect(email).toContain('„erlaubnis erfassen“ und „widerspruch erfassen“ stehen in der lead-karte')
+    expect(email).not.toMatch(/palette|verbindungen einrichten|linkedin-benachrichtigungen/)
+    const kampagnen = themaText(themaVon('kampagnen')!)
+    expect(kampagnen).toContain('in der lead-karte „erlaubnis erfassen“')
+    expect(kampagnen).not.toMatch(/unter heute/)
+  })
+
+  it('Suche findet die neuen Themen; mehrere Wörter = alle müssen passen', () => {
     expect(sucheThemen('').length).toBe(THEMEN.length)
-    expect(sucheThemen('gmail').map((t) => t.key)).toContain('email')
-    expect(sucheThemen('synchronisiert').map((t) => t.key)).toContain('linkedin')
-    expect(sucheThemen('call-block').map((t) => t.key)).toContain('telefon')
-    expect(sucheThemen('anrufgrund uwg').map((t) => t.key)).toEqual(['telefon'])
     expect(sucheThemen('xyzzy')).toEqual([])
-    // Ranking: Titel vor Kurztext/Stichworten vor Fließtext – ↵ öffnet das passende Thema
-    expect(sucheThemen('gmail')[0]!.key).toBe('email')
-    expect(sucheThemen('synchronisiert')[0]!.key).toBe('linkedin')
-    expect(sucheThemen('was macht mike')[0]!.key).toBe('kpis-team')
-    // Runde 3: die LinkedIn-Brücke ist auffindbar
-    expect(sucheThemen('script')[0]!.key).toBe('verbindungen')
-    expect(sucheThemen('seitenleiste').map((t) => t.key)).toEqual(expect.arrayContaining(['linkedin', 'verbindungen']))
-    // seit 01.11.2026 auch die E-Mail-Kampagnen (Postfach verbinden) – E-Mail bleibt vorn
-    expect(sucheThemen('gmail verbinden').map((t) => t.key)).toEqual(['email', 'verbindungen', 'kampagnen'])
+    const erstes = (q: string) => sucheThemen(q)[0]?.key
+    expect(erstes('board')).toBe('leads')
+    expect(erstes('karte hinzufügen')).toBe('leads')
+    // „Kein Interesse“ steht auch in „Erste Schritte“ – das Stichwort holt das Board-Thema nach oben
+    expect(sucheThemen('kein interesse').map((t) => t.key)).toEqual(['leads', 'erste-schritte'])
+    expect(sucheThemen('rückgängig').map((t) => t.key)).toEqual(['leads'])
+    expect(erstes('karte entfernen')).toBe('leads')
+    expect(erstes('platzhalter')).toBe('leitfaeden')
+    expect(erstes('text kopieren')).toBe('leitfaeden')
+    expect(sucheThemen('passcode').map((t) => t.key)).toEqual(['team-einstellungen'])
+    expect(erstes('backup')).toBe('team-einstellungen')
+    // „Feiertage“ und „Sperrliste“ stehen auch bei den Kampagnen – die Einstellungen stehen oben
+    expect(erstes('feiertage')).toBe('team-einstellungen')
+    expect(erstes('sperrliste')).toBe('team-einstellungen')
+    expect(erstes('altes crm')).toBe('archiv')
+    expect(erstes('pipeline')).toBe('archiv')
+    expect(erstes('erste schritte')).toBe('erste-schritte')
+    // Ranking: Titel vor Kurztext/Stichworten vor Fließtext
+    expect(erstes('gmail')).toBe('email')
+    expect(erstes('erlaubnis')).toBe('email')
+    expect(erstes('postfach verbinden')).toBe('email')
+    expect(sucheThemen('postfach verbinden').map((t) => t.key)).toEqual(['email', 'kampagnen'])
+    expect(erstes('dkim')).toBe('kampagnen')
   })
 
-  it('Dein Tag: die angemeldete Person steht oben', () => {
-    const tag = themaVon('dein-tag')!
-    const titel = (p: 'vincent' | 'mike') =>
-      bloeckeVon(tag, p).flatMap((b) => (b.art === 'zwischentitel' ? [b.text] : []))
-    expect(titel('vincent')[0]).toMatch(/^Vincent/)
-    expect(titel('mike')[0]).toMatch(/^Mike/)
+  it('keine Tastenhinweise, keine Touren, kein Feedback', () => {
+    const texte = [...THEMEN.flatMap((t) => themaRohtexte(t)), ...HAEUFIGE_FRAGEN.flatMap((f) => [f.frage, f.antwort])]
+    for (const t of texte) {
+      // geschweifte Klammern waren die Tasten-Auszeichnung – übrig ist nur {{geplant}}
+      expect(t.replaceAll('{{geplant}}', ''), t).not.toMatch(/[{}]/)
+      expect(t, t).not.toMatch(/[⌘⌥⇧⌃↵⎋]/)
+      expect(t, t).not.toMatch(/tastenk|\btaste\b|palette|\btour\b|feedback|zeig’s mir/i)
+    }
   })
 
   it('Wortlaut: deutsche Typografie (keine geraden Anführungszeichen, kein „...“, kein Ausrufezeichen, kein „erfolgreich“)', () => {
@@ -59,13 +164,28 @@ describe('Themen', () => {
       expect(t).not.toContain('!')
       expect(t).not.toMatch(/erfolgreich/i)
       expect(t).not.toMatch(/\s-\s/)
+      expect(t).not.toMatch(/\bok\b/i)
     }
   })
 
-  it('Auszeichnung: Klartext für die Suche, Akkorde getrennt', () => {
-    expect(klartext('{C} kopiert, **dann** [Leads](/leads) {{geplant}}')).toBe('C kopiert, dann Leads geplant')
-    expect(tastenTeile('G H')).toEqual(['G', 'H'])
-    expect(tastenTeile('⌘⇧O')).toEqual(['⌘⇧O'])
-    expect(tastenTeile('1–9')).toEqual(['1–9'])
+  it('Blöcke dürfen von der angemeldeten Person abhängen (Themen-Modell)', () => {
+    const thema: Thema = {
+      key: 'probe',
+      titel: 'Probe',
+      kurz: 'Nur für diesen Test.',
+      bloecke: (person) => [{ art: 'absatz', text: person === 'mike' ? 'Für Mike' : 'Für alle anderen' }],
+    }
+    expect(bloeckeVon(thema, 'mike')).toEqual([{ art: 'absatz', text: 'Für Mike' }])
+    expect(themaText(thema, 'vincent')).toContain('für alle anderen')
+  })
+
+  it('Auszeichnung: Klartext für die Suche, Link-Ziele für die Routen-Prüfung', () => {
+    expect(klartext('**Erst** auf [Leads](/leads) klicken {{geplant}}')).toBe('Erst auf Leads klicken geplant')
+    expect(linkZiele('Auf [Leads](/leads) oder [Profil](/einstellungen/profil), nicht [Vorname].')).toEqual([
+      '/leads',
+      '/einstellungen/profil',
+    ])
+    // ein Platzhalter in eckigen Klammern ist kein Link
+    expect(klartext('Platzhalter wie [Vorname] bleiben stehen.')).toBe('Platzhalter wie [Vorname] bleiben stehen.')
   })
 })

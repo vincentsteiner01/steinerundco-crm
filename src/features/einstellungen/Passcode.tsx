@@ -1,9 +1,13 @@
 // Einstellungen → Passcode (BAUPLAN § 3.9, ux § 3.10 Nr. 2, E-01): alt · neu ≥ 10 · Wiederholung · „Andere Geräte abmelden“ (an)
-// → usePasscodeAendern (M0). Zurücksetzen der anderen Person ist v1.1 (E-02) – Button disabled mit Tooltip. „Überall abmelden“ mit Dialog.
+// → usePasscodeAendern (M0). „Überall abmelden“ mit Dialog. Neustart 25.11.2026: der nie gebaute Knopf „Passcode der anderen
+// Person zurücksetzen“ und die Tastenhinweise sind raus.
 import { Eye, EyeOff } from 'lucide-react'
 import { useId, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { Button, Checkbox, Dialog, FormField, Input } from '@/components/ui'
-import { useAndere } from '@/data'
+import { Button } from '@/components/ui/Button'
+import { Checkbox } from '@/components/ui/Checkbox'
+import { Dialog } from '@/components/ui/Dialog'
+import { Feld } from '@/components/ui/Feld'
+import { Input } from '@/components/ui/Input'
 import { useAuth } from '@/features/auth/authStore'
 import { usePasscodeAendern, type PasscodeEingabe } from '@/features/auth/usePasscodeAendern'
 import { ALLGEMEIN, DIALOG } from '@/texte/de'
@@ -30,9 +34,10 @@ function PasscodeFeld({
 }) {
   const [sichtbar, setSichtbar] = useState(false)
   return (
-    <FormField label={label} htmlFor={id} hinweis={hinweis}>
+    <Feld label={label} htmlFor={id} hinweis={fehler ? undefined : hinweis}>
       <Input
         id={id}
+        groesse="L"
         type={sichtbar ? 'text' : 'password'}
         mono
         value={wert}
@@ -57,7 +62,7 @@ function PasscodeFeld({
           </Button>
         }
       />
-    </FormField>
+    </Feld>
   )
 }
 
@@ -65,7 +70,6 @@ export function Passcode() {
   const id = useId()
   const { aendern, laeuft, fehler } = usePasscodeAendern()
   const abmelden = useAuth((s) => s.abmelden)
-  const andere = useAndere()
   const [eingabe, setEingabe] = useState<PasscodeEingabe>(LEER)
   const [dialogOffen, setDialogOffen] = useState(false)
   const [abmeldenLaeuft, setAbmeldenLaeuft] = useState(false)
@@ -97,8 +101,6 @@ export function Passcode() {
     }
   }
 
-  const andererName = andere?.display_name ?? 'der anderen Person'
-
   return (
     <div className="grid">
       <form
@@ -109,9 +111,8 @@ export function Passcode() {
       >
         <div className="grid gap-1">
           <h3 className="text-h3 text-ink-bright">Passcode ändern</h3>
-          <p className="text-small text-ink-3">
-            Mindestens 10 Zeichen. Danach gilt nur noch der neue Passcode – auch auf dem Handy.
-          </p>
+          {/* „Mindestens 10 Zeichen.“ steht einmal: als Hinweis unter „Neuer Passcode“ */}
+          <p className="text-small text-ink-3">Danach gilt nur noch der neue Passcode – auch auf dem Handy.</p>
         </div>
         <PasscodeFeld
           id={`${id}-aktuell`}
@@ -147,7 +148,7 @@ export function Passcode() {
           <Button
             type="submit"
             variante="primary"
-            kbd="⌘↵"
+            groesse="L"
             busy={laeuft}
             disabled={!geaendert}
             disabledGrund={geaendert ? undefined : 'Erst Passcode eingeben'}
@@ -158,22 +159,11 @@ export function Passcode() {
       </form>
 
       <Block
-        titel={`Passcode von ${andere?.display_name ?? 'der anderen Person'} zurücksetzen`}
-        beschreibung="Erzeugt einen Einmal-Passcode, der beim nächsten Login einen neuen verlangt."
-      >
-        <div>
-          <Button disabled disabledGrund="Kommt in v1.1 – bis dahin: Lead fragen">
-            Passcode von {andererName} zurücksetzen
-          </Button>
-        </div>
-      </Block>
-
-      <Block
         titel="Überall abmelden"
         beschreibung="Meldet alle Geräte ab, auf denen du angemeldet bist – auch die Akten-Sitzung desselben Kontos."
       >
         <div>
-          <Button variante="danger" onClick={() => setDialogOffen(true)}>
+          <Button variante="danger" groesse="L" className="-ml-4" onClick={() => setDialogOffen(true)}>
             {ALLGEMEIN.ueberallAbmelden}
           </Button>
         </div>
@@ -182,6 +172,7 @@ export function Passcode() {
       <Dialog
         offen={dialogOffen}
         onOpenChange={setDialogOffen}
+        gross
         titel={ALLGEMEIN.ueberallAbmelden}
         text={DIALOG.ueberallAbmelden.text}
         primaer={{

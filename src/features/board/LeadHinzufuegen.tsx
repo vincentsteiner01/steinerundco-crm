@@ -4,13 +4,14 @@
 import { useId, useState, type KeyboardEvent } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Dialog } from '@/components/ui/Dialog'
+import { Feld } from '@/components/ui/Feld'
 import { Input } from '@/components/ui/Input'
 import { useKarteAnlegen, type KarteAngelegt } from '@/data/board'
 import { fehlerMeldung } from '@/data/errors'
 import { anzeigeName } from '@/lib/mitglied'
 import { anredeAusVorname } from '@/lib/vornamen'
 import type { Member } from '@/types/domain'
-import { Feld, Wahl } from './Feld'
+import { Wahl } from './Wahl'
 
 const NAME_FEHLT = 'Bitte einen Namen eingeben'
 
@@ -74,6 +75,7 @@ export function LeadHinzufuegen({ offen, onOpenChange, members, meId, onAngelegt
 
   return (
     <Dialog
+      gross
       offen={offen}
       onOpenChange={schliessen}
       titel="Lead hinzufügen"

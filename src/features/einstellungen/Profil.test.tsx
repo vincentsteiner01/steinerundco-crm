@@ -1,5 +1,5 @@
-// Profil (ux § 3.10 Nr. 1, E-11): Werte aus crm.members, Rufnummer → E.164, LinkedIn-Plan → Wochenbudget-Vorschlag (nur Feld),
-// Kanäle/Benachrichtigungen in preferences, Upsert der eigenen member_profiles-Zeile.
+// Profil (Neustart 25.11.2026): Name und E-Mail nur zum Lesen, dazu Kürzel, E-Mail-Signatur, Calendly-Link. Gespeichert wird die
+// ganze member_profiles-Zeile – die Werte der entfallenen Felder (Plan, Budget, Tagesziel, Rufnummer, preferences) bleiben stehen.
 import { fireEvent, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -11,14 +11,23 @@ vi.mock('@/components/toast', () => ({
   registriereUndo: vi.fn(),
 }))
 
+import { toast } from '@/components/toast'
 import { supabase } from '@/data/supabase'
 import { useAuth } from '@/features/auth/authStore'
 import { Profil } from './Profil'
-import { anzahlAufrufe, letzterAufruf, MEMBER_V } from './_testDaten'
+import {
+  anzahlAufrufe,
+  letzterAufruf,
+  MEMBER_M,
+  MEMBER_V,
+  MEMBERS,
+  testZustand,
+  testZustandZuruecksetzen,
+} from './_testDaten'
 import { rendern } from './_testHilfe'
 
 const vonMock = () => vi.mocked(supabase.from)
-type Upsert = Record<string, unknown> & { preferences: { kanaele: Record<string, boolean>; realtime_toasts: boolean } }
+const speichernKnopf = () => screen.getByRole('button', { name: 'Speichern' })
 
 describe('Profil', () => {
   beforeEach(() => {
@@ -27,80 +36,189 @@ describe('Profil', () => {
       member: { user_id: MEMBER_V, email: 'v@example.test', display_name: 'Vincent' },
     })
     vonMock().mockClear()
+    vi.mocked(toast).mockClear()
+    testZustandZuruecksetzen()
   })
 
-  it('zeigt Anzeigename/E-Mail read-only, Kürzel, Plan, Rufnummer formatiert, Kanäle aus preferences', async () => {
+  it('zeigt Name und E-Mail nur zum Lesen, dazu Kürzel, E-Mail-Signatur und Calendly-Link', async () => {
     rendern(<Profil />)
-    expect(await screen.findByLabelText('Anzeigename')).toHaveValue('Vincent')
-    expect(screen.getByLabelText('Anzeigename')).toBeDisabled()
-    expect(screen.getByLabelText('E-Mail', { selector: 'input' })).toHaveValue('v@example.test')
-    expect(screen.getByLabelText('Kürzel')).toHaveValue('VS')
-    expect(screen.getByLabelText('LinkedIn-Plan')).toHaveValue('premium')
-    expect(screen.getByLabelText('Rufnummer')).toHaveValue('+49 40 123456')
-    expect(screen.getByRole('switch', { name: 'LinkedIn' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByRole('switch', { name: 'Telefon' })).toHaveAttribute('aria-checked', 'false')
-    expect(screen.getByRole('switch', { name: 'Realtime-Toasts' })).toHaveAttribute('aria-checked', 'true')
-    expect(screen.getByText(/nie unterdrückt anrufen/)).toBeInTheDocument()
+    expect(await screen.findByLabelText('Kürzel')).toHaveValue('VS')
+    expect(screen.getByLabelText('E-Mail-Signatur')).toHaveValue('Vincent Muster\nMusterfirma')
+    expect(screen.getByLabelText('Calendly-Link')).toHaveValue('')
+    // Name und Adresse stehen als Text da – es gibt dafür kein Eingabefeld
+    expect(screen.getByText('Vincent')).toBeInTheDocument()
+    expect(screen.getByText('v@example.test')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Anzeigename')).not.toBeInTheDocument()
+    expect(screen.getAllByRole('textbox')).toHaveLength(3)
   })
 
-  it('E-11: Rufnummer-Eingabe wird beim Verlassen formatiert und als E.164 gespeichert', async () => {
-    rendern(<Profil />)
-    const tel = await screen.findByLabelText('Rufnummer')
-    fireEvent.change(tel, { target: { value: '0151 23456789' } })
-    fireEvent.blur(tel)
-    expect(tel).toHaveValue('+49 1512 3456789')
-    fireEvent.click(screen.getAllByRole('button', { name: /Speichern/ })[0]!)
-    await waitFor(() => expect(letzterAufruf(vonMock(), 'member_profiles', 'upsert')).not.toBeNull())
-    const u = letzterAufruf(vonMock(), 'member_profiles', 'upsert') as Upsert
-    expect(u.member_id).toBe(MEMBER_V)
-    expect(u.caller_number_e164).toBe('+4915123456789')
-    expect(u.short_name).toBe('VS')
-    expect(u.linkedin_plan).toBe('premium')
-    expect(u.preferences.kanaele).toEqual({ linkedin: true, telefon: false, email: true })
-  })
-
-  it('unvollständige Rufnummer → „Nummer unvollständig“, kein Upsert', async () => {
-    rendern(<Profil />)
-    const tel = await screen.findByLabelText('Rufnummer')
-    fireEvent.change(tel, { target: { value: '12' } })
-    fireEvent.click(screen.getAllByRole('button', { name: /Speichern/ })[0]!)
-    expect(screen.getByRole('alert')).toHaveTextContent('Nummer unvollständig')
-    expect(anzahlAufrufe(vonMock(), 'member_profiles', 'upsert')).toBe(0)
-  })
-
-  it('LinkedIn-Plan wechseln zeigt den Wochenbudget-Vorschlag und ändert nur das Feld', async () => {
-    rendern(<Profil />)
-    const plan = await screen.findByLabelText('LinkedIn-Plan')
-    fireEvent.change(plan, { target: { value: 'sales_navigator' } })
-    expect(screen.getByText('Vorschlag für Sales Navigator: 200')).toBeInTheDocument()
-    expect(screen.getByLabelText('Wochenbudget Anfragen')).toHaveValue('150')
-    fireEvent.click(screen.getByRole('button', { name: '200 übernehmen' }))
-    expect(screen.getByLabelText('Wochenbudget Anfragen')).toHaveValue('200')
-    expect(screen.queryByText(/Vorschlag für/)).not.toBeInTheDocument()
-    expect(anzahlAufrufe(vonMock(), 'member_profiles', 'upsert')).toBe(0)
-  })
-
-  it('Kanal-Switch und Realtime-Toasts landen in preferences, fremde Keys bleiben', async () => {
-    rendern(<Profil />)
-    fireEvent.click(await screen.findByRole('switch', { name: 'Telefon' }))
-    fireEvent.click(screen.getByRole('switch', { name: 'Realtime-Toasts' }))
-    fireEvent.click(screen.getAllByRole('button', { name: /Speichern/ })[1]!)
-    await waitFor(() => expect(letzterAufruf(vonMock(), 'member_profiles', 'upsert')).not.toBeNull())
-    const u = letzterAufruf(vonMock(), 'member_profiles', 'upsert') as Upsert
-    expect(u.preferences.kanaele.telefon).toBe(true)
-    expect(u.preferences.realtime_toasts).toBe(false)
-  })
-
-  it('Speichern ist ohne Änderung deaktiviert („Nichts geändert“)', async () => {
-    rendern(<Profil />)
-    const knopf = () => screen.getAllByRole('button', { name: /Speichern/ })[0]!
+  it('die entfallenen Felder sind weg: Plan, Wochenbudget, Tagesziel, Rufnummer, Kanäle, Benachrichtigungen', async () => {
+    const { container } = rendern(<Profil />)
     await screen.findByLabelText('Kürzel')
-    expect(knopf()).toBeDisabled()
-    expect(screen.getAllByLabelText('Nichts geändert').length).toBeGreaterThan(0)
-    fireEvent.change(screen.getByLabelText('Kürzel'), { target: { value: 'vs' } })
-    expect(screen.getByLabelText('Kürzel')).toHaveValue('VS')
-    expect(knopf()).toBeDisabled()
-    fireEvent.change(screen.getByLabelText('Kürzel'), { target: { value: 'v' } })
-    expect(knopf()).toBeEnabled()
+    for (const label of ['LinkedIn-Plan', 'Wochenbudget Anfragen', 'Tagesziel Anfragen', 'Rufnummer'])
+      expect(screen.queryByLabelText(label)).not.toBeInTheDocument()
+    expect(screen.queryByRole('switch')).not.toBeInTheDocument()
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Kanäle aktiv|Benachrichtigungen|Realtime/)).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: 'Speichern' })).toHaveLength(1)
+    expect(container.querySelector('kbd')).toBeNull()
+  })
+
+  it('kein Text nennt den Entwickler „Lead“ – das Wort meint im CRM den Kontakt', async () => {
+    const { container } = rendern(<Profil />)
+    await screen.findByLabelText('Kürzel')
+    expect(container.textContent).not.toMatch(/Lead/)
+    expect(container.textContent).not.toMatch(/v1\b|Heute/)
+  })
+
+  it('Speichern verliert nichts: die alten Werte der entfallenen Felder stehen unverändert im Upsert', async () => {
+    rendern(<Profil />)
+    fireEvent.change(await screen.findByLabelText('E-Mail-Signatur'), {
+      target: { value: '  Vincent Muster\nMusterweg 1, Musterstadt  ' },
+    })
+    fireEvent.change(screen.getByLabelText('Calendly-Link'), { target: { value: 'https://calendly.com/muster/30min' } })
+    fireEvent.click(speichernKnopf())
+    await waitFor(() => expect(letzterAufruf(vonMock(), 'member_profiles', 'upsert')).not.toBeNull())
+    const u = letzterAufruf(vonMock(), 'member_profiles', 'upsert') as Record<string, unknown>
+    // die drei Felder des Formulars
+    expect(u.short_name).toBe('VS')
+    expect(u.signature).toBe('Vincent Muster\nMusterweg 1, Musterstadt')
+    expect(u.calendly_url).toBe('https://calendly.com/muster/30min')
+    // alles andere genau wie in der Datenbank
+    const alt = MEMBERS[0]!
+    expect(u.member_id).toBe(MEMBER_V)
+    expect(u.linkedin_plan).toBe('premium')
+    expect(u.weekly_budget).toBe(150)
+    expect(u.daily_target).toBe(30)
+    expect(u.caller_number_e164).toBe('+4940123456')
+    expect(u.email_address).toBe('absender@example.test')
+    expect(u.linkedin_url).toBe('https://www.linkedin.com/in/test-vincent/')
+    expect(u.preferences).toEqual(alt.preferences)
+    expect(u.preferences).toMatchObject({ onboarding_v1: '2026-10-14', realtime_toasts: false })
+    expect(anzahlAufrufe(vonMock(), 'member_profiles', 'upsert')).toBe(1)
+    await waitFor(() => expect(toast).toHaveBeenCalledWith('Profil gespeichert.'))
+  })
+
+  // Fund 34 (25.11.2026): Nach „Speichern“ stand kurz wieder der alte Stand im Formular (der Entwurf wurde auf die Quelle aus
+  // dem Render des Klicks zurückgesetzt) – wer in dem Moment weiterschrieb, überschrieb beim nächsten Speichern das eben Gespeicherte.
+  it('speichern → neu geladen → das Formular zeigt den neuen Stand → zweites Speichern enthält beide Änderungen', async () => {
+    rendern(<Profil />)
+    const signatur = await screen.findByLabelText('E-Mail-Signatur')
+    fireEvent.change(signatur, { target: { value: 'Vincent Muster\nNeue Musterfirma' } })
+    // das Neuladen nach dem Speichern anhalten: dazwischen darf nie der alte Stand erscheinen
+    let weiter = () => {}
+    testZustand.membersHalt = new Promise<void>((ok) => (weiter = ok))
+    fireEvent.click(speichernKnopf())
+    await waitFor(() => expect(toast).toHaveBeenCalledWith('Profil gespeichert.'))
+    expect(screen.getByLabelText('E-Mail-Signatur')).toHaveValue('Vincent Muster\nNeue Musterfirma')
+    expect(speichernKnopf()).toBeDisabled()
+    // die Quelle ändert sich (Neuladen fertig): weiter der neue Stand
+    testZustand.membersHalt = null
+    weiter()
+    await waitFor(() => expect(anzahlAufrufe(vonMock(), 'members', 'select')).toBeGreaterThanOrEqual(2))
+    await waitFor(() => expect(speichernKnopf()).toBeDisabled())
+    expect(screen.getByLabelText('E-Mail-Signatur')).toHaveValue('Vincent Muster\nNeue Musterfirma')
+    // zweite Änderung an einem anderen Feld
+    fireEvent.change(screen.getByLabelText('Calendly-Link'), { target: { value: 'https://calendly.com/muster/30min' } })
+    fireEvent.click(speichernKnopf())
+    await waitFor(() => expect(anzahlAufrufe(vonMock(), 'member_profiles', 'upsert')).toBe(2))
+    const u = letzterAufruf(vonMock(), 'member_profiles', 'upsert') as Record<string, unknown>
+    expect(u.signature).toBe('Vincent Muster\nNeue Musterfirma')
+    expect(u.calendly_url).toBe('https://calendly.com/muster/30min')
+    expect(u.short_name).toBe('VS')
+  })
+
+  it('gleich weiterschreiben, während das Neuladen noch läuft: das zweite Speichern überschreibt das erste nicht', async () => {
+    rendern(<Profil />)
+    fireEvent.change(await screen.findByLabelText('E-Mail-Signatur'), { target: { value: 'Neue Signatur' } })
+    let weiter = () => {}
+    testZustand.membersHalt = new Promise<void>((ok) => (weiter = ok))
+    fireEvent.click(speichernKnopf())
+    await waitFor(() => expect(toast).toHaveBeenCalledWith('Profil gespeichert.'))
+    fireEvent.change(screen.getByLabelText('Kürzel'), { target: { value: 'VM' } })
+    testZustand.membersHalt = null
+    weiter()
+    await waitFor(() => expect(anzahlAufrufe(vonMock(), 'members', 'select')).toBeGreaterThanOrEqual(2))
+    // die eigene Eingabe bleibt, die gespeicherte Signatur auch
+    expect(screen.getByLabelText('Kürzel')).toHaveValue('VM')
+    expect(screen.getByLabelText('E-Mail-Signatur')).toHaveValue('Neue Signatur')
+    fireEvent.click(speichernKnopf())
+    await waitFor(() => expect(anzahlAufrufe(vonMock(), 'member_profiles', 'upsert')).toBe(2))
+    const u = letzterAufruf(vonMock(), 'member_profiles', 'upsert') as Record<string, unknown>
+    expect(u.signature).toBe('Neue Signatur')
+    expect(u.short_name).toBe('VM')
+  })
+
+  it('leere Signatur und leerer Link werden als null gespeichert', async () => {
+    rendern(<Profil />)
+    fireEvent.change(await screen.findByLabelText('E-Mail-Signatur'), { target: { value: '   ' } })
+    fireEvent.click(speichernKnopf())
+    await waitFor(() => expect(letzterAufruf(vonMock(), 'member_profiles', 'upsert')).not.toBeNull())
+    const u = letzterAufruf(vonMock(), 'member_profiles', 'upsert') as Record<string, unknown>
+    expect(u.signature).toBeNull()
+    expect(u.calendly_url).toBeNull()
+    expect(u.weekly_budget).toBe(150)
+  })
+
+  it('Calendly-Link muss mit https://calendly.com/ beginnen – sonst Fehler und kein Upsert', async () => {
+    rendern(<Profil />)
+    fireEvent.change(await screen.findByLabelText('Calendly-Link'), {
+      target: { value: 'http://beispiel.test/termin' },
+    })
+    fireEvent.click(speichernKnopf())
+    expect(screen.getByRole('alert')).toHaveTextContent('Link beginnt mit https://calendly.com/')
+    expect(anzahlAufrufe(vonMock(), 'member_profiles', 'upsert')).toBe(0)
+  })
+
+  it('altes Kürzel mit vier Zeichen (früher der Vorname) blockiert das Speichern der Signatur nicht und bleibt stehen', async () => {
+    useAuth.setState({
+      status: 'mitglied',
+      member: { user_id: MEMBER_M, email: 'm@example.test', display_name: 'Mike' },
+    })
+    rendern(<Profil />)
+    expect(await screen.findByLabelText('Kürzel')).toHaveValue('Mike')
+    fireEvent.change(screen.getByLabelText('E-Mail-Signatur'), { target: { value: 'Mike Muster' } })
+    fireEvent.click(speichernKnopf())
+    await waitFor(() => expect(letzterAufruf(vonMock(), 'member_profiles', 'upsert')).not.toBeNull())
+    const u = letzterAufruf(vonMock(), 'member_profiles', 'upsert') as Record<string, unknown>
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(u.member_id).toBe(MEMBER_M)
+    expect(u.short_name).toBe('Mike')
+    expect(u.signature).toBe('Mike Muster')
+    expect(u.linkedin_plan).toBe('basic')
+    expect(u.weekly_budget).toBe(100)
+  })
+
+  it('Speichern ist ohne Änderung deaktiviert; das Kürzel wird groß geschrieben', async () => {
+    rendern(<Profil />)
+    const kuerzel = await screen.findByLabelText('Kürzel')
+    expect(speichernKnopf()).toBeDisabled()
+    fireEvent.change(kuerzel, { target: { value: 'vs' } })
+    expect(kuerzel).toHaveValue('VS')
+    expect(speichernKnopf()).toBeDisabled()
+    fireEvent.change(kuerzel, { target: { value: 'v' } })
+    expect(kuerzel).toHaveValue('V')
+    expect(speichernKnopf()).toBeEnabled()
+  })
+
+  it.each([
+    ['alle Zeilen', 'alle' as const],
+    ['die Zeile „linkedin“', ['linkedin']],
+  ])('stürzt nicht ab, wenn in crm.settings %s fehlen', async (_name, ohne) => {
+    testZustand.settingsOhne = ohne
+    rendern(<Profil />)
+    expect(await screen.findByLabelText('Kürzel')).toHaveValue('VS')
+    expect(screen.getByLabelText('E-Mail-Signatur')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Speichern' })).toBeInTheDocument()
+  })
+
+  it('ohne eigene Zeile in crm.members: ein Satz und „Erneut versuchen“ statt endloser Ladebalken', async () => {
+    useAuth.setState({
+      status: 'mitglied',
+      member: { user_id: '99999999-0000-4000-8000-000000000009', email: 'x@example.test', display_name: 'Fremd' },
+    })
+    rendern(<Profil />)
+    expect(await screen.findByText('Dein Profil konnte nicht geladen werden.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Erneut versuchen' })).toBeInTheDocument()
   })
 })

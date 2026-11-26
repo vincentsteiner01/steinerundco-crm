@@ -1,5 +1,5 @@
 // Verlauf eines Leads – reine Regeln, gemeinsam für die Lead-Timeline im CRM und die Chrome-Erweiterung (17.10.2026):
-// Filter-Kategorien, welche Einträge Text zum Aufklappen haben, und das Ausblenden technischer Doppel-Einträge.
+// Filter-Kategorien und das Ausblenden technischer Doppel-Einträge.
 // Keine Abhängigkeiten außer Typen – die Erweiterung bündelt diese Datei in ihren Service Worker.
 import type { Activity, ActivityType } from '@/types/domain'
 
@@ -100,12 +100,4 @@ export const TIMELINE_FILTER: readonly { key: TimelineFilterKey; label: string; 
 export function timelineKategorie(type: ActivityType): Exclude<TimelineFilterKey, 'alle'> {
   for (const f of TIMELINE_FILTER) if (f.key !== 'alle' && f.types.includes(type)) return f.key
   return 'system'
-}
-
-/** Ereignisse mit aufklappbarem Text („anzeigen“): Nachrichten, E-Mails, Anrufe mit Notiz. */
-export function hatAufklappText(a: Activity): boolean {
-  if (!a.note) return false
-  const k = timelineKategorie(a.type)
-  if (a.type === 'nachricht_erhalten') return false // Zitat steht schon im Wortlaut
-  return k === 'nachrichten' || k === 'emails' || k === 'anrufe'
 }

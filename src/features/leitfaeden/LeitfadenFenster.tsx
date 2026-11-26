@@ -1,6 +1,7 @@
 // Leitfaden schreiben / bearbeiten (Neustart 25.11.2026): ein Fenster mit Titel, Text und Platzhalter-Chips – mehr nicht.
-// Kanal (sonstiges) und Phase (erstgespraech) sind feste, unsichtbare Werte. „Löschen“ setzt nur `archiviert_at`: der Leitfaden
-// verschwindet aus der Liste, die Zeile bleibt in der Datenbank.
+// Neue Leitfäden bekommen feste, unsichtbare Werte (Kanal sonstiges, Phase erstgespraech); ein vorhandener behält Kanal, Phase
+// und Schlüssel – auch die aus dem alten CRM (Kanal linkedin). „Löschen“ setzt nur `archiviert_at`: der Leitfaden verschwindet
+// aus der Liste, die Zeile bleibt in der Datenbank.
 import * as RD from '@radix-ui/react-dialog'
 import { useId, useLayoutEffect, useRef, useState, type RefObject, type TextareaHTMLAttributes } from 'react'
 import { PlatzhalterChips } from '@/components/PlatzhalterChips'
@@ -9,12 +10,14 @@ import { Button } from '@/components/ui/Button'
 import { cn } from '@/components/ui/cn'
 import { Dialog } from '@/components/ui/Dialog'
 import { Input } from '@/components/ui/Input'
+import { seitenInhalt, useFokusZurueck } from '@/components/ui/useFokusZurueck'
 import { useMeId } from '@/data/members'
 import { useTemplateSave } from '@/data/templates'
 import type { Template } from '@/types/domain'
 import { neuerKey } from './helfer'
 
-const CHIPS = ['Anrede', 'Vorname', 'Nachname', 'Unternehmen', 'Absender Vorname'] as const
+// „Position“ ist ein freier Platzhalter (Mike setzt ihn von Hand ein, z. B. die Stelle aus der Stellenanzeige)
+const CHIPS = ['Anrede', 'Vorname', 'Nachname', 'Unternehmen', 'Position', 'Absender Vorname'] as const
 
 /**
  * Textfeld, das mit dem Text wächst – es scrollt das Fenster, nicht das Feld. Eigenes Feld statt ui/Textarea: dessen Messung
@@ -86,6 +89,8 @@ export function LeitfadenFenster({
   const [fehler, setFehler] = useState<{ titel?: string; text?: string }>({})
   const [frage, setFrage] = useState<'loeschen' | 'verwerfen' | null>(null)
   const geaendert = titel !== (vorlage?.name ?? '') || text !== (vorlage?.body ?? '')
+  // Nach dem Schließen zurück zu „Leitfaden schreiben“ bzw. zur Karte des Leitfadens; gibt es sie nicht mehr (gelöscht), zum Seiteninhalt
+  const fokusZurueck = useFokusZurueck(true, seitenInhalt)
 
   // Rückfrage auf und zu: ui/Dialog hat keinen Auslöser, zu dem der Fokus von selbst zurückkehrt – er fiele sonst auf <body>
   const vorFrage = useRef<HTMLElement | null>(null)
@@ -167,6 +172,7 @@ export function LeitfadenFenster({
               e.preventDefault()
               inhalt.current?.focus()
             }}
+            onCloseAutoFocus={fokusZurueck}
             className={cn(
               'bg-surface-raised shadow-float fixed top-1/2 left-1/2 z-[59] flex max-h-[min(88dvh,900px)] w-[min(760px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg outline-none',
               'data-[state=open]:animate-[screen-in_var(--t-3)_var(--ease-brand)]',
@@ -177,7 +183,7 @@ export function LeitfadenFenster({
             </RD.Title>
             <div ref={rollen} className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto px-6 pb-5 max-md:px-4">
               <div className="grid min-w-0 gap-1.5">
-                <label htmlFor={`${id}-titel`} className="text-small text-ink-3 font-medium">
+                <label htmlFor={`${id}-titel`} className="text-small text-ink-2 font-medium">
                   Titel
                 </label>
                 <Input
@@ -199,7 +205,7 @@ export function LeitfadenFenster({
                 />
               </div>
               <div className="grid min-w-0 gap-1.5">
-                <label htmlFor={`${id}-text`} className="text-small text-ink-3 font-medium">
+                <label htmlFor={`${id}-text`} className="text-small text-ink-2 font-medium">
                   Text
                 </label>
                 <TextFeld
@@ -235,7 +241,7 @@ export function LeitfadenFenster({
                 setFehler({})
                 setText(t)
               }}
-              className="border-line border-t px-6 py-3 max-md:[scrollbar-width:none] max-md:flex-nowrap max-md:overflow-x-auto max-md:px-4"
+              className="border-line border-t px-6 py-3 max-md:px-4"
             />
             {/* max-md:px-3 an den Knöpfen: alle drei passen auf dem Telefon in eine Zeile */}
             <footer className="border-line flex flex-wrap items-center gap-2 border-t px-6 py-3.5 max-md:px-4">
@@ -245,7 +251,7 @@ export function LeitfadenFenster({
                 </Button>
               ) : null}
               <span className="ml-auto flex gap-2">
-                <Button groesse="L" className="max-md:px-3" onClick={schliessen}>
+                <Button variante="quiet" groesse="L" className="max-md:px-3" onClick={schliessen}>
                   Abbrechen
                 </Button>
                 <Button
@@ -264,6 +270,7 @@ export function LeitfadenFenster({
       </RD.Root>
 
       <Dialog
+        gross
         offen={frage === 'loeschen'}
         onOpenChange={(o) => !o && frageZu()}
         titel="Leitfaden löschen?"
@@ -271,6 +278,7 @@ export function LeitfadenFenster({
         primaer={{ label: 'Löschen', onClick: () => void archivieren(), busy: speichern.isPending }}
       />
       <Dialog
+        gross
         offen={frage === 'verwerfen'}
         onOpenChange={(o) => !o && frageZu()}
         titel="Änderungen verwerfen?"

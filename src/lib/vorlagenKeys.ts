@@ -60,7 +60,6 @@ export const SEQUENZ = {
 } as const
 
 export type VorlageKey = keyof typeof VORLAGE
-export type SequenzKey = keyof typeof SEQUENZ
 
 /** § 3.1.10b – Reaktion → vorgeschlagene Phase-2-Vorlage (`kein_bedarf` mit Zitat: `li_bedarf_nein_mit_grund`). */
 export const PHASE2_VORLAGE_NACH_LABEL: Record<ReplyLabel, keyof typeof VORLAGE | null> = {
@@ -97,8 +96,3 @@ export const STELLEN_WAHL = [
   { label: 'Elektriker', vorlage: VORLAGE.li_elektriker_neue_eroeffnung },
   { label: 'Keine passende Stelle', vorlage: VORLAGE.li_keine_mitarbeitersuche_neue_eroeffnung },
 ] as const
-
-/** Gehört die Vorlage zur Stellen-Familie (dann wählt der Agent die Stelle, bevor er sendet)? */
-export function istStellenVorlage(key: string | null | undefined): boolean {
-  return !!key && STELLEN_WAHL.some((s) => s.vorlage === key)
-}

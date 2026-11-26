@@ -1,5 +1,5 @@
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -21,30 +21,9 @@ const cspMeta = {
   },
 }
 
-// Recherche-Dienst (public/recherche-dienst): Verbindungsdaten für den Dienst auf dem Mac – dieselben öffentlichen Werte wie im
-// JS-Bundle (Projekt-URL, Publishable Key), damit die Einrichtung nur den persönlichen Dienst-Schlüssel braucht.
-function rechercheDienstVerbindung(): Plugin {
-  let env: Record<string, string> = {}
-  return {
-    name: 'recherche-dienst-verbindung',
-    apply: 'build',
-    configResolved(c) {
-      env = c.env
-    },
-    generateBundle() {
-      this.emitFile({
-        type: 'asset',
-        fileName: 'recherche-dienst/verbindung.json',
-        source: JSON.stringify({ url: env.VITE_SUPABASE_URL, key: env.VITE_SUPABASE_KEY }),
-      })
-    },
-  }
-}
-
 export default defineConfig({
   plugins: [
     cspMeta,
-    rechercheDienstVerbindung(),
     react(),
     tailwindcss(),
     VitePWA({
@@ -68,7 +47,6 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,woff2,svg,png,webmanifest}'],
-        globIgnores: ['**/xlsx-*.js'], // 400-kB-Chunk nicht vorab cachen
         navigateFallback: '/index.html',
         cleanupOutdatedCaches: true,
         clientsClaim: true,
@@ -91,7 +69,6 @@ export default defineConfig({
           groups: [
             { name: 'vendor-supabase', test: /node_modules[\\/]@supabase/ },
             { name: 'vendor-react', test: /node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/ },
-            { name: 'xlsx', test: /node_modules[\\/]xlsx/ },
           ],
         },
       },

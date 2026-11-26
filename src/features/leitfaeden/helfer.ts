@@ -1,6 +1,5 @@
 // Reine Helfer des Moduls M6: Schlüssel-Vergabe (BAUPLAN § 3.7 „DB“), Statistik aus Aktivitäten (LF-06), Suche, Baum-Gruppen.
 import type { ActivityZeitraum } from '@/data/activities'
-import { fmtAnteil, fmtZahl } from '@/lib/format'
 import { berlinTag, tagPlus, tageDifferenz } from '@/lib/zeit'
 import type { Channel, Template, TemplatePerformance, TemplatePhase } from '@/types/domain'
 import { KANAELE, KEY_PRAEFIX, phaseRang, phasenFuer, type PhaseDef } from './phasen'
@@ -103,11 +102,6 @@ export function passtSuche(t: Pick<Template, 'name' | 'when_to_use' | 'key'>, q:
 export const ANTWORT_FENSTER_TAGE = 7
 export const WOCHEN = 8
 
-/** Von-Tag der Statistik: Beginn des 8-Wochen-Fensters (Berlin). */
-export function statistikVon(heute: string): string {
-  return tagPlus(heute, -(WOCHEN * 7 - 1))
-}
-
 export type Statistik = {
   gesendet: number
   antworten7T: number
@@ -168,11 +162,6 @@ export function statistikAusAktivitaeten(
 export function nutzung(perf: TemplatePerformance | undefined): { gesendet: number; quote: number | null } | null {
   if (!perf || !perf.gesendet) return null
   return { gesendet: perf.gesendet, quote: perf.antwort_quote ?? null }
-}
-
-/** Klartext der Nutzung für title/aria-label: „148 gesendet · 5 % Antwort“ (Runde 2: Werte standen unbeschriftet im Baum). */
-export function nutzungText(n: { gesendet: number; quote: number | null }): string {
-  return `${fmtZahl(n.gesendet)} gesendet · ${n.quote === null ? 'Antwortquote –' : `${fmtAnteil(n.quote)} Antwort`}`
 }
 
 /** Standard-Verwendung in Sequenzschritten: „Standard für Schritt 2“ (Sequenzname · Position). */

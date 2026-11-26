@@ -27,7 +27,11 @@ const UMFANG: { key: Umfang; label: string; kbd: string; kanaele: Channel[] }[] 
   { key: 'alle', label: 'alle Kanäle', kbd: '3', kanaele: ['linkedin', 'telefon', 'email'] },
 ]
 
-export type WiderspruchErfassenProps = AktionProps & { umfang?: Umfang }
+export type WiderspruchErfassenProps = AktionProps & {
+  umfang?: Umfang
+  /** Lead-Blatt des Neustarts (25.11.2026): ohne Tastenmarken, kurzer Text, 44-px-Knöpfe. Ohne Angabe wie bisher (E-Mail-Bereich). */
+  schlicht?: boolean
+}
 
 export function WiderspruchErfassen({
   leadId,
@@ -37,6 +41,7 @@ export function WiderspruchErfassen({
   onFertig,
   aktiv,
   umfang: umfangVorgabe = 'alle',
+  schlicht,
   className,
 }: WiderspruchErfassenProps) {
   const [offen, setOffen] = useOffen(offenProp, onOpenChange)
@@ -91,7 +96,8 @@ export function WiderspruchErfassen({
   // `D` nur im Anruf-Screen (Scope anruf); überall sonst ist der Button der Weg
   useAktionTaste('d', trigger === undefined && !!aktiv, () => setOffen(true), 'anruf')
   useTastenWaehrendOffen(offen, (b) => {
-    const u = UMFANG.find((x) => x.kbd === b)
+    // schlicht zeigt keine Ziffern – dann wählen sie auch nichts
+    const u = schlicht ? undefined : UMFANG.find((x) => x.kbd === b)
     if (u) {
       setUmfang(u.key)
       return true
@@ -116,7 +122,8 @@ export function WiderspruchErfassen({
         offen={offen}
         onOpenChange={schliessen}
         titel={`Werbewiderspruch für ${name} erfassen?`}
-        text={dialog.text}
+        text={schlicht ? dialog.kurz : dialog.text}
+        gross={schlicht}
         primaer={{ label: dialog.primaer, onClick: () => void erfassen(), danger: true, busy: update.isPending }}
         kinder={
           <>
@@ -125,7 +132,7 @@ export function WiderspruchErfassen({
               <RadioListe
                 name={`widerspruch-${leadId}`}
                 ariaLabel="Umfang"
-                optionen={UMFANG}
+                optionen={schlicht ? UMFANG.map((o) => ({ key: o.key, label: o.label })) : UMFANG}
                 wert={umfang}
                 onChange={setUmfang}
               />

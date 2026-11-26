@@ -219,13 +219,6 @@ export function usePlatzierungsTests() {
   })
 }
 
-export function useAnbieterZahlen() {
-  return useQuery({
-    queryKey: [...KEY, 'anbieter'],
-    queryFn: async (): Promise<AnbieterZahlen[]> => pruefe(await supabase.from('v_mail_anbieter').select('*')),
-  })
-}
-
 export function useSperrdomains() {
   return useQuery({
     queryKey: [...KEY, 'sperrdomains'],

@@ -39,8 +39,9 @@ function gemerktePerson(): PersonId {
 
 /**
  * Login (DESIGN-SYSTEM § 6, reference.html „Login“): Vollbild canvas, Kopf Marke + Dateline, Mitte 400 px: Headline „Wer bist du?“,
- * zwei Personenkacheln (V/M), Passcode (Input L, Mono, Auge), Checkbox „Angemeldet bleiben“, Button L „Anmelden ↵“, Kleinzeile.
- * Kein vorbelegter Passcode, kein Technik-Footer.
+ * zwei Personenkacheln, Passcode (Input L, Mono, Auge), Checkbox „Angemeldet bleiben“, Button L „Anmelden“.
+ * Kein vorbelegter Passcode, kein Technik-Footer. Seit dem Neustart (25.11.2026) ruhiger: die Kacheln zeigen nur Kürzel und
+ * Namen (keine Rollen-Zeile), nirgends Tastenmarken – V, M und die Eingabetaste wirken weiter.
  */
 export function Component() {
   const status = useAuth((s) => s.status)
@@ -166,12 +167,7 @@ export function Component() {
                   <span className="text-ink-bright tnum font-mono text-[28px] leading-none font-medium tracking-[-0.02em]">
                     {p.initialen}
                   </span>
-                  <span className="grid gap-0.5">
-                    <span className="font-strong text-[15px] leading-tight">{p.name}</span>
-                    <span className="text-small text-ink-3">
-                      {p.rolle} · <kbd className="kbd">{p.taste}</kbd>
-                    </span>
-                  </span>
+                  <span className="font-strong text-[15px] leading-tight">{p.name}</span>
                 </button>
               )
             })}
@@ -233,15 +229,7 @@ export function Component() {
             }}
           />
 
-          <Button
-            type="submit"
-            variante="primary"
-            groesse="L"
-            className="w-full"
-            kbd={gesperrt ? undefined : '↵'}
-            disabled={gesperrt}
-            busy={laeuft}
-          >
+          <Button type="submit" variante="primary" groesse="L" className="w-full" disabled={gesperrt} busy={laeuft}>
             {gesperrt ? ALLGEMEIN.nochmalIn(restSekunden) : ALLGEMEIN.anmelden}
           </Button>
           {gesperrt ? (
@@ -249,8 +237,6 @@ export function Component() {
               {ALLGEMEIN.nochmalIn(restSekunden)}
             </p>
           ) : null}
-
-          <p className="text-small text-ink-3 mt-[18px]">{ALLGEMEIN.passcodeVergessen}</p>
         </form>
       </div>
 

@@ -1,19 +1,10 @@
-// BAUPLAN § 3.1.6 leads.ts: Liste (PostgREST-Filter aus LeadFilter, range 500, count exact), Detail (Embeds), Suche,
-// Update mit updated_at-Bedingung (optimistisch), Erstellen, Soft-Delete/Wiederherstellen, Dubletten-Check, Views.
+// BAUPLAN § 3.1.6 leads.ts: Liste (PostgREST-Filter aus LeadFilter, range 500, count exact), Detail (Embeds),
+// Update mit updated_at-Bedingung (optimistisch), Soft-Delete. Suche, Erstellen, Wiederherstellen, Dubletten-Check und die
+// Views sind seit dem Neustart (25.11.2026) ohne Verwendung entfernt – das Board hat seine eigenen Hooks (data/board.ts).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
 import { toastFehler } from '@/components/toast'
 import { useAuth } from '@/features/auth/authStore'
-import type {
-  Lead,
-  LeadFilter,
-  LeadInsert,
-  LeadMitBezug,
-  LeadOhneBewegung,
-  LeadStage,
-  LeadUpdate,
-  PhaseKey,
-} from '@/types/domain'
+import type { Lead, LeadFilter, LeadMitBezug, LeadStage, LeadUpdate, PhaseKey } from '@/types/domain'
 import {
   berlinMitternachtIso,
   heuteBerlin,
@@ -22,7 +13,6 @@ import {
   pruefeNull,
   SEITE,
   tagPlus,
-  useAlleSeiten,
   zeitraumGrenzen,
 } from './_helfer'
 import { MELDUNG, mutationFehler } from './errors'
@@ -160,54 +150,28 @@ export function useLeads(filter: LeadFilter, seite = 0) {
   })
 }
 
-/** Alle Seiten nacheinander (Virtualisierung ab 100 Zeilen, E18). */
-export function useLeadsUnendlich(filter: LeadFilter) {
-  const me = useAuth((s) => s.member?.user_id ?? null)
-  return useAlleSeiten<LeadListenZeile>([...qk.leads.liste(filter, -1), 'unendlich'], async (von, bis) => {
-    const { data, error } = await wendeLeadFilterAn(
-      supabase.from('leads').select(embedSelect(filter)),
-      filter,
-      me,
-    ).range(von, bis)
-    if (error) throw error
-    return (data ?? []) as unknown as LeadListenZeile[]
-  })
-}
-
 export async function ladeLead(id: string): Promise<LeadMitBezug> {
   const z = pruefe(await supabase.from('leads').select(LEAD_EMBED).eq('id', id).single())
   return z as unknown as LeadMitBezug
 }
 
-export function useLead(id: string | null | undefined) {
-  return useQuery({ queryKey: qk.leads.detail(id ?? ''), queryFn: () => ladeLead(id as string), enabled: !!id })
+/**
+ * `frisch` (Lead-Blatt, 25.11.2026): beim Einhängen immer neu laden – das Formular des Blatts darf nicht aus dem Cache von
+ * vorhin entstehen (falsche Liste nach einem Zug, fremde Notiz unsichtbar und beim Speichern überschrieben).
+ */
+export function useLead(id: string | null | undefined, opt?: { frisch?: boolean }) {
+  return useQuery({
+    queryKey: qk.leads.detail(id ?? ''),
+    queryFn: () => ladeLead(id as string),
+    enabled: !!id,
+    ...(opt?.frisch ? { refetchOnMount: 'always' as const } : {}),
+  })
 }
 
 export type LeadTreffer = Pick<
   Lead,
   'id' | 'full_name' | 'company_name' | 'stage' | 'owner_id' | 'linkedin_url' | 'deleted_at'
 >
-const TREFFER_SPALTEN = 'id, full_name, company_name, stage, owner_id, linkedin_url, deleted_at'
-
-/** Palette/Suche: `or(ilike)` auf Name/Firma + `fts(german)` (E18). */
-export function useLeadSuche(q: string, limit = 20) {
-  const w = orWert(q)
-  return useQuery({
-    queryKey: qk.leads.suche(w),
-    enabled: w.length >= 2,
-    staleTime: 10_000,
-    queryFn: async (): Promise<LeadTreffer[]> =>
-      pruefe(
-        await supabase
-          .from('leads')
-          .select(TREFFER_SPALTEN)
-          .is('deleted_at', null)
-          .or(`full_name.ilike.*${w}*,company_name.ilike.*${w}*,search.fts(german).${w}`)
-          .order('last_activity_at', { ascending: false, nullsFirst: false })
-          .limit(limit),
-      ),
-  })
-}
 
 export type LeadPatch = { id: string; erwartetUpdatedAt: string; patch: LeadUpdate }
 
@@ -263,22 +227,6 @@ export function useLeadUpdate() {
   })
 }
 
-export function useLeadErstellen() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (lead: LeadInsert): Promise<Lead> =>
-      pruefe(await supabase.from('leads').insert(lead).select('*').single()),
-    onError: mutationFehler,
-    onSuccess: (l) =>
-      qc.setQueryData(qk.leads.detail(l.id), (alt: LeadMitBezug | undefined) => (alt ? { ...alt, ...l } : alt)),
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: qk.leads.all })
-      void qc.invalidateQueries({ queryKey: qk.queue.all })
-      void qc.invalidateQueries({ queryKey: qk.nav })
-    },
-  })
-}
-
 /** Soft-Delete (`deleted_at`); Papierkorb-Ansicht zeigt ihn weiter. */
 export function useLeadLoeschen() {
   const qc = useQueryClient()
@@ -294,74 +242,5 @@ export function useLeadLoeschen() {
       void qc.invalidateQueries({ queryKey: qk.queue.all })
       void qc.invalidateQueries({ queryKey: qk.nav })
     },
-  })
-}
-
-export function useLeadWiederherstellen() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (id: string): Promise<Lead> =>
-      pruefe(await supabase.from('leads').update({ deleted_at: null }).eq('id', id).select('*').single()),
-    onError: mutationFehler,
-    onSettled: (_d, _e, id) => {
-      void qc.invalidateQueries({ queryKey: qk.leads.all })
-      void qc.invalidateQueries({ queryKey: qk.leads.detail(id) })
-      void qc.invalidateQueries({ queryKey: qk.queue.all })
-      void qc.invalidateQueries({ queryKey: qk.nav })
-    },
-  })
-}
-
-/** Endgültig löschen (Dialog DIALOG.endgueltigLoeschen, ux § 4.8). */
-export function useLeadEndgueltigLoeschen() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (id: string) => {
-      pruefe(await supabase.from('leads').delete().eq('id', id))
-    },
-    onError: mutationFehler,
-    onSettled: (_d, _e, id) => {
-      qc.removeQueries({ queryKey: qk.leads.detail(id) })
-      void qc.invalidateQueries({ queryKey: qk.leads.all })
-      void qc.invalidateQueries({ queryKey: qk.queue.all })
-      void qc.invalidateQueries({ queryKey: qk.nav })
-    },
-  })
-}
-
-function useDebounce<T>(wert: T, ms: number): T {
-  const [v, setV] = useState(wert)
-  useEffect(() => {
-    const t = setTimeout(() => setV(wert), ms)
-    return () => clearTimeout(t)
-  }, [wert, ms])
-  return v
-}
-
-/** Dubletten beim Anlegen (300 ms Debounce): `linkedin_url_norm` (normalisiert vom Aufrufer, lib/url), `phone_e164`, `email`. */
-export function useDubletteCheck(url?: string, phone?: string, email?: string) {
-  const u = useDebounce(url?.trim() || undefined, 300)
-  const p = useDebounce(phone?.trim() || undefined, 300)
-  const e = useDebounce(email?.trim().toLowerCase() || undefined, 300)
-  const bedingungen: string[] = []
-  if (u) bedingungen.push(`linkedin_url_norm.eq.${u.replace(/[,()\s]/g, '')}`)
-  if (p) bedingungen.push(`phone_e164.eq.${p.replace(/[,()\s]/g, '')}`)
-  if (e) bedingungen.push(`email.ilike.${e.replace(/[,()\s]/g, '')}`)
-  return useQuery({
-    queryKey: qk.leads.dublette(u, p, e),
-    enabled: bedingungen.length > 0,
-    staleTime: 10_000,
-    queryFn: async (): Promise<LeadTreffer[]> =>
-      pruefe(await supabase.from('leads').select(TREFFER_SPALTEN).or(bedingungen.join(',')).limit(10)),
-  })
-}
-
-export function useLeadsOhneBewegung() {
-  return useQuery({
-    queryKey: qk.leads.ohneBewegung,
-    queryFn: async (): Promise<LeadOhneBewegung[]> =>
-      pruefe(
-        await supabase.from('v_leads_ohne_bewegung').select('*').order('tage_ohne_bewegung', { ascending: false }),
-      ),
   })
 }

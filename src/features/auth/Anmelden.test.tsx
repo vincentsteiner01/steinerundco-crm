@@ -1,5 +1,5 @@
 // L-02…L-04, L-06 (BAUPLAN § 3.1.7): Fehlertexte, Countdown nach 5 Versuchen, Redirect-Ziel aus ?von=, Ablehnung von //evil und https://…
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('@/data/supabase', async () => (await import('@/test/supabaseMock')).supabaseMock())
@@ -22,8 +22,8 @@ function rendern(start = '/anmelden') {
     ],
     { initialEntries: [start] },
   )
-  render(<RouterProvider router={router} />)
-  return router
+  const { container } = render(<RouterProvider router={router} />)
+  return Object.assign(router, { container })
 }
 
 const signIn = supabase.auth.signInWithPassword as unknown as ReturnType<typeof vi.fn>
@@ -36,6 +36,23 @@ describe('Anmelden', () => {
   })
   afterEach(() => vi.useRealTimers())
 
+  it('ruhig: die Kacheln zeigen nur Kürzel und Namen – keine Rollen-Zeile, nirgends Tastenmarken', () => {
+    const { container } = rendern()
+    expect(
+      within(screen.getByRole('group', { name: 'Person wählen' }))
+        .getAllByRole('button')
+        .map((k) => k.textContent),
+    ).toEqual(['VSVincent', 'MMMike'])
+    expect(container.querySelector('kbd')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Anmelden' })).toHaveTextContent(/^Anmelden$/)
+    expect(container).not.toHaveTextContent(/LinkedIn|Telefonie|DMs|↵/)
+  })
+
+  it('verweist nicht auf ein Zurücksetzen unter Einstellungen – das gibt es dort nicht', () => {
+    const { container } = rendern()
+    expect(container).not.toHaveTextContent(/vergessen|zurück/i)
+  })
+
   it('zeigt Headline, zwei Kacheln und merkt die Person', () => {
     rendern()
     expect(screen.getByRole('heading', { name: 'Wer bist du?' })).toBeInTheDocument()
@@ -46,7 +63,7 @@ describe('Anmelden', () => {
     expect(document.activeElement).toBe(screen.getByLabelText('Passcode'))
   })
 
-  it('L-01: erster Besuch → Fokus auf der Kachel, `M` wählt Mike und setzt den Fokus ins Passcode-Feld (Review)', () => {
+  it('L-01: erster Besuch → Fokus auf der Kachel; die Taste `M` wählt weiter Mike (auch ohne sichtbare Marke) und setzt den Fokus ins Passcode-Feld', () => {
     rendern()
     expect(document.activeElement).toBe(screen.getByRole('button', { name: /Vincent/ }))
     fireEvent.keyDown(document.activeElement as Element, { key: 'm', code: 'KeyM' })

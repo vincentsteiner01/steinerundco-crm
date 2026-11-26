@@ -1,5 +1,6 @@
 // Toasts (DESIGN-SYSTEM § 5.21, BAUPLAN § 3.1.10): sonner mit eigenen Klassen (base.css .toast-brand).
-// Varianten: neutral · undo (2-px-Sage-Rand, 6 s, „Rückgängig Z“) · error (2-px-danger-Rand, bleibt bis R/Esc).
+// Varianten: neutral · undo (2-px-Sage-Rand, 6 s, „Rückgängig“) · error (2-px-danger-Rand, bleibt bis R/Esc).
+// 25.11.2026 (Neustart): die Knöpfe zeigen keine Tastenmarken mehr – Z, R und Esc wirken weiter (GlobaleTasten).
 // Die Ausführung von Rückgängig gehört der Daten-Schicht: src/data/undo.ts registriert sie über `registriereUndo(fn)`.
 import { createElement, type ReactElement, type ReactNode } from 'react'
 import { toast as sonner } from 'sonner'
@@ -20,29 +21,26 @@ const undoZiele = new Map<number, Exclude<UndoZiel, number>>()
 let marke = 0
 let letzterRetry: (() => void) | null = null
 let fehlerToastId: string | number | null = null
+/** Der Rückgängig-Toast, der gerade steht – ein neuer schließt ihn (25.11.2026). */
+let undoToastId: string | number | null = null
 
 /** Von src/data/undo.ts aufgerufen: verbindet den Toast mit `rpc.undoActivity`. */
 export function registriereUndo(fn: UndoAusfuehrer): void {
   undoAusfuehrer = fn
 }
 
-function knopf(
-  label: string,
-  kbd: string,
-  onClick: () => void,
-  ton: 'secondary' | 'quiet' = 'secondary',
-): ReactElement {
+// 40 px hoch (25.11.2026): „Rückgängig“ steht nur 6 s – 28 px waren dafür zu klein zum Treffen
+function knopf(label: string, onClick: () => void, ton: 'secondary' | 'quiet' = 'secondary'): ReactElement {
   return createElement(
     'button',
     {
       type: 'button',
       onClick,
       className:
-        'toast-aktion inline-flex h-7 items-center gap-2 rounded-sm border px-2.5 text-small font-medium leading-none transition-[background] duration-[var(--t-1)] ease-brand hover:bg-surface-hover ' +
+        'toast-aktion inline-flex h-10 items-center gap-2 rounded-sm border px-3.5 text-small font-medium leading-none transition-[background] duration-[var(--t-1)] ease-brand hover:bg-surface-hover ' +
         (ton === 'secondary' ? 'border-line-strong text-ink' : 'border-transparent text-ink-2'),
     },
     label,
-    createElement('kbd', { className: 'kbd' }, kbd),
   )
 }
 
@@ -66,28 +64,42 @@ export function toast(text: string): string | number {
  */
 export function toastUndo(text: string, ziel: UndoZiel): string | number {
   if (Array.isArray(ziel) && ziel.length === 0) return toast(text)
+  // Immer nur ein „Rückgängig“: zwei wortgleiche Toasts übereinander ließen offen, welcher zu welchem Zug gehört –
+  // Knopf und Taste Z meinen so denselben, letzten Schritt
+  if (undoToastId !== null) sonner.dismiss(undoToastId)
   const { setLetzterUndo } = useUiStore.getState()
   const activityId = typeof ziel === 'number' ? ziel : -++marke
   if (typeof ziel !== 'number') undoZiele.set(activityId, ziel as Exclude<UndoZiel, number>)
   setLetzterUndo({ activityId, label: text })
   let id: string | number = 0
   const ausfuehren = () => {
-    void undoAusfuehren()
+    // Der Knopf nimmt SEINEN Zug zurück, nicht den zuletzt angebotenen (den nimmt die Taste Z) – sonst träfe ein Klick auf
+    // einen Toast, der gerade einem neueren weicht, die falsche Karte. Ist das Ziel schon weg (per Z erledigt, abgelaufen),
+    // geschieht nichts.
+    if (typeof ziel === 'function') {
+      if (undoZiele.delete(activityId)) {
+        const s = useUiStore.getState()
+        if (s.letzterUndo?.activityId === activityId) s.setLetzterUndo(null)
+        void ziel()
+      }
+    }
+    // Activity-ID oder Stapel (E-Mail-Bereich): nur solange dieser Toast das zuletzt Angebotene ist – weicht er gerade einem
+    // neueren, nähme `undoAusfuehren()` sonst dessen Aktion zurück
+    else if (useUiStore.getState().letzterUndo?.activityId === activityId) void undoAusfuehren()
     sonner.dismiss(id)
   }
-  id = sonner.custom(() => karte('undo', text, knopf('Rückgängig', 'Z', ausfuehren)), {
+  const erledigt = () => {
+    const s = useUiStore.getState()
+    if (s.letzterUndo?.activityId === activityId) s.setLetzterUndo(null)
+    undoZiele.delete(activityId)
+    if (undoToastId === id) undoToastId = null
+  }
+  id = sonner.custom(() => karte('undo', text, knopf('Rückgängig', ausfuehren)), {
     duration: UNDO_MS,
-    onAutoClose: () => {
-      const s = useUiStore.getState()
-      if (s.letzterUndo?.activityId === activityId) s.setLetzterUndo(null)
-      undoZiele.delete(activityId)
-    },
-    onDismiss: () => {
-      const s = useUiStore.getState()
-      if (s.letzterUndo?.activityId === activityId) s.setLetzterUndo(null)
-      undoZiele.delete(activityId)
-    },
+    onAutoClose: erledigt,
+    onDismiss: erledigt,
   })
+  undoToastId = id
   return id
 }
 
@@ -114,10 +126,10 @@ export async function undoAusfuehren(): Promise<boolean> {
 export function toastFehler(text: string, retry?: () => void): string | number {
   letzterRetry = retry ?? null
   const aktion = retry
-    ? knopf('Erneut versuchen', 'R', () => {
+    ? knopf('Erneut versuchen', () => {
         void retryAusfuehren()
       })
-    : knopf('Schließen', 'Esc', () => fehlerSchliessen(), 'quiet')
+    : knopf('Schließen', () => fehlerSchliessen(), 'quiet')
   fehlerToastId = sonner.custom(() => karte('error', text, aktion), { duration: Infinity })
   return fehlerToastId
 }

@@ -135,6 +135,11 @@
   [data-sonner-toaster][data-y-position='bottom'] {
     bottom: calc(var(--spacing-tabbar) + 16px + env(safe-area-inset-bottom)) !important;
   }
+  /* „Mehr“-Menü offen (Team · Einstellungen · Hilfe, 146 px hoch): Toasts darüber – sonst liegt „Rückgängig“ bzw.
+     „Schließen“ genau auf „Einstellungen“ und „Hilfe“ (25.11.2026) */
+  body:has(nav [role='menu']) [data-sonner-toaster][data-y-position='bottom'] {
+    bottom: calc(var(--spacing-tabbar) + 172px + env(safe-area-inset-bottom)) !important;
+  }
 }
 
 /* Bewegungen für Peek/Sheet (von rechts, translateX 24 → 0) und Popover/Palette (scale .98 → 1) – DESIGN-SYSTEM § 3.8 */

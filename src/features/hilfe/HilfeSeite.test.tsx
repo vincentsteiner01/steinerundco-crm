@@ -1,5 +1,5 @@
-// Hilfe-Seite: Übersicht mit häufigen Fragen, Themen mit Inhalt aus themen.ts, Suche (Enter öffnet), unbekanntes Thema → /hilfe.
-// 25.11.2026: keine Touren mehr – „Zeig’s mir“ und „Tour erneut starten“ dürfen nicht mehr erscheinen.
+// Hilfe-Seite nach dem Neustart (25.11.2026): Übersicht mit höchstens drei Fragen, sieben kurze Themen aus themen.ts, Suche
+// (Enter öffnet den ersten Treffer), unbekanntes oder entferntes Thema → /hilfe. Keine Touren, kein Feedback, keine Tastenhinweise.
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryRouter, RouterProvider } from 'react-router'
@@ -9,6 +9,7 @@ vi.mock('@/data/supabase', async () => (await import('@/test/supabaseMock')).sup
 import { TooltipProvider } from '@/components/ui/Tooltip'
 import { useAuth } from '@/features/auth/authStore'
 import { Component as HilfeSeite } from './HilfeSeite'
+import { HAEUFIGE_FRAGEN, THEMEN } from './themen'
 
 function rendern(start: string) {
   const router = createMemoryRouter(
@@ -19,13 +20,21 @@ function rendern(start: string) {
     ],
     { initialEntries: [start] },
   )
-  render(
+  const { unmount } = render(
     <TooltipProvider>
       <RouterProvider router={router} />
     </TooltipProvider>,
   )
-  return router
+  return { router, unmount }
 }
+
+/** Der Lesetext rechts – die Themenliste links trägt seit dem Wegfall der Nummern dieselben Link-Namen. */
+const text = () => within(screen.getByRole('article'))
+
+const themenLinks = () =>
+  within(screen.getByRole('navigation', { name: 'Hilfe-Themen' }))
+    .getAllByRole('link')
+    .map((a) => a.textContent)
 
 beforeEach(() => {
   useAuth.setState({
@@ -35,106 +44,144 @@ beforeEach(() => {
 })
 
 describe('Hilfe', () => {
-  it('Übersicht: Titel, häufige Fragen mit Links, Themenliste mit allen Themen', () => {
+  it('Übersicht: Titel, drei häufige Fragen mit Link zum Thema, Themenliste mit den sieben Themen', () => {
     rendern('/hilfe')
     expect(screen.getByRole('heading', { level: 1, name: 'Hilfe' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Was das CRM kann – und was nicht.' })).toBeInTheDocument()
-    expect(screen.getByText('Kann ich mein Gmail verbinden?')).toBeInTheDocument()
-    expect(screen.getByText('Kommen LinkedIn-Nachrichten automatisch ins CRM?')).toBeInTheDocument()
-    const liste = screen.getByRole('navigation', { name: 'Hilfe-Themen' })
-    // Runde 2: am Telefon steht das Themenverzeichnis unter Einleitung und FAQ
+    expect(screen.getByRole('heading', { level: 2, name: 'So funktioniert das CRM.' })).toBeInTheDocument()
+    expect(HAEUFIGE_FRAGEN).toHaveLength(3)
+    for (const f of HAEUFIGE_FRAGEN) expect(screen.getByText(f.frage, { selector: 'dt' })).toBeInTheDocument()
+    expect(screen.getAllByRole('link', { name: 'Weiterlesen' }).map((a) => a.getAttribute('href'))).toEqual([
+      '/hilfe/archiv',
+      '/hilfe/leads',
+      '/hilfe/email',
+    ])
+    // am Telefon steht das Themenverzeichnis unter Einleitung und Fragen
     expect(screen.getByRole('complementary', { name: 'Themen' })).toHaveClass('max-md:order-last')
-    expect(within(liste).getAllByRole('link').length).toBeGreaterThanOrEqual(13)
-    expect(within(liste).getByRole('link', { name: /Was das CRM \(noch\) nicht kann/ })).toHaveAttribute(
-      'href',
-      '/hilfe/noch-nicht',
-    )
+    // ohne Nummern davor
+    expect(themenLinks()).toEqual([
+      'Erste Schritte',
+      'Leads',
+      'Leitfäden',
+      'E-Mail',
+      'E-Mail-Kampagnen',
+      'Team & Einstellungen',
+      'Wo ist das alte CRM?',
+    ])
+    const liste = screen.getByRole('navigation', { name: 'Hilfe-Themen' })
+    expect(within(liste).getByRole('link', { name: /Wo ist das alte CRM/ })).toHaveAttribute('href', '/hilfe/archiv')
   })
 
-  it('Übersicht ohne „Tour erneut starten“ und ohne Verweis auf die alte Feedback-Seite', () => {
-    rendern('/hilfe')
-    expect(screen.queryByRole('button', { name: /Tour erneut starten/ })).toBeNull()
-    expect(document.querySelector('a[href="/feedback"]')).toBeNull()
+  it('Kopf wie auf den anderen Seiten: nur der Titel – keine Datumszeile, keine Themen-Nummern, kein „02 / 07“', () => {
+    const { unmount } = rendern('/hilfe')
+    expect(screen.getByRole('heading', { level: 1, name: 'Hilfe' })).toHaveClass('headline', 'min-h-11')
+    expect(document.body).not.toHaveTextContent(/KW \d|Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag/)
+    unmount()
+    rendern('/hilfe/leads')
+    expect(screen.getByRole('heading', { level: 1, name: 'Hilfe' })).toBeInTheDocument()
+    expect(document.body).not.toHaveTextContent(/\d\d \/ \d\d/)
+    expect(themenLinks()).toContain('Leads')
   })
 
-  it('Thema LinkedIn (Runde 3): Gmail-Brücke, Seitenleiste, was manuell bleibt', () => {
-    rendern('/hilfe/linkedin')
-    expect(screen.getByRole('heading', { level: 2, name: /LinkedIn: was automatisch geht/ })).toBeInTheDocument()
-    expect(screen.getByText(/berührt das CRM LinkedIn nie/)).toBeInTheDocument()
-    const zwischentitel = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
-    expect(zwischentitel).toEqual(
-      expect.arrayContaining([
-        'Automatisch: LinkedIn-Mails aus deinem Gmail',
-        'Mit einem Klick: die Chrome-Erweiterung',
-        'Bleibt bei dir',
-      ]),
-    )
-    // (a) Gmail: 5-Minuten-Takt, nur LinkedIn-Mails, Grenze ungelesene Nachrichten, Link zu Verbindungen
-    expect(screen.getByText(/alle 5 Minuten/)).toBeInTheDocument()
-    expect(screen.getByText(/nur diese LinkedIn-Mails/)).toBeInTheDocument()
-    expect(screen.getByText(/nicht schon in LinkedIn gelesen hast/)).toBeInTheDocument()
-    expect(screen.getAllByRole('link', { name: 'Einstellungen → Verbindungen' })[0]).toHaveAttribute(
-      'href',
-      '/einstellungen/verbindungen?tab=eingang',
-    )
-    expect(screen.getByRole('link', { name: 'Verbindungen einrichten' })).toHaveAttribute('href', '/hilfe/verbindungen')
-    // (b) Seitenleiste: Kopieren → Gesendet, Angenommen, Antwort erhalten, Als Lead anlegen; nie auf LinkedIn handeln
-    for (const k of ['Kopieren', 'Gesendet', 'Angenommen', 'Antwort erhalten', 'Als Lead anlegen'])
-      expect(screen.getAllByText(k, { selector: 'strong, b' }).length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText(/klickt, tippt und sendet nie in LinkedIn/)).toBeInTheDocument()
-    // der alte „geplant“-Hinweis zur Gmail-Erkennung ist weg, Connections.csv bleibt geplant
-    const geplant = [...document.querySelectorAll('[data-geplant]')].map((e) => e.textContent)
-    expect(geplant).toHaveLength(1)
-    expect(geplant[0]).toMatch(/Connections\.csv/)
-    expect(screen.queryByRole('button', { name: /Zeig’s mir/ })).toBeNull()
-    // Weiter-Navigation zum nächsten Thema
-    expect(screen.getByRole('navigation', { name: 'Weitere Themen' })).toHaveTextContent('Verbindungen einrichten')
+  it('keine Touren, kein Feedback, keine Tastenhinweise – auf der Übersicht und in jedem Thema', () => {
+    for (const start of ['/hilfe', ...THEMEN.map((t) => `/hilfe/${t.key}`)]) {
+      const { unmount } = rendern(start)
+      expect(screen.queryByRole('button', { name: /Tour erneut starten|Zeig’s mir/ }), start).toBeNull()
+      expect(document.querySelector('a[href="/feedback"]'), start).toBeNull()
+      expect(document.querySelector('kbd'), start).toBeNull()
+      expect(document.body.textContent, start).not.toMatch(/[⌘⌥⇧↵]|Tastenk|Feedback geben/)
+      unmount()
+    }
   })
 
-  it('Thema „Verbindungen einrichten“ (Runde 3): Schritte und Link auf Einstellungen → Verbindungen', () => {
-    rendern('/hilfe/verbindungen')
-    expect(screen.getByRole('heading', { level: 2, name: 'Verbindungen einrichten' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Einstellungen → Verbindungen' })).toHaveAttribute(
-      'href',
-      '/einstellungen/verbindungen',
-    )
-    expect(screen.getByRole('link', { name: 'Eingang' })).toHaveAttribute(
-      'href',
-      '/einstellungen/verbindungen?tab=eingang',
-    )
-    expect(screen.getByText(/CRM_SCHLUESSEL/)).toBeInTheDocument()
-    expect(screen.getByText(/chrome:\/\/extensions/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /Zeig’s mir/ })).toBeNull()
+  it('jedes Thema zeigt Titel, Kurztext und nur interne Links', () => {
+    for (const t of THEMEN) {
+      const { unmount } = rendern(`/hilfe/${t.key}`)
+      expect(screen.getByRole('heading', { level: 2, name: t.titel })).toBeInTheDocument()
+      const text = screen.getByRole('article')
+      for (const a of within(text).getAllByRole('link')) expect(a.getAttribute('href'), t.key).toMatch(/^\/[a-z]/)
+      // Auszeichnung ist aufgelöst: keine Sternchen, keine Link-Klammern im Lesetext
+      expect(text.textContent, t.key).not.toMatch(/\*\*|\]\(/)
+      unmount()
+    }
+  })
+
+  it('Thema Leads: Listen fett, Schritte zum Hinzufügen, Link aufs Board, Weiter zu den Leitfäden', () => {
+    rendern('/hilfe/leads')
+    expect(screen.getByRole('heading', { level: 2, name: 'Leads' })).toBeInTheDocument()
+    for (const liste of ['Angeschrieben', 'Gespräch vereinbart', 'Im Geschäft', 'Verloren'])
+      expect(screen.getByText(liste, { selector: 'strong' })).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual([
+      'Karte hinzufügen',
+      'Karte verschieben',
+      'Karte finden und öffnen',
+    ])
+    expect(screen.getByText(/oben rechts auf den blauen Knopf „Lead hinzufügen“/)).toBeInTheDocument()
+    expect(text().getByRole('link', { name: 'Leads' })).toHaveAttribute('href', '/leads')
+    const weiter = screen.getByRole('navigation', { name: 'Weitere Themen' })
+    expect(weiter).toHaveTextContent('Erste Schritte')
+    expect(weiter).toHaveTextContent('Leitfäden')
+  })
+
+  it('Thema Leitfäden: der Platzhalter [Vorname] bleibt als Text stehen', () => {
+    rendern('/hilfe/leitfaeden')
+    expect(screen.getByText(/Ein Klick setzt einen Platzhalter wie \[Vorname\] an die Stelle/)).toBeInTheDocument()
+    expect(text().getByRole('link', { name: 'Leitfäden' })).toHaveAttribute('href', '/leitfaeden')
+  })
+
+  it('Thema Team & Einstellungen verlinkt die fünf Bereiche', () => {
+    rendern('/hilfe/team-einstellungen')
+    expect(screen.getByRole('link', { name: 'Team' })).toHaveAttribute('href', '/team')
+    for (const [name, bereich] of [
+      ['Profil', 'profil'],
+      ['Passcode', 'passcode'],
+      ['Sperrliste', 'sperrliste'],
+      ['Feiertage', 'feiertage'],
+      ['Export & Backup', 'export'],
+    ] as const)
+      expect(screen.getByRole('link', { name })).toHaveAttribute('href', `/einstellungen/${bereich}`)
+  })
+
+  it('Thema „Wo ist das alte CRM?“: nichts gelöscht, Stand vom 25.11.2026', () => {
+    rendern('/hilfe/archiv')
+    expect(screen.getByRole('heading', { level: 2, name: 'Wo ist das alte CRM?' })).toBeInTheDocument()
+    expect(screen.getByText('nichts gelöscht', { selector: 'strong' })).toBeInTheDocument()
+    expect(screen.getByText(/Am 25\.11\.2026 wurde das CRM neu und einfach aufgebaut/)).toBeInTheDocument()
+    // letztes Thema: nur „Zurück“
+    const weiter = screen.getByRole('navigation', { name: 'Weitere Themen' })
+    expect(weiter).toHaveTextContent('Team & Einstellungen')
+    expect(weiter).not.toHaveTextContent('Weiter')
+  })
+
+  it('Thema E-Mail: Erlaubnis und Widerspruch stehen in der Lead-Karte, Verweis auf die Kampagnen', () => {
+    rendern('/hilfe/email')
+    expect(
+      screen.getByText(/„Erlaubnis erfassen“ und „Widerspruch erfassen“ stehen in der Lead-Karte/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Einzelmails' })).toHaveAttribute('href', '/email')
+    expect(text().getByRole('link', { name: 'E-Mail-Kampagnen' })).toHaveAttribute('href', '/hilfe/kampagnen')
   })
 
   it('Suche filtert über den ganzen Text, Enter öffnet den ersten Treffer, nichts gefunden → Hinweis', () => {
-    const router = rendern('/hilfe')
+    const { router } = rendern('/hilfe')
     const feld = screen.getByRole('searchbox', { name: 'Hilfe durchsuchen' })
-    fireEvent.change(feld, { target: { value: 'gmail verbinden' } })
-    const liste = screen.getByRole('navigation', { name: 'Hilfe-Themen' })
-    expect(
-      within(liste)
-        .getAllByRole('link')
-        .map((a) => a.textContent),
-    ).toEqual(['09E-Mail', '06Verbindungen einrichten', '10E-Mail-Kampagnen'])
+    fireEvent.change(feld, { target: { value: 'postfach verbinden' } })
+    expect(themenLinks()).toEqual(['E-Mail', 'E-Mail-Kampagnen'])
+    // Zähler ohne Tastenhinweis
+    expect(screen.getByText('2 Themen')).toBeInTheDocument()
+    fireEvent.change(feld, { target: { value: 'passcode' } })
+    expect(themenLinks()).toEqual(['Team & Einstellungen'])
+    expect(screen.getByText('1 Thema')).toBeInTheDocument()
     fireEvent.keyDown(feld, { key: 'Enter' })
-    expect(router.state.location.pathname).toBe('/hilfe/email')
+    expect(router.state.location.pathname).toBe('/hilfe/team-einstellungen')
     fireEvent.change(screen.getByRole('searchbox', { name: 'Hilfe durchsuchen' }), { target: { value: 'xyzzy' } })
     expect(screen.getByText(/Nichts gefunden/)).toBeInTheDocument()
   })
 
-  it('Dein Tag zeigt die Routine der angemeldeten Person zuerst', () => {
-    useAuth.setState({
-      status: 'mitglied',
-      member: { user_id: 'u2', email: 'mike@steinerundco.de', display_name: 'Mike' },
-    } as never)
-    rendern('/hilfe/dein-tag')
-    const titel = screen.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
-    expect(titel[0]).toMatch(/^Mike/)
-  })
-
-  it('unbekanntes Thema → Übersicht', () => {
-    const router = rendern('/hilfe/gibt-es-nicht')
-    expect(router.state.location.pathname).toBe('/hilfe')
+  it('unbekanntes oder entferntes Thema → Übersicht', () => {
+    for (const alt of ['gibt-es-nicht', 'dein-tag', 'feedback', 'noch-nicht', 'verbindungen']) {
+      const { router, unmount } = rendern(`/hilfe/${alt}`)
+      expect(router.state.location.pathname, alt).toBe('/hilfe')
+      unmount()
+    }
   })
 })

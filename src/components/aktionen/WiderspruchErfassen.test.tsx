@@ -62,4 +62,47 @@ describe('WiderspruchErfassen', () => {
     expect(await within(dialog).findByText('Zitat ist Pflicht.')).toBeInTheDocument()
     expect(letzterAufruf(supabase.from, 'leads', 'update')).toBeNull()
   })
+
+  it('ohne `schlicht` (E-Mail-Bereich) wie vor dem Neustart: Ziffern-Marken, langer Text, blauer Knopf in 36 px', async () => {
+    rendern(<WiderspruchErfassen leadId={LEAD.id} />)
+    const knopf = await screen.findByRole('button', { name: 'Widerspruch erfassen' })
+    await waitFor(() => expect(knopf).toBeEnabled())
+    fireEvent.click(knopf)
+    const dialog = await screen.findByRole('dialog')
+    expect([...dialog.querySelectorAll('kbd')].map((k) => k.textContent)).toEqual(['1', '2', '3'])
+    expect(dialog).toHaveTextContent('alle Sequenzen enden')
+    const ja = within(dialog).getByRole('button', { name: 'Widerspruch erfassen' })
+    expect(ja).toHaveClass('bg-signal', 'h-9')
+    expect(ja).not.toHaveClass('bg-danger')
+  })
+
+  it('`schlicht` (Lead-Blatt, 25.11.2026): keine Tastenmarken, ein kurzer Satz, Knöpfe 44 px – gespeichert wird dasselbe', async () => {
+    rendern(<WiderspruchErfassen schlicht leadId={LEAD.id} trigger={<button type="button">Öffnen</button>} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Öffnen' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog.querySelector('kbd')).toBeNull()
+    expect(dialog).toHaveTextContent('Die Person kommt auf die Sperrliste und wird nicht mehr kontaktiert.')
+    expect(dialog).not.toHaveTextContent('Sequenzen')
+    expect(dialog).not.toHaveTextContent('importiert')
+    expect(
+      within(dialog)
+        .getAllByRole('radio')
+        .map((r) => r.closest('label')?.textContent),
+    ).toEqual(['nur Telefon', 'nur E-Mail', 'alle Kanäle'])
+    expect(within(dialog).getByRole('button', { name: 'Abbrechen' })).toHaveClass('h-11')
+    const ja = within(dialog).getByRole('button', { name: 'Widerspruch erfassen' })
+    expect(ja).toHaveClass('h-11')
+    // die Ziffern wählen hier nichts: der Umfang bleibt „alle Kanäle“
+    fireEvent.keyDown(document.body, { key: '1' })
+    expect(within(dialog).getByRole('radio', { name: 'alle Kanäle' })).toBeChecked()
+    fireEvent.change(within(dialog).getByLabelText(/Zitat/), { target: { value: 'Bitte nicht mehr melden' } })
+    await waitFor(() => expect(ja).toBeEnabled())
+    fireEvent.click(ja)
+    await waitFor(() => expect(letzterAufruf(supabase.from, 'leads', 'update')).not.toBeNull())
+    expect(letzterAufruf(supabase.from, 'leads', 'update')).toMatchObject({
+      do_not_contact: true,
+      do_not_contact_channels: ['linkedin', 'telefon', 'email'],
+      objection_note: 'Bitte nicht mehr melden',
+    })
+  })
 })

@@ -1,6 +1,6 @@
 // BAUPLAN § 3.1.4 `/email/verfassen` (`?lead=&vorlage=&schritt=&enrollment=&zurueck=`), § 3.5: Sheet 640 px über /email
 // (oder `?zurueck`); Esc schließt, der Entwurf bleibt. Zusätzliche Parameter `?erlaubnis=1` / `?widerspruch=1` öffnen den
-// jeweiligen Dialog sofort (Palette-Befehle aus befehle.ts).
+// jeweiligen Dialog sofort (gesetzt von verfassenUrl in links.ts; die Befehlspalette gibt es seit dem 25.11.2026 nicht mehr).
 import { useCallback } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { PFADE } from '@/app/pfade'

@@ -46,7 +46,8 @@ export function Input({
           aria-describedby={[describedBy, fehlerId].filter(Boolean).join(' ') || undefined}
           className={cn(
             'placeholder:text-ink-4 h-full min-w-0 flex-1 bg-transparent outline-none',
-            groesse === 'L' ? 'text-[15px]' : 'text-ui font-normal',
+            // L am Telefon 16 px: iOS zoomt beim Antippen in Felder unter 16 px (25.11.2026). M bleibt (E-Mail-Bereich).
+            groesse === 'L' ? 'text-[15px] max-md:text-[16px]' : 'text-ui font-normal',
             mono && 'tnum font-mono',
             className,
           )}

@@ -1,29 +1,29 @@
-// Einstellungen → Sperrliste (BAUPLAN § 3.9 Sperrliste.tsx, ux § 3.10 Nr. 8, § 4.8, E-08): Tabelle 40 px (Name · Unternehmen ·
-// Kanal-Umfang · Grund · Datum · erfasst von · Quelle), Suche, „Eintrag hinzufügen“ (URL/E-Mail/Telefon mind. eins, Grund Pflicht),
-// „Entfernen“ (Dialog mit Grund → Notiz-Aktivität am Lead, falls lead_id).
+// Einstellungen → Sperrliste (BAUPLAN § 3.9 Sperrliste.tsx, ux § 3.10 Nr. 8, § 4.8, E-08): Suche, „Eintrag hinzufügen“
+// (Link/E-Mail/Telefon mind. eins, Grund Pflicht), „Entfernen“ (Dialog mit Grund → Notiz-Aktivität am Lead, falls lead_id).
+// Neustart 25.11.2026: keine Tasten (N, ↵) und keine Tastenhinweise mehr; eine leere Liste zeigt nur einen Satz und den Knopf.
+// Statt der Tabelle mit sieben Spalten eine schlichte Liste – je Eintrag Name bzw. Adresse, Grund, Datum und „Entfernen“
+// (44 px): Die Tabelle schnitt bei 1440 px Texte ab, und am Telefon lag „Entfernen“ außerhalb des Bildschirms. Kanal-Umfang,
+// „Erfasst von“, Quelle und der Zähler sind entfallen; ein neuer Eintrag gilt immer für alle Kanäle.
 import { Plus } from 'lucide-react'
-import { useId, useMemo, useState } from 'react'
-import { Button, Checkbox, Chip, Dialog, EmptyState, FormField, Input, Skeleton, Textarea } from '@/components/ui'
-import { DataTable, spaltenHelper, type DataTableSpalte } from '@/components/tabelle'
+import { useId, useState } from 'react'
+import { Button } from '@/components/ui/Button'
+import { Chip } from '@/components/ui/Chip'
+import { Dialog } from '@/components/ui/Dialog'
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Feld } from '@/components/ui/Feld'
+import { Input } from '@/components/ui/Input'
+import { Skeleton } from '@/components/ui/Skeleton'
+import { Textarea } from '@/components/ui/Textarea'
 import { toast } from '@/components/toast'
-import {
-  useAktivitaetErstellen,
-  useMeId,
-  useMembers,
-  useSperrliste,
-  useSperrlisteEintrag,
-  useSperrlisteEntfernen,
-} from '@/data'
-import { useHotkeys } from '@/lib/keyboard'
+import { useAktivitaetErstellen, useMeId, useSperrliste, useSperrlisteEintrag, useSperrlisteEntfernen } from '@/data'
 import { fmtDatum } from '@/lib/format'
 import { fmtTelefon, nachE164 } from '@/lib/telefon'
 import { normalizeLinkedinUrl } from '@/lib/url'
-import { ALLGEMEIN, DIALOG, KANAL_LABEL } from '@/texte/de'
-import type { Channel, SperrlisteEintrag } from '@/types/domain'
+import { ALLGEMEIN, DIALOG } from '@/texte/de'
+import type { SperrlisteEintrag } from '@/types/domain'
+import { NichtGeladen } from './components/Formular'
 import {
-  KANAELE,
   LEERER_EINTRAG,
-  kanalUmfang,
   passtSperrsuche,
   pruefeEintrag,
   sperrGrundText,
@@ -64,6 +64,7 @@ function HinzufuegenDialog({
         phone_e164: e.telefon.trim() ? nachE164(e.telefon) : null,
         name: e.name.trim() || null,
         company: e.firma.trim() || null,
+        // immer alle Kanäle (LEERER_EINTRAG) – die Auswahl im Dialog ist mit dem Neustart entfallen
         channels: e.kanaele,
         // `reason` ist ein Enum (check widerspruch|abmeldung|bounce|manuell) – manuelle Einträge sind `manuell`, der Freitext-Grund
         // steht in `note` (Review: vorher Constraint-Verletzung bei jedem manuellen Eintrag)
@@ -80,15 +81,15 @@ function HinzufuegenDialog({
       },
     )
   }
-  const kanal = (c: Channel, an: boolean) =>
-    setE((x) => ({ ...x, kanaele: an ? [...new Set([...x.kanaele, c])] : x.kanaele.filter((k) => k !== c) }))
-
   return (
     <Dialog
       offen={offen}
       onOpenChange={schliessen}
+      gross
       titel="Eintrag hinzufügen"
-      text="Wird beim Import und vor jedem Kontakt geprüft – LinkedIn-URL, E-Mail oder Telefon."
+      text="Wird vor jeder E-Mail und beim Hinzufügen einer Karte geprüft."
+      // Sieben Felder: auf dem Telefon höher als der Bildschirm – dann scrollt der Dialog in sich, statt oben und unten abzuschneiden
+      className="max-h-[calc(100dvh-24px)] overflow-y-auto"
       primaer={{ label: 'Eintragen', onClick: absenden, busy: anlegen.isPending }}
       kinder={
         <>
@@ -97,73 +98,77 @@ function HinzufuegenDialog({
               {fehler.schluessel}
             </p>
           ) : null}
-          <FormField label="LinkedIn-URL" htmlFor={`${id}-url`} fehler={fehler.url}>
-            <Input id={`${id}-url`} value={e.url} onChange={(ev) => setE((x) => ({ ...x, url: ev.target.value }))} />
-          </FormField>
+          <Feld label="LinkedIn-Link" htmlFor={`${id}-url`}>
+            <Input
+              id={`${id}-url`}
+              groesse="L"
+              fehler={fehler.url}
+              value={e.url}
+              onChange={(ev) => setE((x) => ({ ...x, url: ev.target.value }))}
+            />
+          </Feld>
           <div className="grid items-start gap-3.5 sm:grid-cols-2">
-            <FormField label="E-Mail" htmlFor={`${id}-mail`} fehler={fehler.email}>
+            <Feld label="E-Mail" htmlFor={`${id}-mail`}>
               <Input
                 id={`${id}-mail`}
+                groesse="L"
                 type="email"
+                fehler={fehler.email}
                 value={e.email}
                 onChange={(ev) => setE((x) => ({ ...x, email: ev.target.value }))}
               />
-            </FormField>
-            <FormField label="Telefon" htmlFor={`${id}-tel`} fehler={fehler.telefon}>
+            </Feld>
+            <Feld label="Telefon" htmlFor={`${id}-tel`}>
               <Input
                 id={`${id}-tel`}
+                groesse="L"
                 type="tel"
                 mono
+                fehler={fehler.telefon}
                 value={e.telefon}
                 onChange={(ev) => setE((x) => ({ ...x, telefon: ev.target.value }))}
               />
-            </FormField>
+            </Feld>
           </div>
           <div className="grid items-start gap-3.5 sm:grid-cols-2">
-            <FormField label="Name" htmlFor={`${id}-name`}>
+            <Feld label="Name" htmlFor={`${id}-name`}>
               <Input
                 id={`${id}-name`}
+                groesse="L"
                 value={e.name}
                 onChange={(ev) => setE((x) => ({ ...x, name: ev.target.value }))}
               />
-            </FormField>
-            <FormField label="Unternehmen" htmlFor={`${id}-firma`}>
+            </Feld>
+            <Feld label="Unternehmen" htmlFor={`${id}-firma`}>
               <Input
                 id={`${id}-firma`}
+                groesse="L"
                 value={e.firma}
                 onChange={(ev) => setE((x) => ({ ...x, firma: ev.target.value }))}
               />
-            </FormField>
+            </Feld>
           </div>
-          <FormField label="Kanäle" fehler={fehler.kanaele}>
-            <div className="flex flex-wrap gap-4">
-              {KANAELE.map((c) => (
-                <Checkbox
-                  key={c}
-                  label={KANAL_LABEL[c]}
-                  checked={e.kanaele.includes(c)}
-                  onChange={(ev) => kanal(c, ev.target.checked)}
-                />
-              ))}
-            </div>
-          </FormField>
-          <FormField label="Grund" htmlFor={`${id}-grund`} fehler={fehler.grund} pflicht>
+          <Feld label="Grund" htmlFor={`${id}-grund`}>
             <Input
               id={`${id}-grund`}
+              groesse="L"
+              aria-required
               placeholder="Widerspruch per Telefon am …"
+              fehler={fehler.grund}
               value={e.grund}
               onChange={(ev) => setE((x) => ({ ...x, grund: ev.target.value }))}
             />
-          </FormField>
-          <FormField label="Notiz" htmlFor={`${id}-notiz`}>
+          </Feld>
+          <Feld label="Notiz" htmlFor={`${id}-notiz`}>
             <Textarea
               id={`${id}-notiz`}
               rows={2}
+              className="text-[15px] max-md:text-[16px]"
               value={e.notiz}
               onChange={(ev) => setE((x) => ({ ...x, notiz: ev.target.value }))}
               onSubmit={absenden}
             />
-          </FormField>
+          </Feld>
         </>
       }
     />
@@ -215,6 +220,7 @@ function EntfernenDialog({
     <Dialog
       offen={eintrag !== null}
       onOpenChange={schliessen}
+      gross
       titel="Eintrag entfernen"
       text={DIALOG.sperrlisteEntfernen.text}
       primaer={{
@@ -225,157 +231,114 @@ function EntfernenDialog({
         busy: entfernen.isPending || notiz.isPending,
       }}
       kinder={
-        <FormField label="Grund" htmlFor={`${id}-grund`} fehler={fehler} pflicht>
+        <Feld label="Grund" htmlFor={`${id}-grund`}>
           <Input
             id={`${id}-grund`}
+            groesse="L"
+            aria-required
             autoFocus
+            fehler={fehler}
             value={grund}
             onChange={(e) => setGrund(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) void absenden()
             }}
           />
-        </FormField>
+        </Feld>
       }
     />
   )
 }
 
+/**
+ * Eine Zeile der Liste: Name (ohne Namen die Adresse), Grund, Datum, rechts „Entfernen“. Ab 1280 px steht alles in einer Zeile;
+ * darunter (und am Telefon) stehen Grund und Datum in voller Breite unter dem Namen – „Entfernen“ bleibt rechts im Bild.
+ */
+function Zeile({ eintrag, onEntfernen }: { eintrag: SperrlisteEintrag; onEntfernen: () => void }) {
+  const adresse = [eintrag.linkedin_url_norm, eintrag.email, fmtTelefon(eintrag.phone_e164)].filter(Boolean).join(' · ')
+  const grund = sperrGrundText(eintrag.reason, eintrag.note)
+  return (
+    <li
+      data-id={eintrag.id}
+      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+    >
+      <div className="grid min-w-0">
+        <span className="text-body text-ink truncate-1 font-medium">{eintrag.name ?? (adresse || '–')}</span>
+        {eintrag.name && adresse ? <span className="text-small text-ink-3 truncate-1">{adresse}</span> : null}
+      </div>
+      <div className="flex min-w-0 items-center gap-3 max-xl:col-span-2 max-xl:row-start-2">
+        <Chip ton="danger" title={grund} className="min-w-0">
+          {grund}
+        </Chip>
+        <span className="text-small text-ink-2 tnum flex-none whitespace-nowrap">{fmtDatum(eintrag.created_at)}</span>
+      </div>
+      <Button variante="danger" groesse="L" className="max-xl:col-start-2 max-xl:row-start-1" onClick={onEntfernen}>
+        Entfernen
+      </Button>
+    </li>
+  )
+}
+
 export function Sperrliste() {
   const id = useId()
-  const { data: eintraege } = useSperrliste()
-  const { data: members } = useMembers()
+  const { data: eintraege, isPending, refetch } = useSperrliste()
   const [q, setQ] = useState('')
   const [neuOffen, setNeuOffen] = useState(false)
   const [entfernen, setEntfernen] = useState<SperrlisteEintrag | null>(null)
-  const [cursor, setCursor] = useState<string | null>(null)
 
-  useHotkeys('global', { n: () => setNeuOffen(true) }, [])
-
-  const name = (mid: string | null) => members?.find((m) => m.id === mid)?.display_name ?? '–'
-
-  const spalten = useMemo<DataTableSpalte<SperrlisteEintrag>[]>(() => {
-    const h = spaltenHelper<SperrlisteEintrag>()
-    return h.columns([
-      h.accessor('name', {
-        header: 'Name',
-        meta: { oeffnet: true, breite: '15%' },
-        cell: (c) => (
-          <span className="grid">
-            <span className="text-ink font-medium">{c.getValue() ?? '–'}</span>
-            <span className="text-small text-ink-3 truncate-1">
-              {[c.row.original.linkedin_url_norm, c.row.original.email, fmtTelefon(c.row.original.phone_e164)]
-                .filter(Boolean)
-                .join(' · ')}
-            </span>
-          </span>
-        ),
-      }),
-      // Runde 3: „Unternehmen“ (95/98 px) und „Erfasst von“ (86/89 px) waren selbst bei leerer Liste gekürzt – 1 % mehr je Spalte,
-      // dafür Kanal-Umfang und Grund je 1 % weniger; Köpfe dürfen zweizeilig umbrechen
-      h.accessor('company', {
-        header: 'Unternehmen',
-        meta: { breite: '14%', kopfUmbruch: true },
-        cell: (c) => c.getValue() ?? '–',
-      }),
-      h.accessor('channels', {
-        header: 'Kanal-Umfang',
-        meta: { breite: '15%', kopfUmbruch: true },
-        enableSorting: false,
-        cell: (c) => kanalUmfang(c.getValue()),
-      }),
-      h.accessor('reason', {
-        header: 'Grund',
-        meta: { breite: '14%' },
-        cell: (c) => {
-          const text = sperrGrundText(c.getValue(), c.row.original.note)
-          return (
-            <Chip ton="danger" title={text}>
-              <span className="truncate-1 max-w-[180px]">{text}</span>
-            </Chip>
-          )
-        },
-      }),
-      h.accessor('created_at', {
-        header: 'Datum',
-        meta: { mono: true, rechts: true, breite: '9%' },
-        cell: (c) => fmtDatum(c.getValue()),
-      }),
-      h.accessor('created_by', {
-        header: 'Erfasst von',
-        meta: { breite: '13%', kopfUmbruch: true },
-        cell: (c) => name(c.getValue()),
-      }),
-      h.accessor('lead_id', {
-        header: 'Quelle',
-        meta: { breite: '7.5%' },
-        enableSorting: false,
-        cell: (c) => (c.getValue() ? 'Lead' : 'manuell'),
-      }),
-      h.display({
-        id: 'aktion',
-        header: '',
-        meta: { rechts: true, breite: '110px' },
-        cell: (c) => (
-          <Button variante="danger" groesse="S" onClick={() => setEntfernen(c.row.original)} kbd="↵">
-            Entfernen
-          </Button>
-        ),
-      }),
-    ])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [members])
-
-  if (!eintraege) return <Skeleton zeilen={4} />
+  if (!eintraege) {
+    return isPending ? (
+      <Skeleton zeilen={4} />
+    ) : (
+      <NichtGeladen text="Die Sperrliste konnte nicht geladen werden." onNochmal={() => void refetch()} />
+    )
+  }
 
   const gefiltert = eintraege.filter((e) => passtSperrsuche(e, q))
+  const hinzufuegen = (
+    <Button variante="primary" groesse="L" icon={Plus} onClick={() => setNeuOffen(true)}>
+      Eintrag hinzufügen
+    </Button>
+  )
 
   return (
     <div className="grid gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div className="w-full max-w-[360px]">
-          <Input
-            id={`${id}-suche`}
-            type="search"
-            aria-label="Sperrliste durchsuchen"
-            placeholder="Suchen – Name, Firma, E-Mail, URL, Grund"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
+      {eintraege.length === 0 ? (
+        <div className="grid justify-items-start gap-5 py-2">
+          <p className="text-body text-ink-2">Die Sperrliste ist leer.</p>
+          {hinzufuegen}
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-small text-ink-3 tnum">
-            {gefiltert.length} von {eintraege.length}
-          </span>
-          <Button variante="primary" icon={Plus} kbd="N" onClick={() => setNeuOffen(true)}>
-            Eintrag hinzufügen
-          </Button>
-        </div>
-      </div>
-      <DataTable<SperrlisteEintrag>
-        daten={gefiltert}
-        spalten={spalten}
-        rowId={(e) => e.id}
-        cursorId={cursor}
-        onCursor={setCursor}
-        onEnter={(e) => setEntfernen(e)}
-        zeilenHoehe={40}
-        ariaLabel="Sperrliste"
-        leer={
-          eintraege.length === 0 ? (
-            <EmptyState
-              titel="Sperrliste ist leer."
-              satz="Widersprüche landen hier automatisch; Einträge von Hand mit „Eintrag hinzufügen“."
-              primaer={{ label: 'Eintrag hinzufügen', onClick: () => setNeuOffen(true), kbd: 'N' }}
-            />
-          ) : (
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="w-full max-w-[360px]">
+              <Input
+                id={`${id}-suche`}
+                groesse="L"
+                type="search"
+                aria-label="Sperrliste durchsuchen"
+                placeholder="Suchen"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+              />
+            </div>
+            {hinzufuegen}
+          </div>
+          {gefiltert.length === 0 ? (
             <EmptyState
               titel={`Nichts gefunden für ‚${q}‘.`}
               primaer={{ label: 'Suche leeren', onClick: () => setQ('') }}
             />
-          )
-        }
-      />
+          ) : (
+            // Reihenfolge wie geladen: neueste zuerst (useSperrliste, created_at absteigend)
+            <ul aria-label="Sperrliste" className="divide-line border-line divide-y border-y">
+              {gefiltert.map((e) => (
+                <Zeile key={e.id} eintrag={e} onEntfernen={() => setEntfernen(e)} />
+              ))}
+            </ul>
+          )}
+        </>
+      )}
       <HinzufuegenDialog offen={neuOffen} onOpenChange={setNeuOffen} onAngelegt={() => setQ('')} />
       <EntfernenDialog
         eintrag={entfernen}

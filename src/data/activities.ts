@@ -1,11 +1,11 @@
-// BAUPLAN § 3.1.6 activities.ts: Timeline (Keyset 50, useInfiniteQuery), Notiz erstellen (optimistisch)/bearbeiten,
+// BAUPLAN § 3.1.6 activities.ts: Timeline (Keyset 50, useInfiniteQuery), Notiz erstellen (optimistisch),
 // generische Aktivität (z. B. Anrufgrund-Beleg § 1.5 Nr. 14), useActivitiesZeitraum (§ 1.5 Nr. 40).
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import { useAuth } from '@/features/auth/authStore'
 import { ohneDoppelteEmailSendung, ohneDoppeltenImport } from '@/lib/verlauf'
 import type { Database, Json } from '@/types/database'
 import type { Activity, ActivityType, Channel } from '@/types/domain'
-import { pruefe, pruefeNull, TIMELINE_SEITE, useAlleSeiten, zeitraumGrenzen } from './_helfer'
+import { pruefe, TIMELINE_SEITE, useAlleSeiten, zeitraumGrenzen } from './_helfer'
 import { mutationFehler } from './errors'
 import { qk } from './queryKeys'
 import { supabase } from './supabase'
@@ -92,14 +92,6 @@ export async function nachleseAktivitaet(
   } catch {
     return null
   }
-}
-
-/** Ergänzt `metadata` einer Aktivität (z. B. `via = 'pipeline'` am Stufenwechsel, P-02); Rückgabe = Zeile mit neuem metadata. */
-export async function aktivitaetMetadataErgaenzen(a: Activity, extra: Record<string, Json>): Promise<Activity> {
-  const alt = a.metadata && typeof a.metadata === 'object' && !Array.isArray(a.metadata) ? a.metadata : {}
-  const metadata: Json = { ...alt, ...extra }
-  pruefeNull(await supabase.from('activities').update({ metadata }).eq('id', a.id))
-  return { ...a, metadata }
 }
 
 export function useActivities(leadId: string | null | undefined, filter?: ActivityFilter) {
@@ -198,38 +190,6 @@ export function notizVersionen(a: Pick<Activity, 'metadata'>): NotizVersion[] {
   return Array.isArray(v) ? (v as NotizVersion[]) : []
 }
 
-/**
- * Notiz bearbeiten: neuer Text, die bisherige Fassung wandert nach `metadata.versions` (ux § 3.3.4, LD-07);
- * `metadata.kind` wird `bearbeitet` (Timeline „Notiz bearbeitet“), sofern die Notiz keine eigene Art trägt.
- */
-export function useNotizBearbeiten() {
-  const qc = useQueryClient()
-  const me = useAuth((s) => s.member?.user_id ?? null)
-  return useMutation({
-    mutationFn: async (p: { activity: Activity; note: string; me?: string | null }): Promise<Activity> => {
-      const alt =
-        p.activity.metadata && typeof p.activity.metadata === 'object' && !Array.isArray(p.activity.metadata)
-          ? (p.activity.metadata as Record<string, Json | undefined>)
-          : {}
-      const versions = [
-        ...notizVersionen(p.activity),
-        { note: p.activity.note, at: new Date().toISOString(), by: p.me ?? me },
-      ]
-      const metadata = { ...alt, kind: alt.kind ?? 'bearbeitet', versions } as Json
-      return pruefe(
-        await supabase
-          .from('activities')
-          .update({ note: p.note, metadata })
-          .eq('id', p.activity.id)
-          .select('*')
-          .single(),
-      )
-    },
-    onError: mutationFehler,
-    onSettled: (_d, _e, p) => invalidiereLead(qc, p.activity.lead_id),
-  })
-}
-
 /** Generische Aktivität (Insert `notiz`/`einwilligung` erlaubt, § 4.3) – z. B. Anrufgrund-Beleg `metadata.kind = 'anrufgrund'`. */
 export function useAktivitaetErstellen() {
   const qc = useQueryClient()
@@ -281,43 +241,3 @@ export const VORLAGE_SENDE_TYPEN: ActivityType[] = [
 export const VORLAGE_ANTWORT_TYPEN: ActivityType[] = ['nachricht_erhalten', 'email_erhalten']
 
 export type VorlagenAktivitaeten = { sendungen: ActivityZeitraum[]; antworten: ActivityZeitraum[] }
-
-/**
- * Sendungen einer Vorlage (Aktivitäten mit `template_id` ab `von`) und die eingehenden Antworten derselben Leads bis `bis`
- * (Europe/Berlin-Grenzen) – Vorlagen-Statistik (M6, LF-06). Key verlängert `qk.activitiesZeitraum` → Realtime-Präfix.
- */
-export function useTemplateActivities(templateId: string | null | undefined, von: string, bis: string) {
-  const { ab, vor } = zeitraumGrenzen(von, bis)
-  return useQuery({
-    queryKey: [...qk.activitiesZeitraum('team', von, bis, VORLAGE_SENDE_TYPEN), 'vorlage', templateId ?? ''] as const,
-    enabled: !!templateId,
-    staleTime: 60_000,
-    queryFn: async (): Promise<VorlagenAktivitaeten> => {
-      const sendungen: ActivityZeitraum[] = pruefe(
-        await supabase
-          .from('activities')
-          .select(ZEITRAUM_SPALTEN)
-          .eq('template_id', templateId as string)
-          .in('type', VORLAGE_SENDE_TYPEN)
-          .gte('occurred_at', ab)
-          .lt('occurred_at', vor)
-          .order('occurred_at', { ascending: true })
-          .limit(1000),
-      )
-      const leadIds = [...new Set(sendungen.map((s) => s.lead_id))]
-      if (leadIds.length === 0) return { sendungen: ohneDoppelteEmailSendung(sendungen), antworten: [] }
-      const antworten: ActivityZeitraum[] = pruefe(
-        await supabase
-          .from('activities')
-          .select(ZEITRAUM_SPALTEN)
-          .in('lead_id', leadIds)
-          .in('type', VORLAGE_ANTWORT_TYPEN)
-          .gte('occurred_at', ab)
-          .lt('occurred_at', vor)
-          .order('occurred_at', { ascending: true })
-          .limit(1000),
-      )
-      return { sendungen: ohneDoppelteEmailSendung(sendungen), antworten }
-    },
-  })
-}

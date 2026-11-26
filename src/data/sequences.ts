@@ -57,34 +57,3 @@ export function useSequenceStepSave() {
     },
   })
 }
-
-export function useSequenceSave() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (s: SequenceInsert) =>
-      pruefe(
-        await supabase
-          .from('sequences')
-          .upsert({ ...s, updated_at: new Date().toISOString() })
-          .select('*')
-          .single(),
-      ),
-    onError: mutationFehler,
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: qk.sequences })
-    },
-  })
-}
-
-export function useSequenceStepLoeschen() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async (id: string) => {
-      pruefe(await supabase.from('sequence_steps').delete().eq('id', id))
-    },
-    onError: mutationFehler,
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: qk.sequences })
-    },
-  })
-}

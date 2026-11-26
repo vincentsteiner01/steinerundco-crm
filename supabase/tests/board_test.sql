@@ -95,15 +95,20 @@ begin
   end;
   out := out || '5 Widerspruch ok; ';
 
-  -- 6. Archiv ist da und vollständig; die alten Vorlagen sind archiviert, aber unverändert aktiv (E-Mail-Composer braucht sie)
+  -- 6. Archiv ist da und vollständig; die alten E-Mail- und Telefon-Vorlagen sind unverändert (der E-Mail-Composer braucht
+  --    seine – LinkedIn-Leitfäden dürfen die Inhaber weiter deaktivieren oder löschen, das Original liegt im Archiv)
   execute 'reset role';
   if (select count(*) from crm_archiv.leads) < 800 or (select count(*) from crm_archiv.activities) < 5000 then raise exception 'FEHLER: Archiv unvollständig'; end if;
   select count(*) into n from unnest(array['leads', 'activities', 'enrollments', 'tasks', 'templates', 'sequences', 'sequence_steps', 'emails',
                                             'meetings', 'calls', 'linkedin_connections', 'companies', 'settings', 'mail_postfaecher']) t
    where to_regclass(format('crm_archiv.%I', t)) is null;
   if n <> 0 then raise exception 'FEHLER: % Tabellen fehlen im Archiv', n; end if;
-  select count(*) into n from crm.templates t join crm_archiv.templates a on a.id = t.id where t.active is distinct from a.active or t.key <> a.key;
-  if n <> 0 then raise exception 'FEHLER: % alte Vorlagen verändert', n; end if;
+  select count(*) into n from crm.templates t join crm_archiv.templates a on a.id = t.id
+   where a.channel <> 'linkedin' and (t.active is distinct from a.active or t.key <> a.key);
+  if n <> 0 then raise exception 'FEHLER: % alte E-Mail-/Telefon-Vorlagen verändert', n; end if;
+  select count(*) into n from crm_archiv.templates a
+   where a.channel <> 'linkedin' and not exists (select 1 from crm.templates t where t.id = a.id);
+  if n <> 0 then raise exception 'FEHLER: % alte E-Mail-/Telefon-Vorlagen fehlen', n; end if;
   select count(*) into n from crm.templates where channel = 'email' and active;
   if n < 10 then raise exception 'FEHLER: nur % aktive E-Mail-Vorlagen', n; end if;
   out := out || '6 Archiv ok; ';

@@ -9,19 +9,17 @@ vi.mock('@/data/supabase', async () => (await import('@/test/supabaseMock')).sup
 
 import { supabase } from '@/data/supabase'
 import { kette } from '@/test/supabaseMock'
-import type { Activity, ActivityType, QueueItem, SperrlisteEintrag } from '@/types/domain'
+import type { Activity, QueueItem, SperrlisteEintrag } from '@/types/domain'
 import { istKontakt, KONTAKT_TYPEN, ohneDoppelteEmailSendung, ohneDoppeltenImport } from './activities'
 import { antwortErfassen, lastUnlabeledReply } from './antworten'
 import { rpc } from './rpc'
 import { sperrlistenStatus, useSperrlistenTreffer } from './sperrliste'
-import { ERLEDIGT_TYPEN, zaehleErledigt } from './tagesbilanz'
 import { useQueueZaehler, zaehleQueue } from './queue'
 import { qk } from './queryKeys'
 
 const LEAD = '00000000-0000-4000-8000-0000000000aa'
 const ANDERER = '00000000-0000-4000-8000-0000000000bb'
 const V = '00000000-0000-4000-8000-000000000001'
-const M = '00000000-0000-4000-8000-000000000002'
 
 let qc: QueryClient
 const wrapper = ({ children }: { children: ReactNode }) => (
@@ -238,29 +236,6 @@ describe('Eine Zählweise für Heute, Team und Sidebar', () => {
     })
     expect(fehler.mock.calls.flat().join(' ')).not.toMatch(/Cannot update a component/)
     fehler.mockRestore()
-  })
-
-  it('erledigt: dieselben Typen für Heute und Team; je Person und je Tag (Europe/Berlin)', () => {
-    const z = (type: ActivityType, member_id: string, occurred_at = '2026-10-15T08:00:00Z') => ({
-      type,
-      member_id,
-      occurred_at,
-    })
-    const zeilen = [
-      z('nachricht_gesendet', V),
-      z('anruf', M),
-      z('vernetzung_angenommen', V),
-      z('notiz', V),
-      z('stage_wechsel', V),
-      z('nachricht_erhalten', V),
-      z('gespraech_eroeffnet', V, '2026-10-14T21:59:00Z'), // 14.10. 23:59 Berlin
-      z('pitch_gesendet', V, '2026-10-14T22:01:00Z'), // 15.10. 00:01 Berlin
-    ]
-    expect(ERLEDIGT_TYPEN).toContain('anruf')
-    expect(ERLEDIGT_TYPEN).not.toContain('nachricht_erhalten')
-    expect(zaehleErledigt(zeilen, V, '2026-10-15')).toBe(3)
-    expect(zaehleErledigt(zeilen, M, '2026-10-15')).toBe(1)
-    expect(zaehleErledigt(zeilen)).toBe(5)
   })
 })
 
