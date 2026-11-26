@@ -1,7 +1,7 @@
 // Leitfäden (Neustart 25.11.2026): Liste zeigt alles nicht Archivierte außer E-Mail-Vorlagen (auch Leitfäden aus dem alten CRM
 // im Kanal linkedin), neueste Änderung oben; Anlegen, Bearbeiten (Kanal/Phase/Schlüssel bleiben), „Löschen“ = archivieren
 // (kein delete), Text kopieren, Platzhalter-Chips im Editor, Rückfrage vor dem Verwerfen.
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // je Test andere Vorlagen: supabaseAntworten liest `antworten.templates` bei jeder Abfrage neu
@@ -282,6 +282,146 @@ describe('Leitfäden', () => {
     fireEvent.keyDown(fenster, { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     await waitFor(() => expect(karte).toHaveFocus())
+  })
+
+  // Abnahme 26.11.2026: die Liste lädt erst NACH dem Schließen neu. Der Auslöser, zu dem der Fokus zurückgekehrt war,
+  // verschwand dabei (Knopf wandert vom Leerzustand in den Kopf, Karte gelöscht) – der Fokus fiel auf <body>.
+  describe('Fokus nach dem Anlegen und nach dem Löschen: „Leitfaden schreiben“', () => {
+    const NACHFASSEN = vorlage('sales_nachfassen', {
+      id: id(8),
+      channel: 'sonstiges',
+      phase: 'erstgespraech',
+      name: 'Nachfassen',
+      body: 'Kurz nachgefragt.',
+      created_at: '2026-11-26T09:00:00+00:00',
+      updated_at: '2026-11-26T09:00:00+00:00',
+      archiviert_at: null,
+    })
+    // wie in der Hülle: <main> ist das Ersatzziel von useFokusZurueck – dort darf der Fokus hier nicht landen
+    const seite = () =>
+      rendern(
+        <main id="main" tabIndex={-1}>
+          <Leitfaeden />
+        </main>,
+      )
+    const schreibenKnopf = () => screen.getByRole('button', { name: 'Leitfaden schreiben' })
+    const schreibeNeuen = async () => {
+      const knopf = await screen.findByRole('button', { name: 'Leitfaden schreiben' })
+      knopf.focus()
+      fireEvent.click(knopf)
+      const fenster = await screen.findByRole('dialog', { name: 'Leitfaden schreiben' })
+      fireEvent.change(within(fenster).getByLabelText('Titel'), { target: { value: 'Nachfassen' } })
+      fireEvent.change(within(fenster).getByLabelText('Text'), { target: { value: 'Kurz nachgefragt.' } })
+      return { knopf, speichern: within(fenster).getByRole('button', { name: 'Speichern' }) }
+    }
+    const loesche = async (name: string) => {
+      const karte = await screen.findByRole('button', { name })
+      karte.focus()
+      fireEvent.click(karte)
+      const fenster = await screen.findByRole('dialog', { name: 'Leitfaden bearbeiten' })
+      fireEvent.click(within(fenster).getByRole('button', { name: 'Löschen' }))
+      return within(await screen.findByRole('dialog', { name: 'Leitfaden löschen?' })).getByRole('button', {
+        name: 'Löschen',
+      })
+    }
+    const fensterZu = () => waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+    it('erster Leitfaden gespeichert: der Knopf wandert beim Neuladen vom Leerzustand in den Kopf – der Fokus wandert mit', async () => {
+      setze(FREMD)
+      const { qc } = seite()
+      const { knopf: imLeerzustand, speichern } = await schreibeNeuen()
+      fireEvent.click(speichern)
+      await fensterZu()
+      // Fenster zu, die Liste ist noch die alte
+      await waitFor(() => expect(imLeerzustand).toHaveFocus())
+      setze([...FREMD, NACHFASSEN])
+      await act(() => qc.invalidateQueries())
+      await screen.findByRole('heading', { level: 2, name: 'Nachfassen' })
+      expect(imLeerzustand).not.toBeInTheDocument()
+      expect(schreibenKnopf().closest('header')).not.toBeNull()
+      expect(schreibenKnopf()).toHaveFocus()
+    })
+
+    it('erster Leitfaden gespeichert, die neue Liste ist beim Schließen schon da: Fokus auf „Leitfaden schreiben“ im Kopf, nicht auf <main>', async () => {
+      setze(FREMD)
+      seite()
+      const { speichern } = await schreibeNeuen()
+      setze([...FREMD, NACHFASSEN])
+      fireEvent.click(speichern)
+      await fensterZu()
+      await screen.findByRole('heading', { level: 2, name: 'Nachfassen' })
+      await waitFor(() => expect(schreibenKnopf()).toHaveFocus())
+      expect(schreibenKnopf().closest('header')).not.toBeNull()
+    })
+
+    it('zweiter Leitfaden gespeichert: der Fokus bleibt auf „Leitfaden schreiben“ im Kopf', async () => {
+      setze([ABLAUF, ...FREMD])
+      seite()
+      const { knopf: imKopf, speichern } = await schreibeNeuen()
+      setze([ABLAUF, NACHFASSEN, ...FREMD])
+      fireEvent.click(speichern)
+      await fensterZu()
+      await screen.findByRole('heading', { level: 2, name: 'Nachfassen' })
+      await waitFor(() => expect(imKopf).toHaveFocus())
+    })
+
+    it('gelöscht (mit Rückfrage): die Karte verschwindet – der Fokus liegt auf „Leitfaden schreiben“ im Kopf', async () => {
+      const { qc } = seite()
+      fireEvent.click(await loesche('Einwand Preis'))
+      await fensterZu()
+      // nicht erst auf die Karte, die gleich verschwindet
+      await waitFor(() => expect(schreibenKnopf()).toHaveFocus())
+      setze([ABLAUF, { ...EINWAND, archiviert_at: ARCHIV }, STELLE, ...FREMD])
+      await act(() => qc.invalidateQueries())
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'Einwand Preis' })).not.toBeInTheDocument())
+      expect(schreibenKnopf()).toHaveFocus()
+    })
+
+    it('letzten Leitfaden gelöscht: die Seite ist wieder leer – der Fokus liegt auf „Leitfaden schreiben“ im Leerzustand', async () => {
+      setze([EINWAND, ...FREMD])
+      const { qc } = seite()
+      fireEvent.click(await loesche('Einwand Preis'))
+      await fensterZu()
+      await waitFor(() => expect(schreibenKnopf()).toHaveFocus())
+      const imKopf = schreibenKnopf()
+      setze([{ ...EINWAND, archiviert_at: ARCHIV }, ...FREMD])
+      await act(() => qc.invalidateQueries())
+      expect(await screen.findByText('Du hast noch keinen Leitfaden geschrieben.')).toBeInTheDocument()
+      expect(imKopf).not.toBeInTheDocument()
+      expect(schreibenKnopf().closest('header')).toBeNull()
+      expect(schreibenKnopf()).toHaveFocus()
+    })
+
+    it('der Fokus zieht nur einmal mit: löscht später die andere Person den letzten Leitfaden, springt er nicht auf den Knopf', async () => {
+      setze(FREMD)
+      const { qc } = seite()
+      const { speichern } = await schreibeNeuen()
+      fireEvent.click(speichern)
+      await fensterZu()
+      setze([...FREMD, NACHFASSEN])
+      await act(() => qc.invalidateQueries())
+      await screen.findByRole('heading', { level: 2, name: 'Nachfassen' })
+      await waitFor(() => expect(schreibenKnopf()).toHaveFocus())
+      // Klick auf eine leere Stelle: nichts hat mehr den Fokus
+      act(() => schreibenKnopf().blur())
+      expect(document.body).toHaveFocus()
+      setze([...FREMD, { ...NACHFASSEN, archiviert_at: ARCHIV }])
+      await act(() => qc.invalidateQueries())
+      expect(await screen.findByText('Du hast noch keinen Leitfaden geschrieben.')).toBeInTheDocument()
+      expect(document.body).toHaveFocus()
+    })
+
+    it('vorhandenen Leitfaden gespeichert: der Fokus geht wie bisher zur Karte zurück, nicht zum Knopf', async () => {
+      seite()
+      const karte = await screen.findByRole('button', { name: 'Einwand Preis' })
+      karte.focus()
+      fireEvent.click(karte)
+      const fenster = await screen.findByRole('dialog', { name: 'Leitfaden bearbeiten' })
+      fireEvent.change(within(fenster).getByLabelText('Text'), { target: { value: 'Besserer Text' } })
+      fireEvent.click(within(fenster).getByRole('button', { name: 'Speichern' }))
+      await fensterZu()
+      await waitFor(() => expect(karte).toHaveFocus())
+    })
   })
 
   it('„Löschen“ fragt nach und archiviert nur (archiviert_at) – es wird nichts gelöscht', async () => {

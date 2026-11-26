@@ -6,6 +6,12 @@ import { toastUndo } from '@/components/toast'
 import { useKarteVerschieben } from '@/data/board'
 import { listenTitel, type BoardListe } from './listen'
 
+// 26.11.2026: Züge zählen in der Reihenfolge der Klicks, nicht der Antworten. Überholt die Antwort des zweiten Zugs die des
+// ersten, ersetzte der Toast des ersten sonst den des zweiten – „Rückgängig“ nähme dann den älteren Zug zurück. Für die ganze
+// App gezählt (Board und Lead-Blatt teilen sich den einen Rückgängig-Toast).
+let zugNr = 0
+let gezeigterZug = 0
+
 /** Wo die Karte vor dem Zug lag – mehr braucht „Rückgängig“ nicht. */
 export type KartenStand = { id: string; board_liste: BoardListe | null; board_seit: string | null }
 
@@ -20,8 +26,14 @@ export function useKartenAktionen() {
           () => {},
           () => {},
         )
+      const nr = ++zugNr
       void mutateAsync({ id: karte.id, liste: ziel }).then(
-        () => void toastUndo(text, zurueck),
+        () => {
+          // Steht schon der Toast eines jüngeren Zugs, bleibt er stehen. Scheiterte der jüngere, erscheint dieser hier.
+          if (nr < gezeigterZug) return
+          gezeigterZug = nr
+          toastUndo(text, zurueck)
+        },
         () => {}, // Fehlermeldung und Zurückrollen: useKarteVerschieben
       )
     },

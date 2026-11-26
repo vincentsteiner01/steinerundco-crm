@@ -2,7 +2,7 @@
 // Gespeichert wird nur, was die Person geändert hat (Vergleich mit dem Stand beim Öffnen) – ändert die andere Person
 // inzwischen die Notiz, überschreibt ein Speichern der Zugehörigkeit sie nicht.
 import type { KartePatch } from '@/data/board'
-import { normalizeLinkedinUrl } from '@/lib/url'
+import { linkedinProfilLink } from '@/lib/url'
 import type { Lead, Salutation } from '@/types/domain'
 import { istBoardListe, type BoardListe } from './listen'
 
@@ -40,14 +40,17 @@ const text = (s: string): string | null => s.trim() || null
 
 export type BlattFehler = { name?: string; link?: string }
 
+/** Derselbe Satz in „Lead hinzufügen“ und im Lead-Blatt. */
+export const KEIN_PROFIL_LINK = 'Das ist kein LinkedIn-Profil-Link – er muss linkedin.com/in/… enthalten'
+
 /** Wortlaut wie in der Datenbank (crm.board_karte_anlegen), damit Anlegen und Bearbeiten gleich klingen. */
 export function pruefeBlatt(basis: BlattWerte, w: BlattWerte): BlattFehler {
   const fehler: BlattFehler = {}
   if (!text(w.first_name) && !text(w.last_name) && !text(w.linkedin_url)) fehler.name = 'Bitte einen Namen eingeben'
   const link = text(w.linkedin_url)
-  // Nur ein geänderter Link wird geprüft: alte Leads tragen teils Firmen- oder Sales-Navigator-Links, die bleiben dürfen
-  if (link && link !== text(basis.linkedin_url) && !normalizeLinkedinUrl(link))
-    fehler.link = 'Das ist kein LinkedIn-Profil-Link – er muss linkedin.com/in/… enthalten'
+  // Nur ein geänderter Link wird geprüft: alte Leads tragen teils Firmen- oder Sales-Navigator-Links, die bleiben dürfen.
+  // Geprüft wird hier, vor dem Speichern – ein Link mit Anhang (/overlay/contact-info/) ist ein Profil-Link (blattPatch).
+  if (link && link !== text(basis.linkedin_url) && !linkedinProfilLink(link)) fehler.link = KEIN_PROFIL_LINK
   return fehler
 }
 
@@ -58,7 +61,10 @@ export function blattPatch(basis: BlattWerte, w: BlattWerte): KartePatch {
   if (text(w.last_name) !== text(basis.last_name)) p.last_name = text(w.last_name)
   if (w.salutation !== basis.salutation) p.salutation = w.salutation
   if (text(w.company_name) !== text(basis.company_name)) p.company_name = text(w.company_name)
-  if (text(w.linkedin_url) !== text(basis.linkedin_url)) p.linkedin_url = text(w.linkedin_url)
+  // Gespeichert wird nur der saubere Profil-Link, ohne Anhang hinter dem Namen – alles andere lehnt die Datenbank ab.
+  // (Kein Profil-Link: pruefeBlatt hält das Speichern auf; als ungespeicherte Änderung zählt die Eingabe trotzdem.)
+  const link = text(w.linkedin_url)
+  if (link !== text(basis.linkedin_url)) p.linkedin_url = link ? (linkedinProfilLink(link) ?? link) : null
   if (w.owner_id !== basis.owner_id) p.owner_id = w.owner_id
   if (w.board_liste !== basis.board_liste) p.board_liste = w.board_liste
   if (text(w.notes) !== text(basis.notes)) p.notes = text(w.notes)

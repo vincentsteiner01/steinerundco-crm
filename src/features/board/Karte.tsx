@@ -17,7 +17,8 @@ import { kartenName } from './logik'
 
 const KNOPF_REIHE = '-mx-1 mt-2 flex flex-wrap gap-1.5'
 // Schmaler Innenabstand und 13/14 px statt der Vorgaben von Größe L (px-4, 15 px) – deshalb die Ausrufezeichen. Höhe bleibt 44 px.
-const KARTEN_KNOPF = 'relative z-[1] min-w-max grow basis-0 px-1! text-[13px]! @[240px]:text-[14px]!'
+// Der Innenabstand ist nur die Untergrenze, ab der die Reihe umbricht: die Knöpfe teilen sich die Reihe, der Text steht mittig.
+const KARTEN_KNOPF = 'relative z-[1] min-w-max grow basis-0 px-0.5! text-[13px]! @[240px]:text-[14px]!'
 
 type FlaecheProps = {
   karte: BoardKarte
@@ -71,9 +72,10 @@ export function KartenFlaeche({ karte, member, onOeffnen, onVerschieben, classNa
       {knoepfe.length > 0 ? (
         // Nebeneinander und gleich breit (Grundbreite 0, beide wachsen gleich). `min-w-max` hält jede Beschriftung ganz: Passen
         // die zwei einmal nicht in eine Zeile (andere Systemschrift, vergrößerte Schrift), bricht die Reihe um und jeder Knopf
-        // nimmt die volle Breite – nie abgeschnitten. Damit es ab 1280 px Fensterbreite passt (Karte dann 221 px breit): Reihe
-        // 4 px über den Kartenrand hinaus (-mx-1), 6 px Abstand, in schmalen Listen 13 px Schrift, ab 240 px Kartenbreite 14 px
-        // (@[240px] misst die Liste, siehe Liste.tsx).
+        // nimmt die volle Breite – nie abgeschnitten. Damit es ab 1280 px Fensterbreite passt (Karte dann 221 px breit, mit
+        // einem Rollbalken, der Platz braucht, nur 216 px – Mac mit Maus, Windows): Reihe 4 px über den Kartenrand hinaus
+        // (-mx-1), 6 px Abstand, in schmalen Listen 13 px Schrift, ab 240 px Listenbreite 14 px (@[240px] misst die Liste,
+        // siehe Liste.tsx), Innenabstand der Knöpfe mindestens 2 px – so bleiben bei 216 px noch rund 8 px Reserve.
         <div className={KNOPF_REIHE}>
           {knoepfe.map((k) => (
             <Button

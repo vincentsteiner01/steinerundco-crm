@@ -37,6 +37,26 @@ export function normalizeLinkedinUrl(u: string | null | undefined): string | nul
   return s
 }
 
+// Host linkedin.com samt Subdomains (www., de., …), davor höchstens http(s)://, dahinter `in/<name>` (auch `mwlite/in/<name>`)
+// und beliebiger Anhang. Der Host steht fest am Anfang – `notlinkedin.com` oder `linkedin.com.evil.de` passen nicht.
+// Der Name enthält keinen Leerraum: `…/in/max-muster-demo Max Muster` (Name mitkopiert) ergäbe einen Link ins Leere.
+const PROFIL = /^(?:https?:\/\/)?(?:[a-z0-9-]+\.)*linkedin\.com\/(?:mwlite\/)?in\/([^/?#\s]+)(?:[/?#].*)?$/i
+
+/**
+ * Sauberer Profil-Link `https://www.linkedin.com/in/<name>` aus einer eingefügten Adresse – oder `null`.
+ * Die Datenbank (normalizeLinkedinUrl) nimmt nur `…/in/<name>` ohne Anhang an. Im Alltag hängt aber oft etwas dahinter:
+ * `/overlay/contact-info/` (LinkedIn mit offener „Kontaktinfo“), `/detail/contact-info/`, `/recent-activity/all/`, oder die
+ * Adresse lautet `linkedin.com/mwlite/in/<name>`. Diese Funktion zieht den Profil-Teil heraus; die Formulare schicken nur ihr
+ * Ergebnis an die Datenbank. Firmenseiten, Sales Navigator, `/feed` und fremde Domains ergeben `null`.
+ */
+export function linkedinProfilLink(eingabe: string | null | undefined): string | null {
+  const name = PROFIL.exec((eingabe ?? '').trim())?.[1]
+  if (!name) return null
+  const sauber = `https://www.linkedin.com/in/${name}`
+  // Nie etwas zurückgeben, das die Datenbank danach doch ablehnt (z. B. ein kodierter Schrägstrich im Namen)
+  return normalizeLinkedinUrl(sauber) ? sauber : null
+}
+
 function roh(u: string | null | undefined): string {
   return (u ?? '')
     .trim()

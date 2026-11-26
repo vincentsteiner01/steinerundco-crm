@@ -2,8 +2,10 @@
 // Entfernen fragt Bestätigung + Grund und schreibt eine Notiz-Aktivität am Lead.
 // Neustart 25.11.2026: keine Tasten und Tastenhinweise, neuer Dialogtext, ruhiger Leerzustand; schlichte Liste statt der
 // Tabelle (Name bzw. Adresse, Grund, Datum, „Entfernen“ in 44 px), kein Zähler, im Dialog keine Kanal-Auswahl mehr.
+// 26.11.2026: Link, E-Mail und Grund stehen je in einer eigenen Zeile und brechen um (nichts endet mit „…“), im Chip steht
+// nur das Stichwort, und der Dialog „Entfernen“ nennt den Eintrag.
 import { fireEvent, screen, waitFor, within } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('@/data/supabase', async () => (await import('./_testDaten')).supabaseAntworten())
 vi.mock('@/components/toast', () => ({
@@ -22,6 +24,26 @@ import { rendern } from './_testHilfe'
 
 const vonMock = () => vi.mocked(supabase.from)
 
+// Erfundener Eintrag mit allem, was lang werden kann: Name, LinkedIn-Link, E-Mail, Telefon und 68 Zeichen Notiz
+const LANG_LINK = 'linkedin.com/in/petra-pruefstein-beispiel-solartechnik-und-elektroanlagen-0123456789'
+const LANG_MAIL = 'petra.pruefstein@beispiel-solartechnik-und-elektroanlagen.example.test'
+const LANG_NOTIZ = 'Widerspruch per Telefon am 20.11.2026, möchte keine Nachrichten mehr'
+const LANGER_EINTRAG: (typeof SPERRLISTE)[number] = {
+  id: '50000000-0000-4000-8000-000000000003',
+  name: 'Petra Prüfstein',
+  company: 'Mustersolar GmbH',
+  channels: ['linkedin', 'telefon', 'email'],
+  reason: 'widerspruch',
+  created_at: '2026-11-20T10:00:00+01:00',
+  created_by: MEMBER_V,
+  email: LANG_MAIL,
+  phone_e164: '+4940123456789',
+  linkedin_url_norm: LANG_LINK,
+  lead_id: null,
+  note: LANG_NOTIZ,
+}
+const ANZAHL = SPERRLISTE.length
+
 describe('Sperrliste', () => {
   beforeEach(() => {
     useAuth.setState({
@@ -33,6 +55,10 @@ describe('Sperrliste', () => {
     testZustandZuruecksetzen()
     Object.defineProperty(window, 'scrollTo', { configurable: true, writable: true, value: vi.fn() })
   })
+  // der lange Eintrag gilt nur in seinem Test – danach wieder die zwei Ausgangszeilen
+  afterEach(() => {
+    SPERRLISTE.length = ANZAHL
+  })
 
   it('E-08: zeigt alle Einträge als schlichte Liste – Name bzw. Adresse, Grund, Datum und „Entfernen“ in 44 px', async () => {
     rendern(<Sperrliste />, '/einstellungen/sperrliste')
@@ -41,19 +67,45 @@ describe('Sperrliste', () => {
     expect(liste.querySelectorAll('li[data-id]')).toHaveLength(2)
     const erste = liste.querySelector(`li[data-id="${SPERRLISTE[0]!.id}"]`) as HTMLElement
     expect(erste).toHaveTextContent('Test Gesperrt')
-    expect(erste).toHaveTextContent('linkedin.com/in/test-gesperrt · gesperrt@example.test')
-    expect(erste).toHaveTextContent('Widerspruch · Widerspruch per Telefon')
+    // Link und E-Mail je in einer eigenen Zeile, der Grund als Text – im Chip nur das Stichwort
+    expect(within(erste).getByText('linkedin.com/in/test-gesperrt')).toBeInTheDocument()
+    expect(within(erste).getByText('gesperrt@example.test')).toBeInTheDocument()
+    expect(within(erste).getByText('Widerspruch per Telefon').tagName).toBe('P')
+    expect(within(erste).getByText('Widerspruch')).toBeInTheDocument()
+    expect(erste.textContent).not.toMatch(/ · /)
     expect(erste).toHaveTextContent('05.10.2026')
     expect(within(erste).getByRole('button', { name: 'Entfernen' })).toHaveClass('h-11')
     // ohne Namen steht die Adresse vorn – einmal, nicht doppelt
     const zweite = liste.querySelector(`li[data-id="${SPERRLISTE[1]!.id}"]`) as HTMLElement
     expect(zweite).toHaveTextContent('info@example.test')
     expect(zweite.textContent?.match(/info@example\.test/g)).toHaveLength(1)
-    expect(zweite).toHaveTextContent('Manuell · Sammeladresse')
+    expect(within(zweite).getByText('Manuell')).toBeInTheDocument()
+    expect(within(zweite).getByText('Sammeladresse')).toBeInTheDocument()
     // entfallen: Unternehmen, Kanal-Umfang, „Erfasst von“, Quelle, Zähler, Spaltenköpfe
     expect(liste).not.toHaveTextContent(/Solar 99 GmbH|alle Kanäle|Mike|Lead/)
     expect(screen.queryByText('2 von 2')).toBeNull()
     expect(screen.queryByRole('columnheader')).toBeNull()
+  })
+
+  it('langer Eintrag: Link, E-Mail, Telefon und Grund stehen vollständig da – je eine Zeile, die umbricht, nichts mit „…“', async () => {
+    SPERRLISTE.push(LANGER_EINTRAG)
+    rendern(<Sperrliste />, '/einstellungen/sperrliste')
+    const liste = await screen.findByRole('list', { name: 'Sperrliste' })
+    const zeile = liste.querySelector(`li[data-id="${LANGER_EINTRAG.id}"]`) as HTMLElement
+    const kopf = within(zeile).getByText('Petra Prüfstein')
+    const link = within(zeile).getByText(LANG_LINK)
+    const mail = within(zeile).getByText(LANG_MAIL)
+    const telefon = within(zeile).getByText('+49 40 123456789')
+    const grund = within(zeile).getByText(LANG_NOTIZ)
+    // je ein eigenes Element (eigene Zeile), in dieser Reihenfolge: Grund, Link, E-Mail, Telefon
+    expect(new Set([link, mail, telefon, grund]).size).toBe(4)
+    expect([...link.parentElement!.children]).toEqual([grund, link, mail, telefon])
+    // Umbruch statt Abschneiden: kein einzeiliges „…“ mehr, kein title als Ersatz für den vollen Text
+    for (const el of [kopf, link.parentElement!]) expect(el.className).toContain('[overflow-wrap:anywhere]')
+    expect(liste.querySelector('.truncate-1, [title]')).toBeNull()
+    // im Chip nur das Stichwort
+    expect(within(zeile).getByText('Widerspruch')).toBeInTheDocument()
+    expect(within(zeile).getByRole('button', { name: 'Entfernen' })).toHaveClass('h-11')
   })
 
   it('Suche filtert clientseitig', async () => {
@@ -142,7 +194,10 @@ describe('Sperrliste', () => {
     const erste = liste.querySelector(`li[data-id="${SPERRLISTE[0]!.id}"]`) as HTMLElement
     fireEvent.click(within(erste).getByRole('button', { name: /Entfernen/ }))
     const dialog = await screen.findByRole('dialog')
-    expect(dialog).toHaveTextContent('Eintrag entfernen? Die Person könnte wieder kontaktiert werden.')
+    // der Dialog nennt, wen er entfernt
+    expect(dialog).toHaveTextContent(
+      'Test Gesperrt von der Sperrliste entfernen? Die Person könnte wieder kontaktiert werden.',
+    )
     const bestaetigen = within(dialog).getByRole('button', { name: 'Entfernen' })
     expect(bestaetigen).toBeDisabled()
     expect(anzahlAufrufe(vonMock(), 'sperrliste', 'delete')).toBe(0)
@@ -164,6 +219,8 @@ describe('Sperrliste', () => {
     const zweite = liste.querySelector(`li[data-id="${SPERRLISTE[1]!.id}"]`) as HTMLElement
     fireEvent.click(within(zweite).getByRole('button', { name: /Entfernen/ }))
     const dialog = await screen.findByRole('dialog')
+    // ohne Namen nennt der Dialog die gesperrte Adresse
+    expect(dialog).toHaveTextContent('info@example.test von der Sperrliste entfernen?')
     fireEvent.change(within(dialog).getByLabelText('Grund'), { target: { value: 'Adresse gehört jetzt uns' } })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Entfernen' }))
     await waitFor(() => expect(anzahlAufrufe(vonMock(), 'sperrliste', 'delete')).toBe(1))

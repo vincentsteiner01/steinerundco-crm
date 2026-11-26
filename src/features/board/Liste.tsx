@@ -74,6 +74,24 @@ export function Liste({
     // sonst Karte um Karte verschieben
     ;(nameAufKarte(kartenKnoten(f.erbe, bereich.current)) ?? kopf.current)?.focus()
   }, [karten])
+  // „Weitere anzeigen“ verschwindet mit dem letzten Nachlegen – der Fokus fiele auf <body>. Er geht auf die erste Karte, die
+  // neu dazukommt (wieder ihr Name). Gemerkt wird sie nur, wenn der Knopf den Fokus hat (Tastatur; in Chrome auch nach einem
+  // Mausklick – dann ohne sichtbaren Ring: `focus()` aus dem Skript zeigt ihn nur nach einer Taste, :focus-visible).
+  const fokusNachMehr = useRef<string | null>(null)
+  const mehr = (knopf: HTMLButtonElement) => {
+    if (knopf === document.activeElement) fokusNachMehr.current = karten[sichtbar.length]?.id ?? null
+    setGrenze((g) => g + KARTEN_JE_SEITE)
+  }
+  useLayoutEffect(() => {
+    const id = fokusNachMehr.current
+    if (!id) return
+    fokusNachMehr.current = null
+    const knoten = kartenKnoten(id, bereich.current)
+    // Ohne Sprung: Chrome rückt ein Fokusziel unter dem Rand sonst in die Mitte der Liste (rund 300 px). Die Karte kommt nur
+    // so weit ins Bild wie nötig – sie steht dort, wo eben noch der Knopf war.
+    nameAufKarte(knoten)?.focus({ preventScroll: true })
+    knoten?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [grenze])
   return (
     // Ablageziel ist die ganze Spalte bis zum unteren Rand des Boards, nicht nur die graue Fläche – eine kurze Liste
     // wäre beim Ziehen sonst schwer zu treffen. Die graue Fläche selbst ist nur so hoch wie ihr Inhalt.
@@ -118,7 +136,9 @@ export function Liste({
           // Rollbalken: Wo er Platz braucht (Windows, Mac mit Maus), nahm er den Karten 15 px – die zwei Knöpfe passten dann
           // nicht mehr nebeneinander, und lange Listen sahen anders aus als kurze. Deshalb reicht der Scrollbereich rechts bis
           // an den Listenrand (-mr-2), der schmale Balken liegt im Randstreifen und ist in jeder Liste eingeplant (stable).
-          // Die Karten sind so breit wie die Liste innen (100cqw), höchstens bis 2 px vor den Balken.
+          // Die Karten sind so breit wie die Liste innen (100cqw), höchstens bis 2 px vor den Balken. Der Randstreifen ist
+          // 8 px breit, der schmale Balken in Chrome 11 px: die Karte gibt dann noch 5 px ab – dafür ist die Knopfreihe
+          // bemessen (Karte.tsx).
           <ul className="-mr-2 -ml-0.5 grid min-h-0 [scrollbar-width:thin] [scrollbar-gutter:stable] grid-cols-1 content-start gap-2 overflow-y-auto overscroll-y-contain py-0.5 pl-0.5 [&>li]:w-[min(100cqw,100%_-_2px)]">
             {sichtbar.map((k) => (
               <Karte
@@ -132,7 +152,7 @@ export function Liste({
             ))}
             {rest > 0 ? (
               <li>
-                <Button variante="quiet" className="w-full" onClick={() => setGrenze((g) => g + KARTEN_JE_SEITE)}>
+                <Button variante="quiet" className="w-full" onClick={(e) => mehr(e.currentTarget)}>
                   Weitere anzeigen
                 </Button>
               </li>

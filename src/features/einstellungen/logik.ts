@@ -1,5 +1,5 @@
 // Reine Logik der Einstellungen (Validierung, Ableitungen) – getrennt von den Komponenten (oxlint react/only-export-components).
-import { nachE164 } from '@/lib/telefon'
+import { fmtTelefon, nachE164 } from '@/lib/telefon'
 import { normalizeLinkedinUrl } from '@/lib/url'
 import { ALLGEMEIN, KANAL_LABEL } from '@/texte/de'
 import type { Channel, SperrlisteEintrag } from '@/types/domain'
@@ -81,10 +81,19 @@ export function sperrNotiz(grund: string, notiz: string): string | null {
   return teile.length ? teile.join(' – ') : null
 }
 
-/** Grund-Chip: Enum-Label, bei Notiz „Manuell · Widerspruch per Telefon am …“. */
-export function sperrGrundText(reason: string, note: string | null | undefined): string {
-  const label = SPERR_GRUND_LABEL[reason] ?? reason
-  return note?.trim() ? `${label} · ${note.trim()}` : label
+/** Grund-Chip: nur das Stichwort („Widerspruch“, „Manuell“) – der Freitext aus `note` steht als eigener Absatz in der Zeile. */
+export function sperrStichwort(reason: string): string {
+  return SPERR_GRUND_LABEL[reason] ?? reason
+}
+
+/** Die gesperrten Adressen eines Eintrags, je eine Zeile: LinkedIn-Link, E-Mail, Telefon (lesbar formatiert). */
+export function sperrAdressen(e: Pick<SperrlisteEintrag, 'linkedin_url_norm' | 'email' | 'phone_e164'>): string[] {
+  return [e.linkedin_url_norm, e.email, fmtTelefon(e.phone_e164)].filter((a): a is string => !!a)
+}
+
+/** Wen ein Eintrag meint – der Name, sonst die erste Adresse (Kopf der Zeile, Dialog „Entfernen“). */
+export function sperrWer(e: Pick<SperrlisteEintrag, 'name' | 'linkedin_url_norm' | 'email' | 'phone_e164'>): string {
+  return e.name?.trim() || sperrAdressen(e)[0] || '–'
 }
 
 export function kanalUmfang(channels: Channel[]): string {

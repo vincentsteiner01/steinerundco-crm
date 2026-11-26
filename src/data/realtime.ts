@@ -6,6 +6,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js'
 import { useEffect } from 'react'
 import { useUiStore } from '@/app/uiStore'
 import { useAuth } from '@/features/auth/authStore'
+import { BOARD_SCHREIBEN, istBoardKey } from './boardKeys'
 import { qk } from './queryKeys'
 import { supabase } from './supabase'
 
@@ -129,7 +130,12 @@ export function invalidierungsBuendler(qc: QueryClient, ruheMs = BUENDEL_RUHE_MS
     ruhe = spaetestens = null
     const keys = [...offen.values()]
     offen.clear()
-    for (const queryKey of keys) void qc.invalidateQueries({ queryKey })
+    // 26.11.2026: Schreibt das Board gerade selbst (Zug, Karte anlegen, Lead-Blatt), bleibt es hier außen vor. Das Ereignis
+    // gehört meist zum eigenen, schon beantworteten Zug; ein Neuladen jetzt brächte den Stand der Datenbank OHNE den Zug, der
+    // noch unterwegs ist – dessen Karte spränge kurz zurück. Der letzte Schreibvorgang lädt das Board ohnehin neu (board.ts).
+    const boardSchreibt = qc.isMutating({ mutationKey: BOARD_SCHREIBEN }) > 0
+    for (const queryKey of keys)
+      void qc.invalidateQueries(boardSchreibt ? { queryKey, predicate: (q) => !istBoardKey(q.queryKey) } : { queryKey })
   }
   return {
     add(e: RealtimeEreignis): void {

@@ -69,12 +69,15 @@ function TextFeld({
 export function LeitfadenFenster({
   vorlage,
   keys,
+  fokusAufKnopf,
   onClose,
 }: {
   /** `null` = neuer Leitfaden */
   vorlage: Template | null
   /** Schlüssel ALLER Vorlagen, auch der archivierten – der neue Schlüssel muss in der ganzen Tabelle eindeutig sein */
   keys: readonly string[]
+  /** Setzt den Fokus auf „Leitfaden schreiben“ – gerufen, wenn das Fenster nach dem Anlegen oder Löschen zu ist */
+  fokusAufKnopf: () => void
   onClose: () => void
 }) {
   const id = useId()
@@ -89,8 +92,11 @@ export function LeitfadenFenster({
   const [fehler, setFehler] = useState<{ titel?: string; text?: string }>({})
   const [frage, setFrage] = useState<'loeschen' | 'verwerfen' | null>(null)
   const geaendert = titel !== (vorlage?.name ?? '') || text !== (vorlage?.body ?? '')
-  // Nach dem Schließen zurück zu „Leitfaden schreiben“ bzw. zur Karte des Leitfadens; gibt es sie nicht mehr (gelöscht), zum Seiteninhalt
+  // Nach dem Schließen zurück zu „Leitfaden schreiben“ bzw. zur Karte des Leitfadens; gibt es sie nicht mehr, zum Seiteninhalt
   const fokusZurueck = useFokusZurueck(true, seitenInhalt)
+  // Neu angelegt oder gelöscht: der Auslöser taugt nicht als Ziel. Die Liste lädt gleich neu – die Karte verschwindet, der Knopf
+  // wandert beim ersten Leitfaden vom Leerzustand in den Kopf, der Fokus fiele auf <body>. Dann setzt ihn die Seite.
+  const zumKnopf = useRef(false)
 
   // Rückfrage auf und zu: ui/Dialog hat keinen Auslöser, zu dem der Fokus von selbst zurückkehrt – er fiele sonst auf <body>
   const vorFrage = useRef<HTMLElement | null>(null)
@@ -137,6 +143,7 @@ export function LeitfadenFenster({
       return // die Meldung zeigt useTemplateSave; das Fenster bleibt mit dem Text offen
     }
     toast('Leitfaden gespeichert.')
+    zumKnopf.current = !vorlage
     onClose()
   }
 
@@ -149,6 +156,7 @@ export function LeitfadenFenster({
       return
     }
     toast('Leitfaden gelöscht.')
+    zumKnopf.current = true
     onClose()
   }
 
@@ -172,7 +180,11 @@ export function LeitfadenFenster({
               e.preventDefault()
               inhalt.current?.focus()
             }}
-            onCloseAutoFocus={fokusZurueck}
+            onCloseAutoFocus={(e) => {
+              if (!zumKnopf.current) return fokusZurueck(e)
+              e.preventDefault()
+              fokusAufKnopf()
+            }}
             className={cn(
               'bg-surface-raised shadow-float fixed top-1/2 left-1/2 z-[59] flex max-h-[min(88dvh,900px)] w-[min(760px,calc(100vw-24px))] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg outline-none',
               'data-[state=open]:animate-[screen-in_var(--t-3)_var(--ease-brand)]',

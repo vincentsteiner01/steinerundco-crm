@@ -196,8 +196,9 @@ describe('Board: Listen und Karten', () => {
     expect(gruen.parentElement).toHaveClass('flex', 'flex-wrap', 'gap-1.5', '-mx-1')
     for (const knopf of [gruen, rot]) {
       expect(knopf).toHaveClass('h-11', 'grow', 'basis-0', 'min-w-max', 'whitespace-nowrap')
-      // 13 px in schmalen Listen, 14 px ab 240 px Kartenbreite; schmaler Innenabstand statt px-4
-      expect(knopf).toHaveClass('text-[13px]!', '@[240px]:text-[14px]!', 'px-1!')
+      // 13 px in schmalen Listen, 14 px ab 240 px Listenbreite; schmaler Innenabstand statt px-4 – 2 px, damit das Paar bei
+      // 1280 px auch dann nebeneinander bleibt, wenn der Rollbalken der Karte 5 px nimmt (Mac mit Maus)
+      expect(knopf).toHaveClass('text-[13px]!', '@[240px]:text-[14px]!', 'px-0.5!')
     }
     expect(rot.className).not.toMatch(/truncate|overflow-hidden/)
   })
@@ -262,6 +263,55 @@ describe('Board: Verschieben mit Rückgängig', () => {
     fireEvent.click(within(karteVon('a')).getByRole('button', { name: 'Hat Interesse' }))
     await act(async () => {})
     expect(m.toastUndo).not.toHaveBeenCalled()
+  })
+
+  // Abnahme 26.11.2026: Antwort des ersten Zugs nach 1200 ms, die des zweiten nach 200 ms – der Toast des ersten ersetzte
+  // den des zweiten, „Rückgängig“ nahm den ersten Zug zurück.
+  describe('zwei Züge, die Antworten überholen sich', () => {
+    const zweiZuege = (zweiterScheitert = false) => {
+      let ersteAntwort!: () => void
+      m.verschieben.mockReturnValueOnce(
+        new Promise<null>((fertig) => {
+          ersteAntwort = () => fertig(null)
+        }),
+      )
+      if (zweiterScheitert) m.verschieben.mockRejectedValueOnce(new Error('nein'))
+      zeigen([karte('a', 'angeschrieben', 'Jonas Schablone'), karte('b', 'angeschrieben', 'Lukas Attrappe')])
+      fireEvent.click(within(karteVon('a')).getByRole('button', { name: 'Hat Interesse' }))
+      fireEvent.click(within(karteVon('b')).getByRole('button', { name: 'Kein Interesse' }))
+      return { ersteAntwort }
+    }
+
+    it('erste Antwort spät, zweite früh: es bleibt bei einem Toast, „Rückgängig“ nimmt den zweiten Zug zurück', async () => {
+      const { ersteAntwort } = zweiZuege()
+      await waitFor(() => expect(m.toastUndo).toHaveBeenCalledTimes(1))
+      await act(async () => {
+        ersteAntwort()
+      })
+      expect(m.toastUndo).toHaveBeenCalledTimes(1)
+      const [text, zurueck] = m.toastUndo.mock.calls[0] as [string, () => Promise<void>]
+      expect(text).toBe('Jetzt in „Verloren“.')
+      await act(async () => {
+        await zurueck()
+      })
+      expect(m.verschieben).toHaveBeenLastCalledWith({ id: 'b', liste: 'angeschrieben', seit: SEIT })
+    })
+
+    it('scheitert der zweite Zug, bekommt der erste sein „Rückgängig“, sobald seine Antwort da ist', async () => {
+      const { ersteAntwort } = zweiZuege(true)
+      await act(async () => {})
+      expect(m.toastUndo).not.toHaveBeenCalled()
+      await act(async () => {
+        ersteAntwort()
+      })
+      expect(m.toastUndo).toHaveBeenCalledTimes(1)
+      const [text, zurueck] = m.toastUndo.mock.calls[0] as [string, () => Promise<void>]
+      expect(text).toBe('Jetzt in „Gespräch vereinbart“.')
+      await act(async () => {
+        await zurueck()
+      })
+      expect(m.verschieben).toHaveBeenLastCalledWith({ id: 'a', liste: 'angeschrieben', seit: SEIT })
+    })
   })
 
   it('ein Knopf auf der Karte öffnet nicht das Lead-Blatt; der Klick auf den Namen setzt ?lead=', () => {
@@ -481,6 +531,31 @@ describe('Board: Suche, Filter, lange Listen', () => {
     fireEvent.click(within(liste('Angeschrieben')).getByRole('button', { name: 'Weitere anzeigen' }))
     expect(kartenIn('Angeschrieben')).toHaveLength(60)
     expect(screen.queryByRole('button', { name: 'Weitere anzeigen' })).toBeNull()
+  })
+
+  // Der Knopf entfernt sich mit dem letzten Nachlegen selbst – der Fokus fiel auf <body>
+  it('lange Liste: nach „Weitere anzeigen“ bekommt die erste neu gezeigte Karte den Fokus – auf ihrem Namen', () => {
+    zeigen(Array.from({ length: 110 }, (_, i) => karte(`k${i}`, 'angeschrieben', `Test Person ${i}`)))
+    const weitere = () => within(liste('Angeschrieben')).getByRole('button', { name: 'Weitere anzeigen' })
+    const nameVon = (id: string) => karteVon(id).querySelector('h3 button')
+    // wie mit der Tastatur: der Knopf hat den Fokus und wird ausgelöst
+    weitere().focus()
+    fireEvent.click(weitere())
+    expect(kartenIn('Angeschrieben')).toHaveLength(100)
+    expect(nameVon('k50')).toHaveFocus()
+    expect(nameVon('k50')).toHaveTextContent('Test Person 50')
+    // beim letzten Nachlegen verschwindet der Knopf: der Fokus landet trotzdem auf einer Karte, nicht auf <body>
+    weitere().focus()
+    fireEvent.click(weitere())
+    expect(screen.queryByRole('button', { name: 'Weitere anzeigen' })).toBeNull()
+    expect(nameVon('k100')).toHaveFocus()
+  })
+
+  it('lange Liste: lag der Fokus nicht auf „Weitere anzeigen“ (Mausklick in Safari), wird er nicht versetzt', () => {
+    zeigen(Array.from({ length: 60 }, (_, i) => karte(`k${i}`, 'angeschrieben', `Test Person ${i}`)))
+    fireEvent.click(within(liste('Angeschrieben')).getByRole('button', { name: 'Weitere anzeigen' }))
+    expect(kartenIn('Angeschrieben')).toHaveLength(60)
+    expect(document.body).toHaveFocus()
   })
 
   // 25.11.2026: „… liegt schon in …“ für eine Karte jenseits der ersten 50 – nach 2,5 s klappte die Liste zurück

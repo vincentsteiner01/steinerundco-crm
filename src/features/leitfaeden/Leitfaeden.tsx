@@ -2,7 +2,7 @@
 // als Karten. Gezeigt wird alles, was nicht archiviert ist – außer E-Mail-Vorlagen (die gehören dem Composer). Der Kanal
 // entscheidet sonst nicht: Leitfäden, die noch im alten CRM geschrieben wurden (Kanal linkedin), erscheinen genauso.
 import { Copy, Plus } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { toast } from '@/components/toast'
 import { Button } from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -68,14 +68,39 @@ export function Component() {
     [alle],
   )
   const keys = useMemo(() => (alle ?? []).map((t) => t.key), [alle])
+  const leer = !!alle && leitfaeden.length === 0
+
+  // Nach dem Anlegen und nach dem Löschen gehört der Fokus auf „Leitfaden schreiben“: das Fenster ruft `fokusAufKnopf`, sobald
+  // es zu ist. Die Liste lädt erst danach neu – beim ersten Leitfaden wandert der Knopf vom Leerzustand in den Kopf, beim
+  // letzten zurück. Der Knopf mit dem Fokus verschwindet dabei, der Fokus fiele auf <body>; er zieht deshalb mit um.
+  const schreibenKnopf = useRef<HTMLButtonElement | null>(null)
+  const fokusHalten = useRef(false)
+  const fokusAufKnopf = () => {
+    fokusHalten.current = true
+    // wie useFokusZurueck: ohne Scrollen; einen Ring gibt es nur nach Tastaturbedienung (:focus-visible)
+    schreibenKnopf.current?.focus({ preventScroll: true })
+  }
+  useLayoutEffect(() => {
+    // <body> = der alte Knopf ist weg. Wer inzwischen woanders ist (auch in einem Fenster), bleibt dort.
+    if (fokusHalten.current && document.activeElement === document.body)
+      schreibenKnopf.current?.focus({ preventScroll: true })
+    // Einmal mitziehen reicht. Bliebe das Merkzeichen stehen, spränge der Fokus später ungefragt auf den Knopf – etwa wenn
+    // die andere Person den letzten Leitfaden löscht, während hier niemand etwas im Fokus hat.
+    fokusHalten.current = false
+  }, [leer])
 
   // Erst wenn die Vorlagen geladen sind: der Schlüssel eines neuen Leitfadens wird gegen alle vorhandenen geprüft
   const schreiben = alle ? (
-    <Button variante="primary" groesse="L" icon={Plus} onClick={() => setFenster({ vorlage: null })}>
+    <Button
+      ref={schreibenKnopf}
+      variante="primary"
+      groesse="L"
+      icon={Plus}
+      onClick={() => setFenster({ vorlage: null })}
+    >
       Leitfaden schreiben
     </Button>
   ) : null
-  const leer = !!alle && leitfaeden.length === 0
 
   return (
     <div className="max-w-[760px]">
@@ -116,7 +141,11 @@ export function Component() {
           key={fenster.vorlage?.id ?? 'neu'}
           vorlage={fenster.vorlage}
           keys={keys}
-          onClose={() => setFenster(null)}
+          fokusAufKnopf={fokusAufKnopf}
+          onClose={() => {
+            fokusHalten.current = false
+            setFenster(null)
+          }}
         />
       ) : null}
     </div>

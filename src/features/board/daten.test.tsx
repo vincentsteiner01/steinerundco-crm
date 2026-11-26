@@ -1,5 +1,6 @@
 // Daten-Schicht des Boards (src/data/board.ts) gegen einen gemockten Supabase-Client: Abfrage, optimistisches Verschieben mit
-// Zurückrollen, „Rückgängig“ mit board_seit, Anlegen über das RPC, Lead-Blatt speichern. Nur erfundene Namen.
+// Zurückrollen, „Rückgängig“ mit board_seit, Anlegen über das RPC, Lead-Blatt speichern, Schreibvorgänge kurz hintereinander.
+// Nur erfundene Namen.
 // Die Regeln der Datenbank selbst (Trigger, RPC) prüft supabase/tests/board_test.sql.
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, renderHook, waitFor } from '@testing-library/react'
@@ -20,11 +21,13 @@ import {
   useKarteVerschieben,
   type BoardKarte,
 } from '@/data/board'
+import { qk } from '@/data/queryKeys'
 import { supabase } from '@/data/supabase'
 
 const V = 'member-v'
 const T0 = '2026-11-24T08:00:00+00:00'
 const T1 = '2026-11-25T09:00:00+00:00'
+const T_ZUG = '2026-11-26T07:15:00+00:00'
 
 function karte(
   id: string,
@@ -276,5 +279,172 @@ describe('useKarteSpeichern', () => {
     expect(k.eq).toHaveBeenCalledTimes(1) // keine updated_at-Sperre
     expect(k.is).toHaveBeenCalledWith('deleted_at', null)
     expect(board().map((b) => `${b.id}:${b.board_liste}:${b.full_name}`)).toEqual(['a:gespraech:Petra Neu'])
+  })
+})
+
+// 26.11.2026: Zwei Züge kurz hintereinander – nach der ersten Antwort lud das Board neu und bekam den Stand der Datenbank
+// OHNE den Zug, der noch unterwegs war; dessen Karte sprang kurz in die alte Liste zurück.
+describe('Schreibvorgänge kurz hintereinander', () => {
+  type DbFehler = { code: string; message: string }
+
+  /**
+   * Datenbank-Attrappe: ein Schreibvorgang wird erst gespeichert und beantwortet, wenn der Test ihn freigibt. Das Laden des
+   * Boards liefert den Stand genau dieses Augenblicks – also ohne alles, was noch unterwegs ist.
+   */
+  function datenbank(start: BoardKarte[]) {
+    let stand = start
+    let geladen = 0
+    const offen = new Map<string, (fehler?: DbFehler) => void>()
+    vi.mocked(supabase.from).mockImplementation((() => {
+      const k = kette()
+      let patch: Partial<BoardKarte> = {}
+      let id = ''
+      k['update'] = vi.fn((p: Partial<BoardKarte>) => {
+        patch = p
+        return k
+      })
+      k['eq'] = vi.fn((_spalte: string, wert: string) => {
+        id = wert
+        return k
+      })
+      k['single'] = vi.fn(
+        () =>
+          new Promise<Antwort>((res) => {
+            offen.set(id, (fehler) => {
+              if (fehler) return res({ data: null, error: fehler })
+              const zeile = { ...stand.find((z) => z.id === id)!, board_seit: T_ZUG, ...patch }
+              stand = stand.map((z) => (z.id === id ? zeile : z))
+              res({ data: zeile, error: null })
+            })
+          }),
+      )
+      k['then'] = (res: (a: Antwort) => unknown, rej?: (e: unknown) => unknown) => {
+        geladen++
+        return Promise.resolve({ data: stand, error: null }).then(res, rej)
+      }
+      return k
+    }) as never)
+    return {
+      antworte: (id: string, fehler?: DbFehler) => offen.get(id)!(fehler),
+      unterwegs: () => offen.size,
+      geladen: () => geladen,
+    }
+  }
+
+  /** Board mit zwei Karten in „Angeschrieben“, geladen aus der Attrappe; `lage()` sagt, in welcher Liste beide liegen. */
+  async function aufbau() {
+    const db = datenbank([karte('a', 'angeschrieben', T1), karte('b', 'angeschrieben', T0)])
+    const { qc, wrapper, board } = umgebung()
+    const lage = () => ['a', 'b'].map((id) => `${id}:${board().find((k) => k.id === id)?.board_liste}`).join(' ')
+    const { result } = renderHook(
+      () => ({
+        karten: useBoardKarten(),
+        zug: useKarteVerschieben(),
+        speichern: useKarteSpeichern(),
+        anlegen: useKarteAnlegen(),
+      }),
+      { wrapper },
+    )
+    await waitFor(() => expect(result.current.karten.data).toHaveLength(2))
+    const zuvor = db.geladen()
+    /** Jede Lage, die das Board ab jetzt einnimmt – auch die kürzeste. */
+    const beobachte = () => {
+      const lagen = new Set<string>([lage()])
+      qc.getQueryCache().subscribe(() => lagen.add(lage()))
+      return lagen
+    }
+    /** Warten, bis nur noch `n` Schreibvorgänge laufen und ein dadurch angestoßenes Neuladen angekommen ist. */
+    const ruhe = async (n: number) => {
+      await waitFor(() => expect(qc.isMutating()).toBe(n))
+      await waitFor(() => expect(qc.isFetching()).toBe(0))
+    }
+    return { db, qc, lage, result, beobachte, ruhe, neuGeladen: () => db.geladen() - zuvor }
+  }
+
+  it.each([
+    ['die erste Antwort kommt spät, die zweite früh', 'b', 'a'],
+    ['die erste Antwort kommt früh, die zweite spät', 'a', 'b'],
+  ])('zwei Züge (%s): keine Karte springt zurück, genau ein Neuladen am Ende', async (_fall, zuerst, danach) => {
+    const { db, lage, result, beobachte, ruhe, neuGeladen } = await aufbau()
+    act(() => void result.current.zug.mutateAsync({ id: 'a', liste: 'gespraech' }))
+    act(() => void result.current.zug.mutateAsync({ id: 'b', liste: 'verloren' }))
+    await waitFor(() => expect(lage()).toBe('a:gespraech b:verloren'))
+    await waitFor(() => expect(db.unterwegs()).toBe(2))
+    const lagen = beobachte()
+
+    await act(async () => db.antworte(zuerst))
+    await ruhe(1)
+    await act(async () => db.antworte(danach))
+    await ruhe(0)
+
+    expect([...lagen]).toEqual(['a:gespraech b:verloren'])
+    expect(neuGeladen()).toBe(1)
+    expect(lage()).toBe('a:gespraech b:verloren')
+  })
+
+  it('Fehler beim ersten von zwei Zügen: nur die erste Karte springt zurück, die zweite bleibt liegen', async () => {
+    const konsole = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const { db, lage, result, beobachte, ruhe, neuGeladen } = await aufbau()
+    act(() => void result.current.zug.mutateAsync({ id: 'a', liste: 'gespraech' }).catch(() => {}))
+    act(() => void result.current.zug.mutateAsync({ id: 'b', liste: 'verloren' }))
+    await waitFor(() => expect(lage()).toBe('a:gespraech b:verloren'))
+    await waitFor(() => expect(db.unterwegs()).toBe(2))
+    const lagen = beobachte()
+
+    await act(async () => db.antworte('a', { code: 'P0001', message: 'Das geht gerade nicht' }))
+    await ruhe(1)
+    expect(lage()).toBe('a:angeschrieben b:verloren')
+    expect(neuGeladen()).toBe(0)
+    await act(async () => db.antworte('b'))
+    await ruhe(0)
+
+    expect([...lagen]).toEqual(['a:gespraech b:verloren', 'a:angeschrieben b:verloren'])
+    expect(m.toastFehler).toHaveBeenCalledTimes(1)
+    expect(m.toastFehler).toHaveBeenCalledWith('Das geht gerade nicht', undefined)
+    expect(neuGeladen()).toBe(1)
+    konsole.mockRestore()
+  })
+
+  it('Karte anlegen endet, während ein Zug läuft: das Board wartet, alles andere unter „leads“ lädt neu', async () => {
+    vi.mocked(supabase.rpc).mockResolvedValue({
+      data: { status: 'schon_da', lead_id: 'b', liste: 'angeschrieben', owner_id: V },
+      error: null,
+    } as never)
+    const { db, qc, lage, result, beobachte, ruhe, neuGeladen } = await aufbau()
+    qc.setQueryData(qk.leads.detail('b'), { id: 'b' })
+    act(() => void result.current.zug.mutateAsync({ id: 'a', liste: 'gespraech' }))
+    await waitFor(() => expect(lage()).toBe('a:gespraech b:angeschrieben'))
+    await waitFor(() => expect(db.unterwegs()).toBe(1))
+    const lagen = beobachte()
+
+    await act(async () => {
+      await result.current.anlegen.mutateAsync({ vorname: 'Petra', nachname: 'Probelauf' })
+    })
+    await ruhe(1)
+    expect(neuGeladen()).toBe(0)
+    expect(qc.getQueryState(qk.leads.detail('b'))?.isInvalidated).toBe(true)
+    await act(async () => db.antworte('a'))
+    await ruhe(0)
+
+    expect([...lagen]).toEqual(['a:gespraech b:angeschrieben'])
+    expect(neuGeladen()).toBe(1)
+  })
+
+  it('ein Zug endet, während das Lead-Blatt speichert: neu geladen wird erst nach dem Speichern', async () => {
+    const { db, lage, result, beobachte, ruhe, neuGeladen } = await aufbau()
+    act(() => void result.current.speichern.mutateAsync({ id: 'b', patch: { board_liste: 'verloren' } }))
+    act(() => void result.current.zug.mutateAsync({ id: 'a', liste: 'gespraech' }))
+    await waitFor(() => expect(lage()).toBe('a:gespraech b:angeschrieben'))
+    await waitFor(() => expect(db.unterwegs()).toBe(2))
+    const lagen = beobachte()
+
+    await act(async () => db.antworte('a'))
+    await ruhe(1)
+    expect(neuGeladen()).toBe(0)
+    await act(async () => db.antworte('b'))
+    await ruhe(0)
+
+    expect([...lagen]).toEqual(['a:gespraech b:angeschrieben', 'a:gespraech b:verloren'])
+    expect(neuGeladen()).toBe(1)
   })
 })

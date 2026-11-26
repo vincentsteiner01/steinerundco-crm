@@ -256,8 +256,29 @@ describe('Lead-Blatt', () => {
     })
     fireEvent.click(blatt.getByRole('button', { name: 'Speichern' }))
     expect(blatt.getByRole('alert')).toHaveTextContent('Das ist kein LinkedIn-Profil-Link')
+    expect(blatt.getByLabelText('LinkedIn-Link')).toHaveAttribute('aria-invalid', 'true')
     expect(m.speichern).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  // 26.11.2026: Mit offener „Kontaktinfo“ auf LinkedIn hängt /overlay/contact-info/ am Profil-Link – der wurde abgelehnt
+  it.each([
+    'https://www.linkedin.com/in/max-muster-demo/overlay/contact-info/',
+    'https://www.linkedin.com/in/max-muster-demo/detail/contact-info/',
+    'https://www.linkedin.com/in/max-muster-demo/recent-activity/all/',
+    'linkedin.com/mwlite/in/max-muster-demo',
+  ])('ein Profil-Link mit Anhang (%s) wird als sauberer Profil-Link gespeichert', (link) => {
+    const l = lead()
+    const { blatt, onClose } = zeigen(l)
+    fireEvent.change(blatt.getByLabelText('LinkedIn-Link'), { target: { value: link } })
+    fireEvent.click(blatt.getByRole('button', { name: 'Speichern' }))
+    expect(blatt.queryByRole('alert')).toBeNull()
+    expect(m.speichern).toHaveBeenCalledTimes(1)
+    expect(m.speichern.mock.calls[0]![0]).toEqual({
+      id: l.id,
+      patch: { linkedin_url: 'https://www.linkedin.com/in/max-muster-demo' },
+    })
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('Anrede: noch einmal auf die gewählte tippen nimmt sie zurück (neutral)', () => {

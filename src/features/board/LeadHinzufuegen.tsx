@@ -1,6 +1,7 @@
 // „Lead hinzufügen“ (25.11.2026): Vorname, Nachname, LinkedIn-Link, Zugehörigkeit (voreingestellt: ich). Die Datenbank
 // entscheidet (crm.board_karte_anlegen): neu · übernommen (Person war schon gespeichert) · schon da. Ihre deutschen Fehlertexte
 // stehen direkt am Formular. Die Anrede wird aus dem Vornamen geraten und lässt sich im Lead-Blatt korrigieren.
+// Der Link wird schon hier geprüft und auf den Profil-Teil gekürzt (lib/url linkedinProfilLink).
 import { useId, useState, type KeyboardEvent } from 'react'
 import { Avatar } from '@/components/ui/Avatar'
 import { Dialog } from '@/components/ui/Dialog'
@@ -9,8 +10,10 @@ import { Input } from '@/components/ui/Input'
 import { useKarteAnlegen, type KarteAngelegt } from '@/data/board'
 import { fehlerMeldung } from '@/data/errors'
 import { anzeigeName } from '@/lib/mitglied'
+import { linkedinProfilLink } from '@/lib/url'
 import { anredeAusVorname } from '@/lib/vornamen'
 import type { Member } from '@/types/domain'
+import { KEIN_PROFIL_LINK } from './blatt'
 import { Wahl } from './Wahl'
 
 const NAME_FEHLT = 'Bitte einen Namen eingeben'
@@ -48,12 +51,16 @@ export function LeadHinzufuegen({ offen, onOpenChange, members, meId, onAngelegt
   const hinzufuegen = async () => {
     if (anlegen.isPending) return
     if (!vorname.trim() && !nachname.trim()) return setFehler(NAME_FEHLT)
+    // Der Link ist freiwillig. Steht einer da, geht nur der saubere Profil-Link an die Datenbank – ohne Anhang wie
+    // /overlay/contact-info/ (LinkedIn mit offener „Kontaktinfo“). Alles andere steht sofort am Feld, ohne Anfrage.
+    const profil = link.trim() ? linkedinProfilLink(link) : ''
+    if (profil === null) return setFehler(KEIN_PROFIL_LINK)
     setFehler(null)
     try {
       const ergebnis = await anlegen.mutateAsync({
         vorname,
         nachname,
-        linkedinUrl: link,
+        linkedinUrl: profil,
         ownerId: ownerWert,
         anrede: anredeAusVorname(vorname),
       })

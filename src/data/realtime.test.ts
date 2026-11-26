@@ -12,6 +12,7 @@ vi.mock('@/components/toast', () => ({
 }))
 
 import * as toasts from '@/components/toast'
+import { BOARD_KEY, BOARD_SCHREIBEN } from './boardKeys'
 import { qk } from './queryKeys'
 import {
   invalidiere,
@@ -115,6 +116,34 @@ describe('invalidierungsBuendler', () => {
     expect(new Set(keys).size).toBe(keys.length) // keine Doppelten
     expect(keys.filter((k) => k === JSON.stringify(qk.queue.all))).toHaveLength(1)
     expect(keys.filter((k) => k === JSON.stringify(qk.kpis.all))).toHaveLength(1)
+  })
+
+  // Abnahme 26.11.2026: Das Ereignis zum ersten Zug lud das Board neu, während der zweite noch unterwegs war – dessen Karte
+  // sprang kurz zurück. Solange das Board schreibt, lädt Realtime alles andere neu, das Board nicht.
+  it('schreibt das Board gerade, bleibt es außen vor – alles andere unter „leads“ lädt neu; danach wieder mit Board', () => {
+    vi.useFakeTimers()
+    const qc = new QueryClient()
+    const liste = [...qk.leads.all, 'liste']
+    qc.setQueryData(BOARD_KEY, [])
+    qc.setQueryData(liste, [])
+    const veraltet = (key: readonly unknown[]) => qc.getQueryState(key)?.isInvalidated
+    const b = invalidierungsBuendler(qc, 400, 2000)
+    const zug = qc.getMutationCache().build(qc, {
+      mutationKey: BOARD_SCHREIBEN,
+      networkMode: 'always',
+      mutationFn: () => new Promise<void>(() => {}),
+    })
+    void zug.execute(undefined)
+    b.add({ tabelle: 'leads', eventType: 'UPDATE', neu: { id: L }, alt: {} })
+    vi.advanceTimersByTime(400)
+    expect(veraltet(liste)).toBe(true)
+    expect(veraltet(BOARD_KEY)).toBe(false)
+
+    qc.getMutationCache().clear()
+    b.add({ tabelle: 'leads', eventType: 'UPDATE', neu: { id: L }, alt: {} })
+    vi.advanceTimersByTime(400)
+    expect(veraltet(BOARD_KEY)).toBe(true)
+    b.stop()
   })
 
   it('Dauerfeuer: spätestens nach maxMs wird geladen; stop() verwirft Offenes', () => {

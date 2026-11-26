@@ -3,10 +3,11 @@
 // Regeln (Bauplan § 3): `stage` wird weder gelesen noch geschrieben (alte Trigger hängen daran); jede Abfrage filtert `deleted_at`;
 // Updates immer mit `.eq('id')` und ohne updated_at-Sperre – fremde Trigger setzen updated_at bei jeder Aktivität, das gäbe beim
 // Kartenschieben falsche „hat gerade geändert“-Konflikte. Realtime invalidiert alles unter ['leads'], also auch dieses Board.
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { istBoardListe, type BoardListe } from '@/features/board/listen'
 import type { Lead, LeadMitBezug, LeadUpdate, Salutation } from '@/types/domain'
 import { alleSeiten, pruefe } from './_helfer'
+import { BOARD_KEY, BOARD_SCHREIBEN, istBoardKey } from './boardKeys'
 import { mutationFehler } from './errors'
 import { qk } from './queryKeys'
 import { supabase } from './supabase'
@@ -25,7 +26,23 @@ export type BoardKarte = Pick<
   | 'board_seit'
 > & { board_liste: BoardListe }
 
-export const BOARD_KEY = [...qk.leads.all, 'board'] as const
+export { BOARD_KEY }
+
+/**
+ * 26.11.2026: Läuft außer diesem kein Schreibvorgang mehr? Nur dann darf das Board neu laden. Ein Neuladen dazwischen bringt
+ * den Stand der Datenbank OHNE den noch laufenden Zug – bei zwei Zügen kurz hintereinander sprang dessen Karte kurz in die
+ * alte Liste zurück. In onSettled zählt der eigene Vorgang noch als laufend, daher „höchstens einer“; der letzte lädt neu.
+ */
+const istLetzterSchreibvorgang = (qc: QueryClient): boolean => qc.isMutating({ mutationKey: BOARD_SCHREIBEN }) <= 1
+
+/** Alles unter ['leads'] neu laden – das Board selbst nur, wenn kein weiterer Schreibvorgang mehr läuft. */
+function ladeLeadsNeu(qc: QueryClient): void {
+  const mitBoard = istLetzterSchreibvorgang(qc)
+  void qc.invalidateQueries({
+    queryKey: qk.leads.all,
+    predicate: (q) => mitBoard || !istBoardKey(q.queryKey),
+  })
+}
 
 const SPALTEN =
   'id, salutation, first_name, last_name, full_name, company_name, linkedin_url, owner_id, board_liste, board_seit'
@@ -95,6 +112,7 @@ export type KarteVerschieben = {
 export function useKarteVerschieben() {
   const qc = useQueryClient()
   return useMutation({
+    mutationKey: BOARD_SCHREIBEN,
     // 25.11.2026: offline nicht pausieren (Voreinstellung 'online') – sonst liegt die Karte sichtbar in der neuen Liste,
     // gespeichert ist nichts. So scheitert der Zug sofort: Karte zurück + Offline-Meldung.
     networkMode: 'always',
@@ -126,7 +144,7 @@ export function useKarteVerschieben() {
       qc.setQueryData<BoardKarte[]>(BOARD_KEY, (alt) => (alt ? einsortiert(alt, id, karte) : alt))
     },
     onSettled: (_d, _e, { id }) => {
-      void qc.invalidateQueries({ queryKey: BOARD_KEY })
+      if (istLetzterSchreibvorgang(qc)) void qc.invalidateQueries({ queryKey: BOARD_KEY })
       void qc.invalidateQueries({ queryKey: qk.leads.detail(id) })
     },
   })
@@ -156,6 +174,7 @@ export type KarteAngelegt = {
 export function useKarteAnlegen() {
   const qc = useQueryClient()
   return useMutation({
+    mutationKey: BOARD_SCHREIBEN,
     mutationFn: async (k: KarteAnlegen): Promise<KarteAngelegt> =>
       pruefe(
         await supabase.rpc('board_karte_anlegen', {
@@ -185,9 +204,7 @@ export function useKarteAnlegen() {
       }
       qc.setQueryData<BoardKarte[]>(BOARD_KEY, (alt) => (alt ? einsortiert(alt, karte.id, karte) : alt))
     },
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: qk.leads.all })
-    },
+    onSettled: () => ladeLeadsNeu(qc),
   })
 }
 
@@ -209,6 +226,7 @@ export type KartePatch = Pick<
 export function useKarteSpeichern() {
   const qc = useQueryClient()
   return useMutation({
+    mutationKey: BOARD_SCHREIBEN,
     mutationFn: async ({ id, patch }: { id: string; patch: KartePatch }): Promise<Lead> =>
       pruefe(await supabase.from('leads').update(patch).eq('id', id).is('deleted_at', null).select('*').single()),
     onError: mutationFehler,
@@ -216,8 +234,6 @@ export function useKarteSpeichern() {
       qc.setQueryData<LeadMitBezug>(qk.leads.detail(lead.id), (alt) => (alt ? { ...alt, ...lead } : alt))
       qc.setQueryData<BoardKarte[]>(BOARD_KEY, (alt) => (alt ? einsortiert(alt, lead.id, alsKarte(lead)) : alt))
     },
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: qk.leads.all })
-    },
+    onSettled: () => ladeLeadsNeu(qc),
   })
 }

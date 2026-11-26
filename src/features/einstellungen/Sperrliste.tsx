@@ -4,6 +4,7 @@
 // Statt der Tabelle mit sieben Spalten eine schlichte Liste – je Eintrag Name bzw. Adresse, Grund, Datum und „Entfernen“
 // (44 px): Die Tabelle schnitt bei 1440 px Texte ab, und am Telefon lag „Entfernen“ außerhalb des Bildschirms. Kanal-Umfang,
 // „Erfasst von“, Quelle und der Zähler sind entfallen; ein neuer Eintrag gilt immer für alle Kanäle.
+// 26.11.2026: Adressen und Grund brechen um, statt mit „…“ zu enden; der Dialog „Entfernen“ nennt den Eintrag.
 import { Plus } from 'lucide-react'
 import { useId, useState } from 'react'
 import { Button } from '@/components/ui/Button'
@@ -17,7 +18,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { toast } from '@/components/toast'
 import { useAktivitaetErstellen, useMeId, useSperrliste, useSperrlisteEintrag, useSperrlisteEntfernen } from '@/data'
 import { fmtDatum } from '@/lib/format'
-import { fmtTelefon, nachE164 } from '@/lib/telefon'
+import { nachE164 } from '@/lib/telefon'
 import { normalizeLinkedinUrl } from '@/lib/url'
 import { ALLGEMEIN, DIALOG } from '@/texte/de'
 import type { SperrlisteEintrag } from '@/types/domain'
@@ -26,8 +27,10 @@ import {
   LEERER_EINTRAG,
   passtSperrsuche,
   pruefeEintrag,
-  sperrGrundText,
+  sperrAdressen,
   sperrNotiz,
+  sperrStichwort,
+  sperrWer,
   type EintragFehler,
   type NeuerEintrag,
 } from './logik'
@@ -187,6 +190,8 @@ function EntfernenDialog({
   const notiz = useAktivitaetErstellen()
   const [grund, setGrund] = useState('')
   const [fehler, setFehler] = useState<string | undefined>()
+  // geschlossen (eintrag === null) ist der Dialog nicht im Dokument – der Ersatz „Eintrag“ ist nie zu sehen
+  const texte = DIALOG.sperrlisteEntfernen(eintrag ? sperrWer(eintrag) : 'Eintrag')
   const schliessen = (o: boolean) => {
     if (!o) {
       setGrund('')
@@ -222,9 +227,10 @@ function EntfernenDialog({
       onOpenChange={schliessen}
       gross
       titel="Eintrag entfernen"
-      text={DIALOG.sperrlisteEntfernen.text}
+      // nennt, wen er entfernt (Name, sonst Adresse); eine lange Adresse bricht um, statt aus dem Dialog zu laufen
+      text={<span className="[overflow-wrap:anywhere]">{texte.text}</span>}
       primaer={{
-        label: DIALOG.sperrlisteEntfernen.primaer,
+        label: texte.primaer,
         onClick: () => void absenden(),
         danger: true,
         disabled: !grund.trim(),
@@ -251,28 +257,42 @@ function EntfernenDialog({
 }
 
 /**
- * Eine Zeile der Liste: Name (ohne Namen die Adresse), Grund, Datum, rechts „Entfernen“. Ab 1280 px steht alles in einer Zeile;
- * darunter (und am Telefon) stehen Grund und Datum in voller Breite unter dem Namen – „Entfernen“ bleibt rechts im Bild.
+ * Eine Zeile der Liste: oben Name (ohne Namen die Adresse), Stichwort, Datum und rechts „Entfernen“; darunter in voller Breite
+ * der Grund als Text und jede gesperrte Adresse in einer eigenen Zeile. Nichts wird abgeschnitten – lange Links und Adressen
+ * brechen um (26.11.2026: vorher standen Adressen und Grund einzeilig mit „…“, die Adresse war nirgends ganz zu lesen).
+ * Unter 1280 px (und am Telefon) rutschen Stichwort und Datum unter den Namen – „Entfernen“ bleibt rechts im Bild.
  */
 function Zeile({ eintrag, onEntfernen }: { eintrag: SperrlisteEintrag; onEntfernen: () => void }) {
-  const adresse = [eintrag.linkedin_url_norm, eintrag.email, fmtTelefon(eintrag.phone_e164)].filter(Boolean).join(' · ')
-  const grund = sperrGrundText(eintrag.reason, eintrag.note)
+  const wer = sperrWer(eintrag)
+  // ohne Namen steht die erste Adresse schon im Kopf – nicht doppelt nennen
+  const adressen = sperrAdressen(eintrag).filter((a) => a !== wer)
+  const grund = eintrag.note?.trim()
   return (
     <li
       data-id={eintrag.id}
-      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]"
+      className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 py-3 xl:grid-cols-[minmax(0,1fr)_auto_auto] xl:gap-y-0"
     >
-      <div className="grid min-w-0">
-        <span className="text-body text-ink truncate-1 font-medium">{eintrag.name ?? (adresse || '–')}</span>
-        {eintrag.name && adresse ? <span className="text-small text-ink-3 truncate-1">{adresse}</span> : null}
+      <span className="text-body text-ink col-start-1 row-start-1 font-medium [overflow-wrap:anywhere]">{wer}</span>
+      {grund || adressen.length ? (
+        <div className="text-small col-span-full grid min-w-0 gap-0.5 [overflow-wrap:anywhere] max-xl:row-start-3 xl:row-start-2">
+          {grund ? <p className="text-ink-2">{grund}</p> : null}
+          {adressen.map((a) => (
+            <span key={a} className="text-ink-3">
+              {a}
+            </span>
+          ))}
+        </div>
+      ) : null}
+      <div className="flex items-center gap-3 max-xl:col-span-full max-xl:row-start-2 xl:col-start-2 xl:row-start-1">
+        <Chip ton="danger">{sperrStichwort(eintrag.reason)}</Chip>
+        <span className="text-small text-ink-2 tnum whitespace-nowrap">{fmtDatum(eintrag.created_at)}</span>
       </div>
-      <div className="flex min-w-0 items-center gap-3 max-xl:col-span-2 max-xl:row-start-2">
-        <Chip ton="danger" title={grund} className="min-w-0">
-          {grund}
-        </Chip>
-        <span className="text-small text-ink-2 tnum flex-none whitespace-nowrap">{fmtDatum(eintrag.created_at)}</span>
-      </div>
-      <Button variante="danger" groesse="L" className="max-xl:col-start-2 max-xl:row-start-1" onClick={onEntfernen}>
+      <Button
+        variante="danger"
+        groesse="L"
+        className="row-start-1 max-xl:col-start-2 xl:col-start-3"
+        onClick={onEntfernen}
+      >
         Entfernen
       </Button>
     </li>

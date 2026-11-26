@@ -212,10 +212,11 @@ export const DIALOG = {
     kurz: 'Die Person kommt auf die Sperrliste und wird nicht mehr kontaktiert.',
     primaer: 'Widerspruch erfassen',
   }),
-  sperrlisteEntfernen: {
-    text: 'Eintrag entfernen? Die Person könnte wieder kontaktiert werden. Grund: Pflicht.',
+  // `wer`: Name des Eintrags, sonst die gesperrte Adresse – der Dialog nennt, wen er entfernt
+  sperrlisteEntfernen: (wer: string) => ({
+    text: `${wer} von der Sperrliste entfernen? Die Person könnte wieder kontaktiert werden. Grund: Pflicht.`,
     primaer: 'Entfernen',
-  },
+  }),
   ueberallAbmelden: {
     text: 'Überall abmelden? Alle Geräte werden abgemeldet – auch die Akten-Sitzung desselben Kontos.',
     primaer: 'Überall abmelden',

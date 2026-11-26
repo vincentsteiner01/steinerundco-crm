@@ -9,8 +9,10 @@ import {
   passtSperrsuche,
   pruefeEintrag,
   pruefeProfil,
-  sperrGrundText,
+  sperrAdressen,
   sperrNotiz,
+  sperrStichwort,
+  sperrWer,
 } from './logik'
 import { SPERRLISTE } from './_testDaten'
 
@@ -58,8 +60,25 @@ describe('Sperrliste', () => {
     expect(sperrNotiz(' Widerspruch per Telefon ', '')).toBe('Widerspruch per Telefon')
     expect(sperrNotiz('Bitte nicht', 'Mail vom 12.10.')).toBe('Bitte nicht – Mail vom 12.10.')
     expect(sperrNotiz(' ', ' ')).toBeNull()
-    expect(sperrGrundText('manuell', 'Bitte nicht')).toBe('Manuell · Bitte nicht')
-    expect(sperrGrundText('bounce', null)).toBe('Bounce')
+    // im Chip nur das Stichwort – der Freitext steht als eigener Absatz in der Zeile
+    expect(sperrStichwort('manuell')).toBe('Manuell')
+    expect(sperrStichwort('bounce')).toBe('Bounce')
+    expect(sperrStichwort('unbekannt')).toBe('unbekannt')
+  })
+  it('Adressen eines Eintrags je einzeln; „wer“ ist der Name, sonst die erste Adresse', () => {
+    const e = { name: 'Petra Prüfstein', linkedin_url_norm: 'linkedin.com/in/max-muster-demo', email: 'p@example.test' }
+    expect(sperrAdressen({ ...e, phone_e164: '+4940123456789' })).toEqual([
+      'linkedin.com/in/max-muster-demo',
+      'p@example.test',
+      '+49 40 123456789',
+    ])
+    expect(sperrAdressen({ linkedin_url_norm: null, email: null, phone_e164: null })).toEqual([])
+    expect(sperrWer({ ...e, phone_e164: null })).toBe('Petra Prüfstein')
+    expect(sperrWer({ ...e, name: ' ', phone_e164: null })).toBe('linkedin.com/in/max-muster-demo')
+    expect(sperrWer({ name: null, linkedin_url_norm: null, email: 'p@example.test', phone_e164: null })).toBe(
+      'p@example.test',
+    )
+    expect(sperrWer({ name: null, linkedin_url_norm: null, email: null, phone_e164: null })).toBe('–')
   })
   it('Kanal-Umfang und Suche', () => {
     expect(kanalUmfang(['linkedin', 'telefon', 'email'])).toBe('alle Kanäle')
